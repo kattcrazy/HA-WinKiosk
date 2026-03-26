@@ -2,11 +2,7 @@
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
-## Requirements
-
-- Windows 10/11
-- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) (the installer will install this automatically if not already present)
-- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
+The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
 
 ## Quick Start
 
@@ -15,7 +11,13 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-## Kiosk Lockdown
+### Requirements
+
+- Windows 10/11
+- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) (the installer will install this automatically if not already present)
+- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
+
+### Kiosk Lockdown
 
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
@@ -23,7 +25,7 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 - Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running.
 - For strict OS-level shell lockdown (edge-swipe shell gestures, task switching, etc.), use Windows Assigned Access / Kiosk mode.
 
-## MQTT and Home Assistant
+### MQTT and Home Assistant
 
 With MQTT configured, the app publishes MQTT payloads that show up in Integrations > MQTT in Home Assistant. In the app Settings, under MQTT, turn Sensors and Commands on or off for which buttons and sensors are discovered.
 
@@ -48,7 +50,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Monitor orientation | Select | Default rotation for the primary display |
 | Monitor brightness | Number | Brightness % (0–100) |
 
-## Settings
+### Settings
 
 Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited either in YAML or in the UI settings.
 
@@ -117,35 +119,6 @@ screenOrientation:
 
 autoStart:
   enabled: true                       # Auto start on boot
-```
-
-## Windows Installer (Normal Install)
-
-Build locally:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\Build-Installer.ps1
-```
-
-Output:
-
-- `installer\output\HAWinKiosk-Setup.exe`
-
-## Automatic App Updates (GitHub Releases)
-
-The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
-
-## Release Automation (GitHub Actions)
-
-This repo includes a workflow that builds and publishes `HAWinKiosk-Setup.exe` when you push a version tag that starts with `v` (for example `v2.0.1`).
-
-Release steps:
-
-```powershell
-# 1) Update src\HAWinKiosk\HAWinKiosk.csproj <Version> to match the release (for example 2.0.1)
-# 2) Commit and push main
-git tag v2.0.1
-git push origin v2.0.1
 ```
 
 ## Credits
