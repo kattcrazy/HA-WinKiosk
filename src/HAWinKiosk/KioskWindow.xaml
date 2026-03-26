@@ -420,7 +420,6 @@
                                     <TextBlock Text="Swipe direction" Style="{StaticResource SettingsItemLabel}"/>
                                     <ComboBox x:Name="SwipeDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
                                         <ComboBoxItem Content="Down" Tag="down"/>
-                                        <ComboBoxItem Content="Up" Tag="up"/>
                                         <ComboBoxItem Content="Left" Tag="left"/>
                                         <ComboBoxItem Content="Right" Tag="right"/>
                                     </ComboBox>
@@ -443,7 +442,6 @@
                                     <TextBlock Text="Swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
                                     <ComboBox x:Name="SwipeHoldDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
                                         <ComboBoxItem Content="Down" Tag="down"/>
-                                        <ComboBoxItem Content="Up" Tag="up"/>
                                         <ComboBoxItem Content="Left" Tag="left"/>
                                         <ComboBoxItem Content="Right" Tag="right"/>
                                     </ComboBox>
@@ -471,7 +469,6 @@
                                         <TextBlock Text="Two-finger swipe direction" Style="{StaticResource SettingsItemLabel}"/>
                                         <ComboBox x:Name="TwoFingerSwipeDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
                                             <ComboBoxItem Content="Down" Tag="down"/>
-                                            <ComboBoxItem Content="Up" Tag="up"/>
                                             <ComboBoxItem Content="Left" Tag="left"/>
                                             <ComboBoxItem Content="Right" Tag="right"/>
                                         </ComboBox>
@@ -494,7 +491,6 @@
                                         <TextBlock Text="Two-finger swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
                                         <ComboBox x:Name="TwoFingerSwipeHoldDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
                                             <ComboBoxItem Content="Down" Tag="down"/>
-                                            <ComboBoxItem Content="Up" Tag="up"/>
                                             <ComboBoxItem Content="Left" Tag="left"/>
                                             <ComboBoxItem Content="Right" Tag="right"/>
                                         </ComboBox>
@@ -511,6 +507,20 @@
                                 </StackPanel>
 
                                 <TextBlock Text="Other gestures" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,4,0,6"/>
+                                <TextBlock Text="Pinch" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GesturePinchActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GesturePinchMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Pinch MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GesturePinchMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GesturePinchMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
                                 <TextBlock Text="Zoom" Style="{StaticResource SettingsItemLabel}"/>
                                 <ComboBox x:Name="GestureZoomActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
                                     <ComboBoxItem Content="Disabled" Tag="disabled"/>

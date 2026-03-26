@@ -143,7 +143,7 @@ public static class WebViewBridge
       case 'twofingerswipe': return cfg.twoFingerSwipeAction || 'disabled';
       case 'swipehold': return cfg.swipeHoldAction || 'disabled';
       case 'twofingerswipehold': return cfg.twoFingerSwipeHoldAction || 'disabled';
-      case 'zoom': return cfg.zoomAction || cfg.pinchAction || 'disabled';
+      case 'zoom': return cfg.zoomAction || 'disabled';
       case 'pinch': return cfg.pinchAction || 'disabled';
       case 'tripletap': return cfg.tripleTapAction || 'disabled';
       case 'quadrupletap': return cfg.quadTapAction || 'disabled';
@@ -338,11 +338,15 @@ public static class WebViewBridge
     const delta = current - pinchStartDist;
     if (pinchActive && !pinchFired && Math.abs(delta) >= 40) {
       pinchFired = true;
-      const zoomDir = delta > 0 ? 'out' : 'in';
-      if (cfg.zoomEnabled && (cfg.zoomDirection === 'any' || cfg.zoomDirection === zoomDir)) {
-        triggerGesture('zoom', pinchCx, pinchCy);
-      } else if (cfg.pinchEnabled) {
+      if (delta < 0 && cfg.pinchEnabled) {
+        // Fingers moving together (pinch-in).
         triggerGesture('pinch', pinchCx, pinchCy);
+      } else if (delta > 0 && cfg.zoomEnabled) {
+        // Fingers moving apart (zoom-out).
+        const zoomDir = 'out';
+        if (cfg.zoomDirection === 'any' || cfg.zoomDirection === zoomDir) {
+          triggerGesture('zoom', pinchCx, pinchCy);
+        }
       }
     }
 

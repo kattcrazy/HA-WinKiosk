@@ -97,7 +97,7 @@ public static class SettingsManager
     private static string NormalizeSwipeDirection(string? raw)
     {
         var s = (raw ?? "down").Trim().ToLowerInvariant();
-        return s is "down" or "up" or "left" or "right" ? s : "down";
+        return s is "down" or "left" or "right" ? s : "down";
     }
 
     private static string NormalizeZoomDirection(string? raw)

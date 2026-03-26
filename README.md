@@ -2,8 +2,6 @@
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
-The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version. The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
-
 ## Quick Start
 
 1. Download the .exe file from the latest release and once downloaded double click/open to install. It will automatically install .NET 8 if needed.
@@ -30,6 +28,8 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 
 Entity IDs in HA include your device name (sanitized). Names below match the name field in discovery.
 
+<img width="1250" height="703" alt="image (21)" src="https://github.com/user-attachments/assets/76113480-37a0-43c6-8385-49aeda76daed" />
+
 | Name in HA | Type | Description |
 | --- | --- | --- |
 | Shutdown | Button | Shut down Windows |
@@ -52,6 +52,8 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 ## Settings
 
 Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited either in YAML or in the UI settings. Below is a key of what all the options are, and below that is an example settings.yaml
+
+![Settings](https://github.com/user-attachments/assets/e09a5801-a07b-45db-98b0-c6f4b96e4eb7)
 
 ### All Options
 
@@ -93,19 +95,21 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited
 | Quintuple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Quintuple-tap screen region | No |
 | Quintuple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
 | Swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe | Indirect (when MQTT message) |
-| Swipe direction | `Up` \| `Down` \| `Left` \| `Right` | Swipe direction filter | No |
+| Swipe direction | `Down` \| `Left` \| `Right` | Swipe direction filter | No |
 | Swipe MQTT topic | string | Topic suffix when action is MQTT message | Yes |
 | Swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe-and-hold | Indirect (when MQTT message) |
-| Swipe and hold direction | `Up` \| `Down` \| `Left` \| `Right` | Swipe-and-hold direction filter | No |
+| Swipe and hold direction | `Down` \| `Left` \| `Right` | Swipe-and-hold direction filter | No |
 | Swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for swipe-and-hold | No |
 | Swipe and hold MQTT topic | string | Topic suffix when action is MQTT message | Yes |
 | Two-finger swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
-| Two-finger swipe direction | `Up` \| `Down` \| `Left` \| `Right` | Touch devices only | No |
+| Two-finger swipe direction | `Down` \| `Left` \| `Right` | Touch devices only | No |
 | Two-finger swipe MQTT topic | string | Touch devices only | Yes |
 | Two-finger swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
-| Two-finger swipe and hold direction | `Up` \| `Down` \| `Left` \| `Right` | Touch devices only | No |
+| Two-finger swipe and hold direction | `Down` \| `Left` \| `Right` | Touch devices only | No |
 | Two-finger swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for two-finger swipe-and-hold | No |
 | Two-finger swipe and hold MQTT topic | string | Touch devices only | Yes |
+| Pinch action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for pinch-in gesture | Indirect (when MQTT message) |
+| Pinch MQTT topic | string | Topic suffix when action is MQTT message | Yes |
 | Zoom action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for zoom gesture | Indirect (when MQTT message) |
 | Zoom direction | `Any` \| `In` \| `Out` | Zoom gesture direction filter | No |
 | Zoom MQTT topic | string | Topic suffix when action is MQTT message | Yes |
@@ -174,6 +178,8 @@ kiosk:
     twoFingerSwipeHoldDirection: down
     twoFingerSwipeHoldMs: 1000
     twoFingerSwipeHoldMqttTopic: "two_finger_swipe_hold"
+    pinchAction: disabled
+    pinchMqttTopic: "pinch"
     zoomAction: disabled
     zoomDirection: any
     zoomMqttTopic: "zoom"
@@ -216,6 +222,12 @@ screenOrientation:
 autoStart:
   enabled: true
 ```
+
+## Autostart and updates
+
+The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
+
+ The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
 
 ## Credits
 

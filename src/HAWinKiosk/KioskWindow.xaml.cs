@@ -62,9 +62,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             ShowKiosk();
             await EnsureWebView2();
-            var url = _settings.Kiosk.Url;
-            if (string.IsNullOrWhiteSpace(url)) url = "about:blank";
-            NavigateTo(url);
+            NavigateTo(_settings.Kiosk.Url);
             StartMqttIfConfigured();
         }
     }
@@ -151,6 +149,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             || GestureTwoFingerSwipeMqttPrefixText == null
             || GestureSwipeHoldMqttPrefixText == null
             || GestureTwoFingerSwipeHoldMqttPrefixText == null
+            || GesturePinchMqttPrefixText == null
             || GestureZoomMqttPrefixText == null
             || GestureTripleTapMqttPrefixText == null
             || GestureQuadTapMqttPrefixText == null
@@ -166,6 +165,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureTwoFingerSwipeMqttPrefixText.Text = topicPrefix;
         GestureSwipeHoldMqttPrefixText.Text = topicPrefix;
         GestureTwoFingerSwipeHoldMqttPrefixText.Text = topicPrefix;
+        GesturePinchMqttPrefixText.Text = topicPrefix;
         GestureZoomMqttPrefixText.Text = topicPrefix;
         GestureTripleTapMqttPrefixText.Text = topicPrefix;
         GestureQuadTapMqttPrefixText.Text = topicPrefix;
@@ -191,6 +191,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureTwoFingerSwipeMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureTwoFingerSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GesturePinchMqttTopicPanel.Visibility = IsMqttGestureAction(GesturePinchActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureZoomMqttTopicPanel.Visibility = IsMqttGestureAction(GestureZoomActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureTripleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureQuadTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
@@ -227,6 +228,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         SelectComboByTag(GestureTwoFingerSwipeActionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeAction);
         SelectComboByTag(GestureSwipeHoldActionCombo, _settings.Kiosk.Gestures.SwipeHoldAction);
         SelectComboByTag(GestureTwoFingerSwipeHoldActionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeHoldAction);
+        SelectComboByTag(GesturePinchActionCombo, _settings.Kiosk.Gestures.PinchAction);
         SelectComboByTag(GestureZoomActionCombo, _settings.Kiosk.Gestures.ZoomAction);
         SelectComboByTag(GestureTripleTapActionCombo, _settings.Kiosk.Gestures.TripleTapAction);
         SelectComboByTag(GestureQuadTapActionCombo, _settings.Kiosk.Gestures.QuadrupleTapAction);
@@ -247,6 +249,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureTwoFingerSwipeMqttTopicBox.Text = _settings.Kiosk.Gestures.TwoFingerSwipeMqttTopic ?? "";
         GestureSwipeHoldMqttTopicBox.Text = _settings.Kiosk.Gestures.SwipeHoldMqttTopic ?? "";
         GestureTwoFingerSwipeHoldMqttTopicBox.Text = _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic ?? "";
+        GesturePinchMqttTopicBox.Text = _settings.Kiosk.Gestures.PinchMqttTopic ?? "";
         GestureZoomMqttTopicBox.Text = _settings.Kiosk.Gestures.ZoomMqttTopic ?? "";
         GestureTripleTapMqttTopicBox.Text = _settings.Kiosk.Gestures.TripleTapMqttTopic ?? "";
         GestureQuadTapMqttTopicBox.Text = _settings.Kiosk.Gestures.QuadrupleTapMqttTopic ?? "";
@@ -575,7 +578,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             "swipehold" => (_settings.Kiosk.Gestures.SwipeHoldAction ?? "disabled").ToLowerInvariant(),
             "twofingerswipehold" => (_settings.Kiosk.Gestures.TwoFingerSwipeHoldAction ?? "disabled").ToLowerInvariant(),
             "zoom" => (_settings.Kiosk.Gestures.ZoomAction ?? "disabled").ToLowerInvariant(),
-            "pinch" => (_settings.Kiosk.Gestures.ZoomAction ?? _settings.Kiosk.Gestures.PinchAction ?? "disabled").ToLowerInvariant(),
+            "pinch" => (_settings.Kiosk.Gestures.PinchAction ?? "disabled").ToLowerInvariant(),
             "tripletap" => (_settings.Kiosk.Gestures.TripleTapAction ?? "disabled").ToLowerInvariant(),
             "quadrupletap" => (_settings.Kiosk.Gestures.QuadrupleTapAction ?? "disabled").ToLowerInvariant(),
             "quintupletap" => (_settings.Kiosk.Gestures.QuintupleTapAction ?? "disabled").ToLowerInvariant(),
@@ -593,7 +596,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             "swipehold" => _settings.Kiosk.Gestures.SwipeHoldMqttTopic,
             "twofingerswipehold" => _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic,
             "zoom" => _settings.Kiosk.Gestures.ZoomMqttTopic,
-            "pinch" => _settings.Kiosk.Gestures.ZoomMqttTopic ?? _settings.Kiosk.Gestures.PinchMqttTopic,
+            "pinch" => _settings.Kiosk.Gestures.PinchMqttTopic,
             "tripletap" => _settings.Kiosk.Gestures.TripleTapMqttTopic,
             "quadrupletap" => _settings.Kiosk.Gestures.QuadrupleTapMqttTopic,
             "quintupletap" => _settings.Kiosk.Gestures.QuintupleTapMqttTopic,
@@ -635,8 +638,25 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void NavigateTo(string url)
     {
-        if (WebView.CoreWebView2 != null)
-            WebView.CoreWebView2.Navigate(url);
+        if (WebView.CoreWebView2 == null) return;
+        var safeUrl = NormalizeNavigableUrl(url);
+        WebView.CoreWebView2.Navigate(safeUrl);
+    }
+
+    private static string NormalizeNavigableUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return "about:blank";
+
+        var s = raw.Trim();
+        if (Uri.TryCreate(s, UriKind.Absolute, out var abs) && !string.IsNullOrWhiteSpace(abs.Scheme))
+            return abs.ToString();
+
+        // If user entered host/path without scheme, prefer HTTP.
+        if (Uri.TryCreate($"http://{s}", UriKind.Absolute, out var withHttp))
+            return withHttp.ToString();
+
+        return "about:blank";
     }
 
     private async void StartMqttIfConfigured()
@@ -710,9 +730,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             await EnsureWebView2();
         }
 
-        var url = _settings.Kiosk.Url;
-        if (string.IsNullOrWhiteSpace(url)) url = "about:blank";
-        NavigateTo(url);
+        NavigateTo(_settings.Kiosk.Url);
 
         RestartMqttIfNeeded();
     }
@@ -752,7 +770,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         var disk = SettingsManager.Load();
 
-        _settings.Kiosk.Url = UrlBox.Text?.Trim() ?? "http://homeassistant.local:8123";
+        _settings.Kiosk.Url = NormalizeNavigableUrl(UrlBox.Text);
         _settings.Mqtt.Host = MqttHostBox.Text?.Trim() ?? "";
         if (int.TryParse(MqttPortBox.Text, out var port))
             _settings.Mqtt.Port = port;
@@ -781,6 +799,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.TwoFingerSwipeAction = SelectedTag(GestureTwoFingerSwipeActionCombo);
         _settings.Kiosk.Gestures.SwipeHoldAction = SelectedTag(GestureSwipeHoldActionCombo);
         _settings.Kiosk.Gestures.TwoFingerSwipeHoldAction = SelectedTag(GestureTwoFingerSwipeHoldActionCombo);
+        _settings.Kiosk.Gestures.PinchAction = SelectedTag(GesturePinchActionCombo);
         _settings.Kiosk.Gestures.ZoomAction = SelectedTag(GestureZoomActionCombo);
         _settings.Kiosk.Gestures.TripleTapAction = SelectedTag(GestureTripleTapActionCombo);
         _settings.Kiosk.Gestures.QuadrupleTapAction = SelectedTag(GestureQuadTapActionCombo);
@@ -811,6 +830,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.TwoFingerSwipeMqttTopic = string.IsNullOrWhiteSpace(GestureTwoFingerSwipeMqttTopicBox.Text) ? null : GestureTwoFingerSwipeMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.SwipeHoldMqttTopic = string.IsNullOrWhiteSpace(GestureSwipeHoldMqttTopicBox.Text) ? null : GestureSwipeHoldMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic = string.IsNullOrWhiteSpace(GestureTwoFingerSwipeHoldMqttTopicBox.Text) ? null : GestureTwoFingerSwipeHoldMqttTopicBox.Text.Trim();
+        _settings.Kiosk.Gestures.PinchMqttTopic = string.IsNullOrWhiteSpace(GesturePinchMqttTopicBox.Text) ? null : GesturePinchMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.ZoomMqttTopic = string.IsNullOrWhiteSpace(GestureZoomMqttTopicBox.Text) ? null : GestureZoomMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.TripleTapMqttTopic = string.IsNullOrWhiteSpace(GestureTripleTapMqttTopicBox.Text) ? null : GestureTripleTapMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.QuadrupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuadTapMqttTopicBox.Text) ? null : GestureQuadTapMqttTopicBox.Text.Trim();

@@ -117,19 +117,19 @@ public class GesturesConfig
     [YamlMember(Alias = "quintupleTapLocation")]
     public string QuintupleTapLocation { get; set; } = "top-left";
 
-    /// <summary>down | up | left | right</summary>
+    /// <summary>down | left | right</summary>
     [YamlMember(Alias = "swipeDirection")]
     public string SwipeDirection { get; set; } = "down";
 
-    /// <summary>down | up | left | right</summary>
+    /// <summary>down | left | right</summary>
     [YamlMember(Alias = "twoFingerSwipeDirection")]
     public string TwoFingerSwipeDirection { get; set; } = "down";
 
-    /// <summary>down | up | left | right</summary>
+    /// <summary>down | left | right</summary>
     [YamlMember(Alias = "swipeHoldDirection")]
     public string SwipeHoldDirection { get; set; } = "down";
 
-    /// <summary>down | up | left | right</summary>
+    /// <summary>down | left | right</summary>
     [YamlMember(Alias = "twoFingerSwipeHoldDirection")]
     public string TwoFingerSwipeHoldDirection { get; set; } = "down";
 
