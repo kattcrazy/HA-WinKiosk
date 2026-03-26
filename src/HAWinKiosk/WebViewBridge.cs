@@ -17,6 +17,11 @@ public static class WebViewBridge
             pinchEnabled = !string.Equals(g.PinchAction, "disabled", StringComparison.OrdinalIgnoreCase),
             tripleTapEnabled = !string.Equals(g.TripleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             quadTapEnabled = !string.Equals(g.QuadrupleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            swipeAction = (g.SwipeAction ?? "disabled").ToLowerInvariant(),
+            swipeHoldAction = (g.SwipeHoldAction ?? "disabled").ToLowerInvariant(),
+            pinchAction = (g.PinchAction ?? "disabled").ToLowerInvariant(),
+            tripleTapAction = (g.TripleTapAction ?? "disabled").ToLowerInvariant(),
+            quadTapAction = (g.QuadrupleTapAction ?? "disabled").ToLowerInvariant(),
             tripleTapLocation = (g.TripleTapLocation ?? "top-left").ToLowerInvariant(),
             quadTapLocation = (g.QuadrupleTapLocation ?? "top-left").ToLowerInvariant(),
             swipeDir = (g.SwipeDirection ?? "down").ToLowerInvariant(),
@@ -115,11 +120,23 @@ public static class WebViewBridge
       setTimeout(() => d.remove(), 280);
     }, 760);
   }
+  function actionForGesture(name) {
+    switch ((name || '').toLowerCase()) {
+      case 'swipe': return cfg.swipeAction || 'disabled';
+      case 'swipehold': return cfg.swipeHoldAction || 'disabled';
+      case 'pinch': return cfg.pinchAction || 'disabled';
+      case 'tripletap': return cfg.tripleTapAction || 'disabled';
+      case 'quadrupletap': return cfg.quadTapAction || 'disabled';
+      default: return 'disabled';
+    }
+  }
   function triggerGesture(name, x, y) {
     const now = Date.now();
     if (now - lastGestureAt < 250) return;
     lastGestureAt = now;
-    showAck(x, y);
+    if (actionForGesture(name) !== 'settings') {
+      showAck(x, y);
+    }
     // Give touch devices enough time to paint ack before disruptive actions (reload/settings).
     setTimeout(() => post({ type: 'gesture', gesture: name }), 220);
   }

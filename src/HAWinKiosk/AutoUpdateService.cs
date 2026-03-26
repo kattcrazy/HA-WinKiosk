@@ -12,10 +12,16 @@ public static class AutoUpdateService
     private const string GitHubRepo = "HA-WinKiosk";
     private const int UpdateHourLocal = 3;
     private static readonly HttpClient Http = BuildHttpClient();
+    private static readonly SemaphoreSlim CheckGate = new(1, 1);
 
     public static void Start()
     {
         _ = Task.Run(RunSchedulerLoopAsync);
+    }
+
+    public static async Task<bool> CheckAndApplyNowAsync()
+    {
+        return await CheckAndApplyAsync();
     }
 
     private static async Task RunSchedulerLoopAsync()
@@ -26,7 +32,7 @@ public static class AutoUpdateService
             {
                 var delay = GetDelayUntilNextUpdateWindow();
                 await Task.Delay(delay);
-                await CheckAndApplyAsync();
+                _ = await CheckAndApplyAsync();
             }
             catch
             {
@@ -46,15 +52,16 @@ public static class AutoUpdateService
         return next - now;
     }
 
-    private static async Task CheckAndApplyAsync()
+    private static async Task<bool> CheckAndApplyAsync()
     {
+        if (!await CheckGate.WaitAsync(0)) return false;
         try
         {
             var latest = await GetLatestReleaseAsync(GitHubOwner, GitHubRepo);
-            if (latest == null) return;
+            if (latest == null) return false;
 
             var currentVersion = GetCurrentVersion();
-            if (latest.Version <= currentVersion) return;
+            if (latest.Version <= currentVersion) return false;
 
             var tempDir = Path.Combine(Path.GetTempPath(), "HA-WinKiosk", "updates");
             Directory.CreateDirectory(tempDir);
@@ -74,10 +81,16 @@ public static class AutoUpdateService
             {
                 System.Windows.Application.Current.Shutdown();
             });
+            return true;
         }
         catch
         {
             // best-effort updater; never crash kiosk
+            return false;
+        }
+        finally
+        {
+            CheckGate.Release();
         }
     }
 

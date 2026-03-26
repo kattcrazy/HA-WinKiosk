@@ -54,7 +54,7 @@ public static partial class MqttDiscovery
         string devId,
         string slug,
         string displayName,
-        string unit,
+        string? unit,
         string? deviceClass)
     {
         var objectId = $"{devId}_{slug}";

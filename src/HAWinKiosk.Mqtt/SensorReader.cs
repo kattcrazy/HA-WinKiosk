@@ -38,8 +38,8 @@ public static class SensorReader
                 return "unavailable";
 
             var pct = ps.BatteryLifePercent;
-            if (pct < 0 || pct > 100) return "unavailable";
-            return pct.ToString();
+            if (pct < 0 || pct > 1) return "unavailable";
+            return Math.Clamp((int)Math.Round(pct * 100.0), 0, 100).ToString();
         }
         catch
         {

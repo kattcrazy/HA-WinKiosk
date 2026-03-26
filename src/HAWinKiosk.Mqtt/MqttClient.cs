@@ -25,7 +25,8 @@ public class MqttClientService : IDisposable
         ["clearcache"] = "Clear kiosk cache",
         ["opensettings"] = "Open settings",
         ["closesettings"] = "Close settings",
-        ["windowsupdate"] = "Run Windows updates"
+        ["windowsupdate"] = "Run Windows updates",
+        ["powershellcommand"] = "PowerShell command"
     };
 
     private IMqttClient? _client;
@@ -367,7 +368,7 @@ public class MqttClientService : IDisposable
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
                 "sessionstate" => MqttDiscovery.StringSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Session state"),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
-                "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Updates pending", "updates", null),
+                "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Updates pending", null, null),
                 _ => (null, null)!
             };
             if (t == null) continue;
@@ -450,6 +451,9 @@ public class MqttClientService : IDisposable
                     break;
                 case "windowsupdate":
                     WindowsUpdateCommand.Execute();
+                    break;
+                case "powershellcommand":
+                    PowerShellCommand.Execute(_settings.Commands.PowerShellCommand ?? "");
                     break;
             }
         }

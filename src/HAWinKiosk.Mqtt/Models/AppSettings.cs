@@ -167,6 +167,9 @@ public class CommandsConfig
         "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
     ];
+
+    [YamlMember(Alias = "powerShellCommand")]
+    public string? PowerShellCommand { get; set; }
 }
 
 public class ScreenBrightnessConfig

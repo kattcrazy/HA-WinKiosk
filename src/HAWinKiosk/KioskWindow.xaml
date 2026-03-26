@@ -129,11 +129,20 @@
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
+                                    <Button x:Name="CheckUpdatesButton"
+                                            Content="Check &amp; run updates"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Background="{DynamicResource Theme.Button.SecondaryBg}"
+                                            Foreground="{DynamicResource Theme.Button.SecondaryFg}"
+                                            BorderBrush="{DynamicResource Theme.Button.SecondaryBorder}"
+                                            Click="CheckUpdatesButton_Click"/>
                                     <Button x:Name="SaveButton"
                                             Content="Save &amp; Back to Kiosk"
                                             Style="{StaticResource PrimaryActionButton}"
+                                            Margin="12,0,0,0"
                                             Click="SaveButton_Click"/>
-                                    <Button Content="Exit to Windows"
+                                    <Button x:Name="ExitToWindowsButton"
+                                            Content="Exit to Windows"
                                             Style="{StaticResource SecondaryActionButton}"
                                             Background="{DynamicResource Theme.Button.SecondaryBg}"
                                             Foreground="{DynamicResource Theme.Button.SecondaryFg}"
@@ -497,6 +506,18 @@
                                     <TextBlock Grid.Column="0" Text="Run Windows updates" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="PowerShell command" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdPowerShellToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdPowerShellToggle_Changed" Unchecked="MqttCmdPowerShellToggle_Changed"/>
+                                </Grid>
+                                <StackPanel x:Name="MqttCmdPowerShellCommandPanel" Margin="16,0,0,0" Visibility="Collapsed">
+                                    <TextBlock Text="PowerShell command text" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="MqttCmdPowerShellTextBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                     </Grid>

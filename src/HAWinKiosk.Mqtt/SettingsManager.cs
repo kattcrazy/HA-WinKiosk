@@ -62,6 +62,7 @@ public static class SettingsManager
         g.MinSwipePixels = Math.Max(20, g.MinSwipePixels);
         s.Kiosk.PinResetQuestion = string.IsNullOrWhiteSpace(s.Kiosk.PinResetQuestion) ? null : s.Kiosk.PinResetQuestion.Trim();
         s.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(s.Kiosk.PinResetAnswer) ? null : s.Kiosk.PinResetAnswer.Trim();
+        s.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(s.Commands.PowerShellCommand) ? null : s.Commands.PowerShellCommand.Trim();
     }
 
     private static string NormalizeGestureAction(string? raw, string fallback)

@@ -2,7 +2,10 @@
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
-The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
+The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version. The app will always open upon boot, first using Task Scheduler then falling back to Startup apps if that fails.
+
+<img height="847" alt="image" src="https://github.com/user-attachments/assets/0afc5f55-55a2-41ce-ad05-28267020d563" />
+<img height="2847" alt="image" src="https://github.com/user-attachments/assets/ae055c43-7757-4b72-812c-8b1e78fe66ef" />
 
 ## Quick Start
 
@@ -11,21 +14,20 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-### Requirements
+## Requirements
 
 - Windows 10/11
 - [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) (the installer will install this automatically if not already present)
 - [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
 
-### Kiosk Lockdown
+## Kiosk Lockdown
 
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
 - Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running.
-- For strict OS-level shell lockdown (edge-swipe shell gestures, task switching, etc.), use Windows Assigned Access / Kiosk mode.
 
-### MQTT and Home Assistant
+## MQTT and Home Assistant
 
 With MQTT configured, the app publishes MQTT payloads that show up in Integrations > MQTT in Home Assistant. In the app Settings, under MQTT, turn Sensors and Commands on or off for which buttons and sensors are discovered.
 
@@ -43,6 +45,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Open settings | Button | Open this app’s Settings screen (no PIN; use only on a trusted broker) |
 | Close settings | Button | Close Settings and return to the kiosk |
 | Run Windows updates | Button | Starts a Windows Update scan/download/install run; app schedules restart if Windows Update reports reboot required |
+| PowerShell command | Button | Executes configured PowerShell command text from settings |
 | Battery level | Sensor | Remaining battery % (`unavailable` on desktops without a battery) |
 | Session state | Sensor | PC session state |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
@@ -50,7 +53,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Monitor orientation | Select | Default rotation for the primary display |
 | Monitor brightness | Number | Brightness % (0–100) |
 
-### Settings
+## Settings
 
 Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited either in YAML or in the UI settings.
 
@@ -110,6 +113,7 @@ commands:
     - opensettings
     - closesettings
     - windowsupdate
+  powerShellCommand: ""               # command text used by the "powershellcommand" MQTT command
 
 screenBrightness:
   defaultPercent: 100

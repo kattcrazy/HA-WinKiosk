@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -123,6 +124,11 @@ public partial class KioskWindow : Window, IKioskHostActions
         UpdateGestureOptionsVisibility();
     }
 
+    private void MqttCmdPowerShellToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdatePowerShellCommandVisibility();
+    }
+
     private void DeviceNameBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateGestureTopicPrefixPreviews();
@@ -163,6 +169,14 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureTripleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureQuadTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         UpdateGestureTopicPrefixPreviews();
+    }
+
+    private void UpdatePowerShellCommandVisibility()
+    {
+        if (MqttCmdPowerShellCommandPanel == null || MqttCmdPowerShellToggle == null) return;
+        MqttCmdPowerShellCommandPanel.Visibility = MqttCmdPowerShellToggle.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void PopulateSettingsForm()
@@ -216,10 +230,14 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdOpenSettingsToggle.IsChecked = cmds.Contains("opensettings");
         MqttCmdCloseSettingsToggle.IsChecked = cmds.Contains("closesettings");
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
+        MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
+        MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
 
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
         UpdateGestureOptionsVisibility();
+        UpdatePowerShellCommandVisibility();
+        UpdateExitButtonVisibility();
 
         UpdatePinProtectedFieldsVisibility();
         ApplySettingsUiTheme();
@@ -254,6 +272,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         WebView.Visibility = Visibility.Collapsed;
         SettingsButtonPopup.IsOpen = false;
         SettingsPanel.Visibility = Visibility.Visible;
+        UpdateExitButtonVisibility();
     }
 
     private void ShowKiosk()
@@ -261,6 +280,24 @@ public partial class KioskWindow : Window, IKioskHostActions
         SettingsPanel.Visibility = Visibility.Collapsed;
         WebView.Visibility = Visibility.Visible;
         UpdateSettingsButtonVisibility();
+    }
+
+    private static bool IsLikelyShellMode()
+    {
+        try
+        {
+            return Process.GetProcessesByName("explorer").Length == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void UpdateExitButtonVisibility()
+    {
+        if (ExitToWindowsButton == null) return;
+        ExitToWindowsButton.Visibility = IsLikelyShellMode() ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void UpdateSettingsButtonVisibility()
@@ -622,6 +659,28 @@ public partial class KioskWindow : Window, IKioskHostActions
         RestartMqttIfNeeded();
     }
 
+    private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (CheckUpdatesButton == null) return;
+        try
+        {
+            CheckUpdatesButton.IsEnabled = false;
+            var started = await AutoUpdateService.CheckAndApplyNowAsync();
+            if (!started)
+            {
+                System.Windows.MessageBox.Show(
+                    "No update found right now.",
+                    "HA WinKiosk",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+        finally
+        {
+            CheckUpdatesButton.IsEnabled = true;
+        }
+    }
+
     private void ApplyFormToSettings()
     {
         var disk = SettingsManager.Load();
@@ -694,6 +753,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdOpenSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("opensettings");
         if (MqttCmdCloseSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("closesettings");
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
+        if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
+        _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
     }
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)
@@ -788,13 +849,13 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (nCode >= 0)
         {
             var msg = (uint)wParam;
-            if (msg is WM_KEYDOWN or WM_SYSKEYDOWN)
+            if (msg is WM_KEYDOWN or WM_SYSKEYDOWN or WM_KEYUP or WM_SYSKEYUP)
             {
                 var data = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
                 var vk = data.vkCode;
                 var isCtrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
                 var isShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-                var isAltDown = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                var isAltDown = ((data.flags & LLKHF_ALTDOWN) != 0) || ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0);
                 if (vk is VK_LWIN or VK_RWIN or VK_APPS
                     || vk is VK_F11 or VK_F12
                     || (vk == VK_ESCAPE && isCtrlDown)
@@ -821,7 +882,10 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private const int WH_KEYBOARD_LL = 13;
     private const uint WM_KEYDOWN = 0x0100;
+    private const uint WM_KEYUP = 0x0101;
     private const uint WM_SYSKEYDOWN = 0x0104;
+    private const uint WM_SYSKEYUP = 0x0105;
+    private const uint LLKHF_ALTDOWN = 0x20;
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
     private const int VK_APPS = 0x5D;
