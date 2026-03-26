@@ -4,9 +4,6 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 
 The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version. The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
 
-<img width="200" alt="image" src="https://github.com/user-attachments/assets/0afc5f55-55a2-41ce-ad05-28267020d563" />
-<img width="200" alt="image" src="https://github.com/user-attachments/assets/ae055c43-7757-4b72-812c-8b1e78fe66ef" />
-
 ## Quick Start
 
 1. Download the .exe file from the latest release and once downloaded double click/open to install. It will automatically install .NET 8 if needed.
@@ -58,36 +55,85 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited
 
 ### All Options
 
-| UI Name | Values | Default | Notes | MQTT? |
-| --- | --- | --- | --- | --- |
-| Kiosk URL | URL | `http://homeassistant.local:8123` | Kiosk page URL | No |
-| Settings PIN | string | `""` | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
-| PIN hint | string | `""` | Hint shown on PIN prompt | No |
-| Verification question | string | `""` | Forgot-PIN verification question | No |
-| PIN reset answer | string | `""` | Forgot-PIN verification answer | No |
-| PIN protection | `true`/`false` | `true` | `false` disables PIN gate | No |
-| Show settings button | `true`/`false` | `true` | Show/hide gear button | No |
-| Theme | `auto` \| `light` \| `dark` | `auto` | UI theme mode | No |
-| Gesture action dropdowns | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | varies | Action behavior for gestures | Indirect (when MQTT message) |
-| Tap location dropdowns | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | `Top left` | Tap gesture location filter | No |
-| Swipe direction dropdowns | `Up` \| `Down` \| `Left` \| `Right` | `Down` | Swipe direction filter | No |
-| Zoom direction | `Any` \| `In` \| `Out` | `Any` | Zoom gesture direction filter | No |
-| Swipe and hold threshold (milliseconds) | integer (ms) | `1000` | Hold threshold for swipe-and-hold | No |
-| Two-finger swipe and hold threshold (milliseconds) | integer (ms) | `1000` | Hold threshold for two-finger swipe-and-hold | No |
-| Gesture MQTT topic fields | string | varies | Topic suffix used when action is MQTT message | Yes |
-| MQTT IP | hostname/IP | `192.168.1.?` | Broker host | Yes |
-| MQTT port | integer | `1883` | Broker port | Yes |
-| MQTT username | string | `""` | Broker username | Yes |
-| MQTT password | string | `""` | Broker password | Yes |
-| Device name | string | `kiosk` | Base ID in MQTT entities/topics | Yes |
-| Discovery prefix | string | `homeassistant` | Home Assistant discovery root | Yes |
-| Sensor toggles | list | `battery,last_active,updates_pending` | Enabled sensor IDs | Yes |
-| Sensor update interval seconds | integer | `30` | Non-Last Active sensor interval | Yes |
-| Command toggles | list | see sample | Enabled command IDs | Yes |
-| PowerShell command text | string | `""` | Command text for powershellcommand MQTT command | Yes |
-| Brightness (%) | `0..100` | `100` | Startup brightness | Yes (number entity) |
-| Default orientation | `landscape` \| `portrait` \| `landscape_flipped` \| `portrait_flipped` | `landscape` | Startup orientation | Yes (select entity) |
-| Start when Windows starts | `true`/`false` | `true` | Launch app at sign-in | No |
+#### Config
+
+| UI Name | Values | Notes | Published to HA via MQTT? |
+| --- | --- | --- | --- |
+| Kiosk URL | URL | Kiosk page URL | No |
+| Show settings button | `true`/`false` | Show/hide gear button | No |
+| Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
+| Brightness (%) | `0..100` | Startup brightness | Yes (number entity) |
+| Default orientation | `landscape` \| `portrait` \| `landscape_flipped` \| `portrait_flipped` | Startup orientation | Yes (select entity) |
+| Start when Windows starts | `true`/`false` | Launch app at sign-in | No |
+
+#### Pin
+
+| UI Name | Values | Notes | Published to HA via MQTT? |
+| --- | --- | --- | --- |
+| Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
+| PIN hint | string | Hint shown on PIN prompt | No |
+| Verification question | string | Forgot-PIN verification question | No |
+| PIN reset answer | string | Forgot-PIN verification answer | No |
+| PIN protection | `true`/`false` | `false` disables PIN gate | No |
+
+#### Gestures
+
+| UI Name | Values | Notes | Published to HA via MQTT? |
+| --- | --- | --- | --- |
+| Double tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for double tap | Indirect (when MQTT message) |
+| Double tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Double-tap screen region | No |
+| Double tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Triple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for triple tap | Indirect (when MQTT message) |
+| Triple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Triple-tap screen region | No |
+| Triple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Quadruple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for quadruple tap | Indirect (when MQTT message) |
+| Quadruple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Quadruple-tap screen region | No |
+| Quadruple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Quintuple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for quintuple tap | Indirect (when MQTT message) |
+| Quintuple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Quintuple-tap screen region | No |
+| Quintuple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe | Indirect (when MQTT message) |
+| Swipe direction | `Up` \| `Down` \| `Left` \| `Right` | Swipe direction filter | No |
+| Swipe MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe-and-hold | Indirect (when MQTT message) |
+| Swipe and hold direction | `Up` \| `Down` \| `Left` \| `Right` | Swipe-and-hold direction filter | No |
+| Swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for swipe-and-hold | No |
+| Swipe and hold MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Two-finger swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
+| Two-finger swipe direction | `Up` \| `Down` \| `Left` \| `Right` | Touch devices only | No |
+| Two-finger swipe MQTT topic | string | Touch devices only | Yes |
+| Two-finger swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
+| Two-finger swipe and hold direction | `Up` \| `Down` \| `Left` \| `Right` | Touch devices only | No |
+| Two-finger swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for two-finger swipe-and-hold | No |
+| Two-finger swipe and hold MQTT topic | string | Touch devices only | Yes |
+| Zoom action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for zoom gesture | Indirect (when MQTT message) |
+| Zoom direction | `Any` \| `In` \| `Out` | Zoom gesture direction filter | No |
+| Zoom MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+
+#### MQTT
+
+| UI Name | Values | Notes | Published to HA via MQTT? |
+| --- | --- | --- | --- |
+| MQTT IP | hostname/IP | Broker host | No |
+| MQTT port | integer | Broker port | No |
+| MQTT username | string | Broker username | No |
+| MQTT password | string | Broker password | No |
+| Device name | string | Base ID in MQTT entities/topics | No |
+| Sensor: Battery level | `On`/`Off` | Publishes battery percentage | Yes |
+| Sensor: Last Active | `On`/`Off` | Publishes seconds since last input (1s cadence) | Yes |
+| Sensor: Updates pending | `On`/`Off` | Publishes Windows update count | Yes |
+| Command: Shutdown | `On`/`Off` | Exposes Shutdown MQTT button | Yes |
+| Command: Restart | `On`/`Off` | Exposes Restart MQTT button | Yes |
+| Command: System sleep | `On`/`Off` | Exposes Sleep MQTT button | Yes |
+| Command: Monitor sleep | `On`/`Off` | Exposes Monitor sleep MQTT button | Yes |
+| Command: Monitor wake | `On`/`Off` | Exposes Monitor wake MQTT button | Yes |
+| Command: Refresh kiosk | `On`/`Off` | Exposes Refresh MQTT button | Yes |
+| Command: Clear kiosk cache | `On`/`Off` | Exposes Clear cache MQTT button | Yes |
+| Command: Open settings | `On`/`Off` | Exposes Open settings MQTT button | Yes |
+| Command: Close settings | `On`/`Off` | Exposes Close settings MQTT button | Yes |
+| Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
+| Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
+| PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
 
 ### Example `settings.yaml`
 
