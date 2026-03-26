@@ -1,0 +1,44 @@
+name: Release Installer
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup -y
+
+      - name: Build installer
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\tools\Build-Installer.ps1 -BuildRoot "C:\HA-WinKiosk"
+
+      - name: Verify installer output
+        shell: powershell
+        run: |
+          if (-not (Test-Path ".\installer\output\HAWinKiosk-Setup.exe")) {
+            throw "Installer not found at installer/output/HAWinKiosk-Setup.exe"
+          }
+
+      - name: Publish GitHub release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/output/HAWinKiosk-Setup.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true

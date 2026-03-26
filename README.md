@@ -121,16 +121,11 @@ autoStart:
 
 ## Windows Installer (Normal Install)
 
-This creates a proper installed app (Start menu + Windows search entry + Apps uninstall entry), includes a "Launch after install" checkbox, and removes `%APPDATA%\HA-WinKiosk` config on uninstall.
-
-Build installer:
+Build locally:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\Build-Installer.ps1
 ```
-- Publish GitHub release tags as semantic versions (for example `v1.2.3`).
-- Keep installer filename as `HAWinKiosk-Setup.exe` (or another `*Setup*.exe`).
-- Bump app version in `src\HAWinKiosk\HAWinKiosk.csproj` (`<Version>...</Version>`) before release.
 
 Output:
 
@@ -138,9 +133,20 @@ Output:
 
 ## Automatic App Updates (GitHub Releases)
 
- The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
+The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
 
+## Release Automation (GitHub Actions)
 
+This repo includes a workflow that builds and publishes `HAWinKiosk-Setup.exe` when you push a version tag that starts with `v` (for example `v2.0.1`).
+
+Release steps:
+
+```powershell
+# 1) Update src\HAWinKiosk\HAWinKiosk.csproj <Version> to match the release (for example 2.0.1)
+# 2) Commit and push main
+git tag v2.0.1
+git push origin v2.0.1
+```
 
 ## Credits
 
