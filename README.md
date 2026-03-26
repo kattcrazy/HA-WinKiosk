@@ -42,16 +42,16 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Monitor wake | Button | Turn the display on |
 | Refresh kiosk | Button | Reload the page in the kiosk |
 | Clear kiosk cache | Button | Clear kiosk cache (passwords & settings kept), then reload kiosk |
-| Open settings | Button | Open this app’s Settings screen (no PIN; use only on a trusted broker) |
+| Open settings | Button | Open this app’s Settings screen (no PIN) |
 | Close settings | Button | Close Settings and return to the kiosk |
 | Run Windows updates | Button | Starts a Windows Update scan/download/install run; app schedules restart if Windows Update reports reboot required |
 | PowerShell command | Button | Executes configured PowerShell command text from settings |
 | Battery level | Sensor | Remaining battery % (`unavailable` on desktops without a battery) |
 | Session state | Sensor | PC session state |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
-| Updates pending | Sensor | Count of available Windows updates (`unavailable` if query fails) |
+| Updates pending | Number | Count of available Windows updates |
+| Monitor brightness | Number | Brightness % (0–100) |s
 | Monitor orientation | Select | Default rotation for the primary display |
-| Monitor brightness | Number | Brightness % (0–100) |
 
 ## Settings
 
