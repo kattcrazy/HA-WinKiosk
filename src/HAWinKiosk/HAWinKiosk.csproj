@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Default to DLL output for Google Drive reliability. Set /p:BundleAsExe=true when ready to ship an .exe. -->
+    <UseAppHost Condition="'$(BundleAsExe)' == 'true'">true</UseAppHost>
+    <UseAppHost Condition="'$(BundleAsExe)' != 'true'">false</UseAppHost>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Version>2.0.0</Version>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>..\..\logo.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="YamlDotNet" Version="16.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HAWinKiosk.Mqtt\HAWinKiosk.Mqtt.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Fonts\Raleway-VariableFont_wght.ttf" />
+    <Resource Include="..\..\logo.png" Link="logo.png" />
+    <None Include="..\..\logo.ico" Link="logo.ico" />
+  </ItemGroup>
+
+</Project>

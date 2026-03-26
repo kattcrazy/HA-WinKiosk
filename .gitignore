@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.pdb
+*.cache
+installer/output/
+src/HAWinKiosk/bin/
+src/HAWinKiosk/obj/
+src/HAWinKiosk.Mqtt/bin/
+src/HAWinKiosk.Mqtt/obj/

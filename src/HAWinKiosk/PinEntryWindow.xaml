@@ -1,0 +1,95 @@
+<Window x:Class="HAWinKiosk.PinEntryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Enter PIN"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        FontFamily="{StaticResource RalewayFamily}"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Theme.Pin.CardBg" Color="#F4F6F9"/>
+        <SolidColorBrush x:Key="Theme.Pin.CardBorder" Color="#D0D8E0"/>
+        <SolidColorBrush x:Key="Theme.Pin.Fg" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="Theme.Pin.FgMuted" Color="#555555"/>
+    </Window.Resources>
+    <!-- Single rounded border as visual root avoids a stray line under borderless windows. -->
+    <Border CornerRadius="8"
+            BorderBrush="{DynamicResource Theme.Pin.CardBorder}"
+            BorderThickness="1.3"
+            Background="{DynamicResource Theme.Pin.CardBg}"
+            Padding="24,20"
+            MinWidth="320"
+            SnapsToDevicePixels="True">
+        <StackPanel>
+            <TextBlock Text="Settings PIN"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource Theme.Pin.Fg}"
+                       Margin="0,0,0,8"/>
+            <TextBlock x:Name="HintBlock"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource Theme.Pin.FgMuted}"
+                       FontSize="12"
+                       Margin="0,0,0,12"
+                       Visibility="Collapsed"/>
+            <PasswordBox x:Name="PinBox"
+                         Style="{StaticResource RoundedPasswordBox}"
+                         Margin="0,0,0,8"
+                         PasswordChanged="PinBox_PasswordChanged"
+                         KeyDown="PinBox_KeyDown"/>
+            <TextBlock x:Name="ErrorBlock"
+                       Text="Incorrect PIN"
+                       Foreground="#B71C1C"
+                       FontSize="12"
+                       Margin="0,0,0,12"
+                       Visibility="Collapsed"/>
+            <TextBlock x:Name="ErrorWithResetBlock"
+                       Foreground="#B71C1C"
+                       FontSize="12"
+                       Margin="0,0,0,12"
+                       Visibility="Collapsed">
+                <Run Text="Incorrect PIN - "/>
+                <Hyperlink Click="ResetPinLink_Click">
+                    <Run Text="reset pin?"/>
+                </Hyperlink>
+            </TextBlock>
+            <StackPanel x:Name="ResetPinPanel" Visibility="Collapsed" Margin="0,0,0,12">
+                <TextBlock x:Name="ResetQuestionBlock"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource Theme.Pin.FgMuted}"
+                           FontSize="12"
+                           Margin="0,0,0,6"/>
+                <TextBox x:Name="ResetAnswerBox"
+                         Style="{StaticResource RoundedTextBox}"
+                         Margin="0,0,0,8"/>
+                <Button Content="Submit reset answer"
+                        Style="{StaticResource SecondaryActionButton}"
+                        Padding="12,8"
+                        MinHeight="34"
+                        HorizontalAlignment="Left"
+                        Click="SubmitResetAnswer_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel"
+                        Style="{StaticResource SecondaryActionButton}"
+                        Padding="18,10"
+                        MinHeight="40"
+                        IsCancel="True"
+                        Click="Cancel_Click"/>
+                <Button Content="OK"
+                        Style="{StaticResource PrimaryActionButton}"
+                        Padding="18,10"
+                        MinHeight="40"
+                        Margin="10,0,0,0"
+                        IsDefault="True"
+                        Click="Ok_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

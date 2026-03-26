@@ -1,0 +1,507 @@
+<Window x:Class="HAWinKiosk.KioskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="HA WinKiosk"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Topmost="True"
+        Background="Black"
+        Loaded="Window_Loaded"
+        Activated="Window_Activated"
+        Deactivated="Window_Deactivated"
+        Closing="Window_Closing"
+        SizeChanged="Window_SizeChanged">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Theme.Kiosk.Bg" Color="#000000"/>
+        <SolidColorBrush x:Key="Theme.Kiosk.SettingsButtonBg" Color="#16B9F0"/>
+        <SolidColorBrush x:Key="Theme.Settings.PanelBg" Color="#E8ECF0"/>
+        <SolidColorBrush x:Key="Theme.Settings.CardBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="Theme.Settings.CardBorder" Color="#D8DDE3"/>
+        <SolidColorBrush x:Key="Theme.Settings.HeaderBg" Color="#F4F6F9"/>
+        <SolidColorBrush x:Key="Theme.Settings.HeaderBorder" Color="#E0E4EA"/>
+        <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="Theme.Settings.FgMuted" Color="#444444"/>
+        <SolidColorBrush x:Key="Theme.Settings.FgSub" Color="#333333"/>
+        <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="Theme.Settings.InputBorder" Color="#CCCCCC"/>
+        <!-- Page title: dialog chrome only -->
+        <Style x:Key="SettingsPageHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+        </Style>
+        <!-- Section: Config, Gestures, Pin, MQTT -->
+        <Style x:Key="SettingsSectionHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <!-- Sub: Sensors, Commands (under MQTT) -->
+        <Style x:Key="SettingsSubSectionHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.FgSub}"/>
+            <Setter Property="Margin" Value="0,12,0,6"/>
+        </Style>
+        <!-- Item: field labels (above inputs) -->
+        <Style x:Key="SettingsItemLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.FgMuted}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <!-- Item: label beside toggle (same tier as SettingsItemLabel) -->
+        <Style x:Key="SettingsToggleRowLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.FgMuted}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid x:Name="KioskPanel" Background="{DynamicResource Theme.Kiosk.Bg}">
+            <wv2:WebView2 x:Name="WebView"/>
+        </Grid>
+
+        <Popup x:Name="SettingsButtonPopup"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="None"
+               Placement="AbsolutePoint">
+            <Button Style="{StaticResource SettingsButton}"
+                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
+                    Click="SettingsButton_Click"
+                    ToolTip="Settings">
+                <TextBlock FontFamily="Segoe MDL2 Assets"
+                           Text="&#xE713;"
+                           FontSize="18"
+                           Foreground="White"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+            </Button>
+        </Popup>
+
+        <Grid x:Name="SettingsPanel"
+              Background="{DynamicResource Theme.Settings.PanelBg}"
+              Visibility="Collapsed"
+              Panel.ZIndex="1000">
+            <ScrollViewer x:Name="SettingsScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="24"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch">
+                <Border Background="{DynamicResource Theme.Settings.CardBg}"
+                        BorderBrush="{DynamicResource Theme.Settings.CardBorder}"
+                        BorderThickness="1.3"
+                        CornerRadius="8"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Margin="0,0,0,0"
+                        MinHeight="{Binding ViewportHeight, ElementName=SettingsScrollViewer}">
+                    <Grid VerticalAlignment="Stretch">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Full-width header: title + actions -->
+                        <Border Grid.Row="0"
+                                Background="{DynamicResource Theme.Settings.HeaderBg}"
+                                BorderBrush="{DynamicResource Theme.Settings.HeaderBorder}"
+                                BorderThickness="0,0,0,1.3"
+                                CornerRadius="8,8,0,0"
+                                Padding="24,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="Settings"
+                                           Style="{StaticResource SettingsPageHeading}"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                    <Button x:Name="SaveButton"
+                                            Content="Save &amp; Back to Kiosk"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Click="SaveButton_Click"/>
+                                    <Button Content="Exit to Windows"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Background="{DynamicResource Theme.Button.SecondaryBg}"
+                                            Foreground="{DynamicResource Theme.Button.SecondaryFg}"
+                                            BorderBrush="{DynamicResource Theme.Button.SecondaryBorder}"
+                                            Margin="12,0,0,0"
+                                            Click="ExitToWindows_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Config + Gestures | Pin | MQTT -->
+                        <Grid Grid.Row="1" Margin="24,20,24,28">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Config" Style="{StaticResource SettingsSectionHeading}"/>
+                                <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <TextBlock Text="Device name" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="DeviceNameBox" Text="living-room-kiosk" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10" TextChanged="DeviceNameBox_TextChanged"/>
+
+                                <TextBlock Text="Theme" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="ThemeModeCombo"
+                                          Style="{StaticResource SettingsComboBox}"
+                                          Margin="0,0,0,12"
+                                          SelectionChanged="ThemeModeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Auto (Windows)" Tag="auto"/>
+                                    <ComboBoxItem Content="Light" Tag="light"/>
+                                    <ComboBoxItem Content="Dark" Tag="dark"/>
+                                </ComboBox>
+
+                                <TextBlock Text="Brightness (%)" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="DefaultBrightnessBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <TextBlock Text="Default orientation" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="DefaultOrientationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,12">
+                                    <ComboBoxItem Content="landscape" Tag="landscape"/>
+                                    <ComboBoxItem Content="portrait" Tag="portrait"/>
+                                    <ComboBoxItem Content="landscape_flipped" Tag="landscape_flipped"/>
+                                    <ComboBoxItem Content="portrait_flipped" Tag="portrait_flipped"/>
+                                </ComboBox>
+
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Start when Windows starts"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="AutoStartToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <TextBlock Text="Pin" Style="{StaticResource SettingsSectionHeading}" Margin="0,16,0,10"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Pin protection"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="PinProtectionToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="PinProtectionToggle_Changed"
+                                                  Unchecked="PinProtectionToggle_Changed"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Show settings button"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="ShowSettingsButtonToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="If off, open Settings only via a configured gesture action set to Settings (or MQTT open settings if enabled)."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,12"/>
+
+                                <StackPanel x:Name="PinProtectedFieldsPanel" Visibility="Visible">
+                                    <TextBlock Text="Settings PIN" Style="{StaticResource SettingsItemLabel}"/>
+                                    <PasswordBox x:Name="SettingsPinBox"
+                                                 Style="{StaticResource RoundedPasswordBox}"
+                                                 Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="PIN hint (optional)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="PinHintBox"
+                                             Style="{StaticResource RoundedTextBox}"
+                                             Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="Add a verification question for if you've forgotten the pin and need to reset it." Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="PinResetQuestionBox"
+                                             Style="{StaticResource RoundedTextBox}"
+                                             Margin="0,0,0,10"/>
+                                    <TextBlock Text="PIN reset answer" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="PinResetAnswerBox"
+                                             Style="{StaticResource RoundedTextBox}"
+                                             Margin="0,0,0,10"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Gestures"
+                                           Style="{StaticResource SettingsSectionHeading}"
+                                           Margin="0,0,0,10"/>
+                                <TextBlock Text="Swipe" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureSwipeActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureSwipeOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe direction" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="SwipeDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="down" Tag="down"/>
+                                        <ComboBoxItem Content="up" Tag="up"/>
+                                        <ComboBoxItem Content="left" Tag="left"/>
+                                        <ComboBoxItem Content="right" Tag="right"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureSwipeMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSwipeMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureSwipeMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Swipe and hold" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureSwipeHoldActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe-and-hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureSwipeHoldDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe-and-hold direction" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="SwipeHoldDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="down" Tag="down"/>
+                                        <ComboBoxItem Content="up" Tag="up"/>
+                                        <ComboBoxItem Content="left" Tag="left"/>
+                                        <ComboBoxItem Content="right" Tag="right"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureSwipeHoldOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe-and-hold threshold (milliseconds)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="SwipeHoldMsBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Pinch" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GesturePinchActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GesturePinchMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Pinch MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GesturePinchMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GesturePinchMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Triple tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureTripleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureTripleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Triple-tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureTripleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureTripleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureTripleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureTripleTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <TextBlock Text="Quadruple tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureQuadTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureQuadTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Quadruple-tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureQuadTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureQuadTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureQuadTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureQuadTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="MQTT" Style="{StaticResource SettingsSectionHeading}"/>
+                                <TextBlock Text="MQTT IP" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="MqttHostBox" Text="192.168.1.?" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <TextBlock Text="MQTT port" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="MqttPortBox" Text="1883" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <TextBlock Text="MQTT username" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="MqttUsernameBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <TextBlock Text="MQTT password" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="MqttPasswordBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Sensors" Style="{StaticResource SettingsSubSectionHeading}"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Battery level" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorBatteryToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Session state" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorSessionToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Last Active" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorIdleToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Updates pending" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorUpdatesPendingToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <TextBlock Text="Commands" Style="{StaticResource SettingsSubSectionHeading}"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Shutdown" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdShutdownToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Restart" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdRestartToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="System sleep" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdSleepToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Monitor sleep" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdMonSleepToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Monitor wake" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdMonWakeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Refresh kiosk" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdRefreshToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Clear kiosk cache" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdClearCacheToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Open settings" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdOpenSettingsToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Close settings" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdCloseSettingsToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Run Windows updates" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

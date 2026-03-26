@@ -1,0 +1,182 @@
+using YamlDotNet.Serialization;
+
+namespace HAWinKiosk.Mqtt.Models;
+
+public class AppSettings
+{
+    [YamlMember(Alias = "kiosk")]
+    public KioskConfig Kiosk { get; set; } = new();
+
+    [YamlMember(Alias = "mqtt")]
+    public MqttConfig Mqtt { get; set; } = new();
+
+    [YamlMember(Alias = "autoStart")]
+    public AutoStartConfig AutoStart { get; set; } = new();
+
+    [YamlMember(Alias = "sensors")]
+    public SensorsConfig Sensors { get; set; } = new();
+
+    [YamlMember(Alias = "commands")]
+    public CommandsConfig Commands { get; set; } = new();
+
+    [YamlMember(Alias = "screenBrightness")]
+    public ScreenBrightnessConfig ScreenBrightness { get; set; } = new();
+
+    [YamlMember(Alias = "screenOrientation")]
+    public ScreenOrientationConfig ScreenOrientation { get; set; } = new();
+}
+
+public class KioskConfig
+{
+    [YamlMember(Alias = "url")]
+    public string Url { get; set; } = "http://homeassistant.local:8123";
+
+    [YamlMember(Alias = "pin")]
+    public string? Pin { get; set; }
+
+    [YamlMember(Alias = "pinHint")]
+    public string? PinHint { get; set; }
+
+    [YamlMember(Alias = "pinResetQuestion")]
+    public string? PinResetQuestion { get; set; }
+
+    [YamlMember(Alias = "pinResetAnswer")]
+    public string? PinResetAnswer { get; set; }
+
+    /// <summary>When true, PIN UI is off and no PIN is required to open Settings (YAML default false = pin protection on).</summary>
+    [YamlMember(Alias = "pinProtectionDisabled")]
+    public bool PinProtectionDisabled { get; set; }
+
+    /// <summary>Show the gear button on the kiosk. If false, Settings are only reachable via secret tap (or MQTT open settings).</summary>
+    [YamlMember(Alias = "showSettingsButton")]
+    public bool ShowSettingsButton { get; set; } = true;
+
+    /// <summary>auto (follow Windows app mode) | light | dark</summary>
+    [YamlMember(Alias = "uiTheme")]
+    public string UiTheme { get; set; } = "auto";
+
+    [YamlMember(Alias = "gestures")]
+    public GesturesConfig Gestures { get; set; } = new();
+}
+
+public class GesturesConfig
+{
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "swipeAction")]
+    public string SwipeAction { get; set; } = "reload";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "swipeHoldAction")]
+    public string SwipeHoldAction { get; set; } = "clearcache_reload";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "pinchAction")]
+    public string PinchAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "tripleTapAction")]
+    public string TripleTapAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "quadrupleTapAction")]
+    public string QuadrupleTapAction { get; set; } = "settings";
+
+    /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
+    [YamlMember(Alias = "tripleTapLocation")]
+    public string TripleTapLocation { get; set; } = "top-left";
+
+    /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
+    [YamlMember(Alias = "quadrupleTapLocation")]
+    public string QuadrupleTapLocation { get; set; } = "top-left";
+
+    /// <summary>down | up | left | right</summary>
+    [YamlMember(Alias = "swipeDirection")]
+    public string SwipeDirection { get; set; } = "down";
+
+    /// <summary>down | up | left | right</summary>
+    [YamlMember(Alias = "swipeHoldDirection")]
+    public string SwipeHoldDirection { get; set; } = "down";
+
+    [YamlMember(Alias = "swipeHoldMs")]
+    public double SwipeHoldMs { get; set; } = 1000;
+
+    [YamlMember(Alias = "minSwipePixels")]
+    public int MinSwipePixels { get; set; } = 80;
+
+    [YamlMember(Alias = "swipeMqttTopic")]
+    public string? SwipeMqttTopic { get; set; }
+
+    [YamlMember(Alias = "swipeHoldMqttTopic")]
+    public string? SwipeHoldMqttTopic { get; set; }
+
+    [YamlMember(Alias = "pinchMqttTopic")]
+    public string? PinchMqttTopic { get; set; }
+
+    [YamlMember(Alias = "tripleTapMqttTopic")]
+    public string? TripleTapMqttTopic { get; set; }
+
+    [YamlMember(Alias = "quadrupleTapMqttTopic")]
+    public string? QuadrupleTapMqttTopic { get; set; }
+}
+
+public class MqttConfig
+{
+    [YamlMember(Alias = "host")]
+    public string Host { get; set; } = "192.168.1.?";
+
+    [YamlMember(Alias = "port")]
+    public int Port { get; set; } = 1883;
+
+    [YamlMember(Alias = "username")]
+    public string? Username { get; set; }
+
+    [YamlMember(Alias = "password")]
+    public string? Password { get; set; }
+
+    [YamlMember(Alias = "deviceName")]
+    public string DeviceName { get; set; } = "living-room-kiosk";
+
+    [YamlMember(Alias = "discoveryPrefix")]
+    public string DiscoveryPrefix { get; set; } = "homeassistant";
+}
+
+public class AutoStartConfig
+{
+    [YamlMember(Alias = "enabled")]
+    public bool Enabled { get; set; } = false;
+}
+
+public class SensorsConfig
+{
+    [YamlMember(Alias = "enabled")]
+    public List<string> Enabled { get; set; } =
+    [
+        "battery", "sessionstate", "last_active", "updates_pending"
+    ];
+
+    /// <summary>Interval for all enabled sensors except <c>last_active</c> (minimum 5 seconds). Idle time (<c>last_active</c>) always publishes every 1 second when enabled.</summary>
+    [YamlMember(Alias = "updateIntervalSeconds")]
+    public int UpdateIntervalSeconds { get; set; } = 30;
+}
+
+public class CommandsConfig
+{
+    [YamlMember(Alias = "enabled")]
+    public List<string> Enabled { get; set; } =
+    [
+        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
+        "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
+    ];
+}
+
+public class ScreenBrightnessConfig
+{
+    [YamlMember(Alias = "defaultPercent")]
+    public int DefaultPercent { get; set; } = 100;
+}
+
+public class ScreenOrientationConfig
+{
+    [YamlMember(Alias = "default")]
+    public string Default { get; set; } = "landscape";
+}
