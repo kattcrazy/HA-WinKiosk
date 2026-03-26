@@ -117,15 +117,21 @@
                                 CornerRadius="8,8,0,0"
                                 Padding="24,18">
                             <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0"
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
                                            Text="Settings"
                                            Style="{StaticResource SettingsPageHeading}"
                                            VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1"
+                                <StackPanel Grid.Row="0"
+                                            Grid.Column="1"
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
@@ -150,6 +156,21 @@
                                             Margin="12,0,0,0"
                                             Click="ExitToWindows_Click"/>
                                 </StackPanel>
+                                <Border x:Name="UpdateStatusPopup"
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Margin="0,12,0,0"
+                                        Padding="12,8"
+                                        HorizontalAlignment="Right"
+                                        Background="{DynamicResource Theme.Settings.CardBg}"
+                                        BorderBrush="{DynamicResource Theme.Settings.CardBorder}"
+                                        BorderThickness="1.3"
+                                        CornerRadius="8"
+                                        Visibility="Collapsed">
+                                    <TextBlock x:Name="UpdateStatusPopupText"
+                                               Style="{StaticResource SettingsItemLabel}"
+                                               Text="No update found right now."/>
+                                </Border>
                             </Grid>
                         </Border>
 
@@ -181,13 +202,34 @@
                                 </ComboBox>
 
                                 <TextBlock Text="Brightness (%)" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="DefaultBrightnessBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="DefaultBrightnessSlider"
+                                            Grid.Column="0"
+                                            Minimum="0"
+                                            Maximum="100"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,10,0"
+                                            ValueChanged="DefaultBrightnessSlider_ValueChanged"/>
+                                    <TextBlock x:Name="DefaultBrightnessValueText"
+                                               Grid.Column="1"
+                                               Width="40"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource SettingsItemLabel}"
+                                               Text="100"/>
+                                </Grid>
                                 <TextBlock Text="Default orientation" Style="{StaticResource SettingsItemLabel}"/>
                                 <ComboBox x:Name="DefaultOrientationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,12">
-                                    <ComboBoxItem Content="landscape" Tag="landscape"/>
-                                    <ComboBoxItem Content="portrait" Tag="portrait"/>
-                                    <ComboBoxItem Content="landscape_flipped" Tag="landscape_flipped"/>
-                                    <ComboBoxItem Content="portrait_flipped" Tag="portrait_flipped"/>
+                                    <ComboBoxItem Content="Landscape" Tag="landscape"/>
+                                    <ComboBoxItem Content="Portrait" Tag="portrait"/>
+                                    <ComboBoxItem Content="Landscape flipped" Tag="landscape_flipped"/>
+                                    <ComboBoxItem Content="Portrait flipped" Tag="portrait_flipped"/>
                                 </ComboBox>
 
                                 <Grid Margin="0,0,0,20">
@@ -251,7 +293,9 @@
                                              Style="{StaticResource RoundedTextBox}"
                                              Margin="0,0,0,10"/>
 
-                                    <TextBlock Text="Add a verification question for if you've forgotten the pin and need to reset it." Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock Text="Add a verification question for if you've forgotten the pin and need to reset it."
+                                               Style="{StaticResource SettingsItemLabel}"
+                                               TextWrapping="Wrap"/>
                                     <TextBox x:Name="PinResetQuestionBox"
                                              Style="{StaticResource RoundedTextBox}"
                                              Margin="0,0,0,10"/>
@@ -266,6 +310,104 @@
                                 <TextBlock Text="Gestures"
                                            Style="{StaticResource SettingsSectionHeading}"
                                            Margin="0,0,0,10"/>
+                                <TextBlock Text="Taps" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Double tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureDoubleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureDoubleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureDoubleTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureDoubleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Double tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureDoubleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureDoubleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Triple tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureTripleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureTripleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureTripleTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureTripleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Triple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureTripleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureTripleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Quadruple tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureQuadTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureQuadTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureQuadTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureQuadTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Quadruple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureQuadTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureQuadTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Quintuple tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureQuintTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureQuintTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureQuintTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureQuintTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Quintuple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureQuintTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureQuintTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Swipes" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,4,0,6"/>
                                 <TextBlock Text="Swipe" Style="{StaticResource SettingsItemLabel}"/>
                                 <ComboBox x:Name="GestureSwipeActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
                                     <ComboBoxItem Content="Disabled" Tag="disabled"/>
@@ -277,10 +419,10 @@
                                 <StackPanel x:Name="GestureSwipeOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Swipe direction" Style="{StaticResource SettingsItemLabel}"/>
                                     <ComboBox x:Name="SwipeDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
-                                        <ComboBoxItem Content="down" Tag="down"/>
-                                        <ComboBoxItem Content="up" Tag="up"/>
-                                        <ComboBoxItem Content="left" Tag="left"/>
-                                        <ComboBoxItem Content="right" Tag="right"/>
+                                        <ComboBoxItem Content="Down" Tag="down"/>
+                                        <ComboBoxItem Content="Up" Tag="up"/>
+                                        <ComboBoxItem Content="Left" Tag="left"/>
+                                        <ComboBoxItem Content="Right" Tag="right"/>
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureSwipeMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
@@ -297,85 +439,98 @@
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
                                 </ComboBox>
-                                <StackPanel x:Name="GestureSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Swipe-and-hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBlock x:Name="GestureSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
-                                    <TextBox x:Name="GestureSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
-                                </StackPanel>
                                 <StackPanel x:Name="GestureSwipeHoldDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Swipe-and-hold direction" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock Text="Swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
                                     <ComboBox x:Name="SwipeHoldDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
-                                        <ComboBoxItem Content="down" Tag="down"/>
-                                        <ComboBoxItem Content="up" Tag="up"/>
-                                        <ComboBoxItem Content="left" Tag="left"/>
-                                        <ComboBoxItem Content="right" Tag="right"/>
+                                        <ComboBoxItem Content="Down" Tag="down"/>
+                                        <ComboBoxItem Content="Up" Tag="up"/>
+                                        <ComboBoxItem Content="Left" Tag="left"/>
+                                        <ComboBoxItem Content="Right" Tag="right"/>
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureSwipeHoldOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Swipe-and-hold threshold (milliseconds)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock Text="Swipe and hold threshold (milliseconds)" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="SwipeHoldMsBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 </StackPanel>
+                                <StackPanel x:Name="GestureSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
 
-                                <TextBlock Text="Pinch" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="GesturePinchActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                <StackPanel x:Name="TouchOnlyGesturesPanel">
+                                    <TextBlock Text="Two-finger swipe" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureTwoFingerSwipeActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                        <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                        <ComboBoxItem Content="Reload" Tag="reload"/>
+                                        <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                        <ComboBoxItem Content="Settings" Tag="settings"/>
+                                        <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    </ComboBox>
+                                    <StackPanel x:Name="GestureTwoFingerSwipeDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                        <TextBlock Text="Two-finger swipe direction" Style="{StaticResource SettingsItemLabel}"/>
+                                        <ComboBox x:Name="TwoFingerSwipeDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                            <ComboBoxItem Content="Down" Tag="down"/>
+                                            <ComboBoxItem Content="Up" Tag="up"/>
+                                            <ComboBoxItem Content="Left" Tag="left"/>
+                                            <ComboBoxItem Content="Right" Tag="right"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel x:Name="GestureTwoFingerSwipeMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                        <TextBlock Text="Two-finger swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="GestureTwoFingerSwipeMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="Two-finger swipe and hold" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureTwoFingerSwipeHoldActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                        <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                        <ComboBoxItem Content="Reload" Tag="reload"/>
+                                        <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                        <ComboBoxItem Content="Settings" Tag="settings"/>
+                                        <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    </ComboBox>
+                                    <StackPanel x:Name="GestureTwoFingerSwipeHoldDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                        <TextBlock Text="Two-finger swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
+                                        <ComboBox x:Name="TwoFingerSwipeHoldDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                            <ComboBoxItem Content="Down" Tag="down"/>
+                                            <ComboBoxItem Content="Up" Tag="up"/>
+                                            <ComboBoxItem Content="Left" Tag="left"/>
+                                            <ComboBoxItem Content="Right" Tag="right"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel x:Name="GestureTwoFingerSwipeHoldOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                        <TextBlock Text="Two-finger swipe and hold threshold (milliseconds)" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBox x:Name="TwoFingerSwipeHoldMsBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    </StackPanel>
+                                    <StackPanel x:Name="GestureTwoFingerSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                        <TextBlock Text="Two-finger swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="GestureTwoFingerSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Text="Other gestures" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,4,0,6"/>
+                                <TextBlock Text="Zoom" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureZoomActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
                                     <ComboBoxItem Content="Disabled" Tag="disabled"/>
                                     <ComboBoxItem Content="Reload" Tag="reload"/>
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
                                 </ComboBox>
-                                <StackPanel x:Name="GesturePinchMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Pinch MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBlock x:Name="GesturePinchMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
-                                    <TextBox x:Name="GesturePinchMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
-                                </StackPanel>
-
-                                <TextBlock Text="Triple tap" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="GestureTripleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
-                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
-                                    <ComboBoxItem Content="Reload" Tag="reload"/>
-                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
-                                    <ComboBoxItem Content="Settings" Tag="settings"/>
-                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
-                                </ComboBox>
-                                <StackPanel x:Name="GestureTripleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Triple-tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBlock x:Name="GestureTripleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
-                                    <TextBox x:Name="GestureTripleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
-                                </StackPanel>
-                                <StackPanel x:Name="GestureTripleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="GestureTripleTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
-                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
-                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
-                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
-                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
-                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                <StackPanel x:Name="GestureZoomDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Zoom direction" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="ZoomDirectionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Any" Tag="any"/>
+                                        <ComboBoxItem Content="In" Tag="in"/>
+                                        <ComboBoxItem Content="Out" Tag="out"/>
                                     </ComboBox>
                                 </StackPanel>
-
-                                <TextBlock Text="Quadruple tap" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="GestureQuadTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
-                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
-                                    <ComboBoxItem Content="Reload" Tag="reload"/>
-                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
-                                    <ComboBoxItem Content="Settings" Tag="settings"/>
-                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
-                                </ComboBox>
-                                <StackPanel x:Name="GestureQuadTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Quadruple-tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBlock x:Name="GestureQuadTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
-                                    <TextBox x:Name="GestureQuadTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
-                                </StackPanel>
-                                <StackPanel x:Name="GestureQuadTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="GestureQuadTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
-                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
-                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
-                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
-                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
-                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
-                                    </ComboBox>
+                                <StackPanel x:Name="GestureZoomMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Zoom MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureZoomMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureZoomMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                             </StackPanel>
@@ -399,14 +554,6 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Battery level" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttSensorBatteryToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
-                                </Grid>
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Session state" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="MqttSensorSessionToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -490,7 +637,7 @@
                                     <TextBlock Grid.Column="0" Text="Open settings" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdOpenSettingsToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,0,0,0">
+                                <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -498,7 +645,7 @@
                                     <TextBlock Grid.Column="0" Text="Close settings" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdCloseSettingsToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,0,0,0">
+                                <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -506,7 +653,7 @@
                                     <TextBlock Grid.Column="0" Text="Run Windows updates" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,0,0,0">
+                                <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -514,7 +661,7 @@
                                     <TextBlock Grid.Column="0" Text="PowerShell command" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdPowerShellToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdPowerShellToggle_Changed" Unchecked="MqttCmdPowerShellToggle_Changed"/>
                                 </Grid>
-                                <StackPanel x:Name="MqttCmdPowerShellCommandPanel" Margin="16,0,0,0" Visibility="Collapsed">
+                                <StackPanel x:Name="MqttCmdPowerShellCommandPanel" Margin="16,0,0,4" Visibility="Collapsed">
                                     <TextBlock Text="PowerShell command text" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="MqttCmdPowerShellTextBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 </StackPanel>

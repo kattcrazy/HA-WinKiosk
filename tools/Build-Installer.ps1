@@ -46,7 +46,7 @@ if (Test-Path $outputDir) {
     Remove-Item -Path $outputDir -Recurse -Force
 }
 
-$appVersion = "2.2.2"
+$appVersion = "3.0.9"
 try {
     [xml]$projXml = Get-Content -Path $csproj -Raw
     $versionNode = $projXml.Project.PropertyGroup.Version | Select-Object -First 1

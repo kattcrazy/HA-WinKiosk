@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace HAWinKiosk.Mqtt;
 
@@ -13,6 +14,9 @@ internal static class DisplaySettings
     internal const int DispChangeSuccessful = 0;
     internal const int DispChangeRestart = 1;
     internal const int DmDisplayOrientation = 0x00000200;
+    internal const int DmPelsWidth = 0x00080000;
+    internal const int DmPelsHeight = 0x00100000;
+    private const string AutoRotationKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\AutoRotation";
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal struct DevModeW
@@ -63,27 +67,106 @@ internal static class DisplaySettings
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern int ChangeDisplaySettingsW(ref DevModeW devMode, uint flags);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetAutoRotationState(out uint pState);
+
+    private static bool TryGetAutoRotationEnabled(out bool enabled)
+    {
+        enabled = false;
+        try
+        {
+            if (!GetAutoRotationState(out var state))
+                return false;
+
+            // AR_ENABLED is represented as 0 (no disabling flags set).
+            enabled = state == 0;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TrySetRotationLock(bool lockOn)
+    {
+        // Lock ON => disable auto-rotation (Enable = 0)
+        var enableValue = lockOn ? 0 : 1;
+        var wrote = false;
+
+        try
+        {
+            using var hkcu = Registry.CurrentUser.CreateSubKey(AutoRotationKey, true);
+            hkcu?.SetValue("Enable", enableValue, RegistryValueKind.DWord);
+            wrote = hkcu != null;
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            using var hklm = Registry.LocalMachine.OpenSubKey(AutoRotationKey, true);
+            hklm?.SetValue("Enable", enableValue, RegistryValueKind.DWord);
+            wrote = wrote || hklm != null;
+        }
+        catch
+        {
+        }
+
+        return wrote;
+    }
+
     /// <summary>DMDO_* values: 0 default, 1 90°, 2 180°, 3 270° (clockwise).</summary>
     internal static void SetPrimaryOrientation(uint dmdo)
     {
         if (dmdo > 3)
             throw new ArgumentOutOfRangeException(nameof(dmdo));
 
-        var dm = new DevModeW
+        var restoreAutoRotate = false;
+        if (TryGetAutoRotationEnabled(out var wasAutoRotateEnabled) && wasAutoRotateEnabled)
         {
-            dmDeviceName = new string('\0', 31),
-            dmFormName = new string('\0', 31)
-        };
-        dm.dmSize = (ushort)Marshal.SizeOf<DevModeW>();
+            if (TrySetRotationLock(lockOn: true))
+            {
+                restoreAutoRotate = true;
+                Thread.Sleep(120);
+            }
+        }
 
-        if (!EnumDisplaySettingsW(null, EnumCurrentSettings, ref dm))
-            throw new InvalidOperationException("Could not read current display settings.");
+        try
+        {
+            var dm = new DevModeW
+            {
+                dmDeviceName = new string('\0', 31),
+                dmFormName = new string('\0', 31)
+            };
+            dm.dmSize = (ushort)Marshal.SizeOf<DevModeW>();
 
-        dm.dmDisplayOrientation = dmdo;
-        dm.dmFields |= DmDisplayOrientation;
+            if (!EnumDisplaySettingsW(null, EnumCurrentSettings, ref dm))
+                throw new InvalidOperationException("Could not read current display settings.");
 
-        var r = ChangeDisplaySettingsW(ref dm, (uint)(CdsUpdateRegistry | CdsGlobal));
-        if (r != DispChangeSuccessful && r != DispChangeRestart)
-            throw new InvalidOperationException($"ChangeDisplaySettings failed with code {r}. The mode may be unsupported on this GPU.");
+            // For 90/270 transitions, Windows expects width/height to be swapped.
+            var rotateBetweenPortraitLandscape = (dm.dmDisplayOrientation + dmdo) % 2 == 1;
+            if (rotateBetweenPortraitLandscape)
+            {
+                (dm.dmPelsWidth, dm.dmPelsHeight) = (dm.dmPelsHeight, dm.dmPelsWidth);
+                dm.dmFields |= (DmPelsWidth | DmPelsHeight);
+            }
+
+            dm.dmDisplayOrientation = dmdo;
+            dm.dmFields |= DmDisplayOrientation;
+
+            var r = ChangeDisplaySettingsW(ref dm, (uint)(CdsUpdateRegistry | CdsGlobal));
+            if (r != DispChangeSuccessful && r != DispChangeRestart)
+                throw new InvalidOperationException($"ChangeDisplaySettings failed with code {r}. The mode may be unsupported on this GPU.");
+        }
+        finally
+        {
+            if (restoreAutoRotate)
+            {
+                _ = TrySetRotationLock(lockOn: false);
+            }
+        }
     }
 }

@@ -62,12 +62,28 @@ public class KioskConfig
 public class GesturesConfig
 {
     /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "doubleTapAction")]
+    public string DoubleTapAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
     [YamlMember(Alias = "swipeAction")]
     public string SwipeAction { get; set; } = "reload";
 
     /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "twoFingerSwipeAction")]
+    public string TwoFingerSwipeAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
     [YamlMember(Alias = "swipeHoldAction")]
     public string SwipeHoldAction { get; set; } = "clearcache_reload";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "twoFingerSwipeHoldAction")]
+    public string TwoFingerSwipeHoldAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "zoomAction")]
+    public string ZoomAction { get; set; } = "disabled";
 
     /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
     [YamlMember(Alias = "pinchAction")]
@@ -81,6 +97,14 @@ public class GesturesConfig
     [YamlMember(Alias = "quadrupleTapAction")]
     public string QuadrupleTapAction { get; set; } = "settings";
 
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "quintupleTapAction")]
+    public string QuintupleTapAction { get; set; } = "disabled";
+
+    /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
+    [YamlMember(Alias = "doubleTapLocation")]
+    public string DoubleTapLocation { get; set; } = "top-left";
+
     /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
     [YamlMember(Alias = "tripleTapLocation")]
     public string TripleTapLocation { get; set; } = "top-left";
@@ -89,25 +113,56 @@ public class GesturesConfig
     [YamlMember(Alias = "quadrupleTapLocation")]
     public string QuadrupleTapLocation { get; set; } = "top-left";
 
+    /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
+    [YamlMember(Alias = "quintupleTapLocation")]
+    public string QuintupleTapLocation { get; set; } = "top-left";
+
     /// <summary>down | up | left | right</summary>
     [YamlMember(Alias = "swipeDirection")]
     public string SwipeDirection { get; set; } = "down";
 
     /// <summary>down | up | left | right</summary>
+    [YamlMember(Alias = "twoFingerSwipeDirection")]
+    public string TwoFingerSwipeDirection { get; set; } = "down";
+
+    /// <summary>down | up | left | right</summary>
     [YamlMember(Alias = "swipeHoldDirection")]
     public string SwipeHoldDirection { get; set; } = "down";
+
+    /// <summary>down | up | left | right</summary>
+    [YamlMember(Alias = "twoFingerSwipeHoldDirection")]
+    public string TwoFingerSwipeHoldDirection { get; set; } = "down";
 
     [YamlMember(Alias = "swipeHoldMs")]
     public double SwipeHoldMs { get; set; } = 1000;
 
+    [YamlMember(Alias = "twoFingerSwipeHoldMs")]
+    public double TwoFingerSwipeHoldMs { get; set; } = 1000;
+
+    /// <summary>any | in | out</summary>
+    [YamlMember(Alias = "zoomDirection")]
+    public string ZoomDirection { get; set; } = "any";
+
     [YamlMember(Alias = "minSwipePixels")]
     public int MinSwipePixels { get; set; } = 80;
+
+    [YamlMember(Alias = "doubleTapMqttTopic")]
+    public string? DoubleTapMqttTopic { get; set; }
 
     [YamlMember(Alias = "swipeMqttTopic")]
     public string? SwipeMqttTopic { get; set; }
 
+    [YamlMember(Alias = "twoFingerSwipeMqttTopic")]
+    public string? TwoFingerSwipeMqttTopic { get; set; }
+
     [YamlMember(Alias = "swipeHoldMqttTopic")]
     public string? SwipeHoldMqttTopic { get; set; }
+
+    [YamlMember(Alias = "twoFingerSwipeHoldMqttTopic")]
+    public string? TwoFingerSwipeHoldMqttTopic { get; set; }
+
+    [YamlMember(Alias = "zoomMqttTopic")]
+    public string? ZoomMqttTopic { get; set; }
 
     [YamlMember(Alias = "pinchMqttTopic")]
     public string? PinchMqttTopic { get; set; }
@@ -117,6 +172,9 @@ public class GesturesConfig
 
     [YamlMember(Alias = "quadrupleTapMqttTopic")]
     public string? QuadrupleTapMqttTopic { get; set; }
+
+    [YamlMember(Alias = "quintupleTapMqttTopic")]
+    public string? QuintupleTapMqttTopic { get; set; }
 }
 
 public class MqttConfig
@@ -151,7 +209,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "sessionstate", "last_active", "updates_pending"
+        "battery", "last_active", "updates_pending"
     ];
 
     /// <summary>Interval for all enabled sensors except <c>last_active</c> (minimum 5 seconds). Idle time (<c>last_active</c>) always publishes every 1 second when enabled.</summary>

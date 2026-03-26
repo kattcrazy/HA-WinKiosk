@@ -4,7 +4,7 @@ using HAWinKiosk.Mqtt.Models;
 
 namespace HAWinKiosk;
 
-/// <summary>Injects gesture handlers (swipe/swipe-hold/pinch/triple-tap/quadruple-tap) into a document or iframe window.</summary>
+/// <summary>Injects gesture handlers into a document or iframe window.</summary>
 public static class WebViewBridge
 {
     public static string BuildDocumentScript(KioskConfig kiosk)
@@ -12,21 +12,37 @@ public static class WebViewBridge
         var g = kiosk.Gestures;
         var dto = new
         {
+            doubleTapEnabled = !string.Equals(g.DoubleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             swipeEnabled = !string.Equals(g.SwipeAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            twoFingerSwipeEnabled = !string.Equals(g.TwoFingerSwipeAction, "disabled", StringComparison.OrdinalIgnoreCase),
             swipeHoldEnabled = !string.Equals(g.SwipeHoldAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            twoFingerSwipeHoldEnabled = !string.Equals(g.TwoFingerSwipeHoldAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            zoomEnabled = !string.Equals(g.ZoomAction, "disabled", StringComparison.OrdinalIgnoreCase),
             pinchEnabled = !string.Equals(g.PinchAction, "disabled", StringComparison.OrdinalIgnoreCase),
             tripleTapEnabled = !string.Equals(g.TripleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             quadTapEnabled = !string.Equals(g.QuadrupleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            quintTapEnabled = !string.Equals(g.QuintupleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            doubleTapAction = (g.DoubleTapAction ?? "disabled").ToLowerInvariant(),
             swipeAction = (g.SwipeAction ?? "disabled").ToLowerInvariant(),
+            twoFingerSwipeAction = (g.TwoFingerSwipeAction ?? "disabled").ToLowerInvariant(),
             swipeHoldAction = (g.SwipeHoldAction ?? "disabled").ToLowerInvariant(),
+            twoFingerSwipeHoldAction = (g.TwoFingerSwipeHoldAction ?? "disabled").ToLowerInvariant(),
+            zoomAction = (g.ZoomAction ?? "disabled").ToLowerInvariant(),
             pinchAction = (g.PinchAction ?? "disabled").ToLowerInvariant(),
             tripleTapAction = (g.TripleTapAction ?? "disabled").ToLowerInvariant(),
             quadTapAction = (g.QuadrupleTapAction ?? "disabled").ToLowerInvariant(),
+            quintTapAction = (g.QuintupleTapAction ?? "disabled").ToLowerInvariant(),
+            doubleTapLocation = (g.DoubleTapLocation ?? "top-left").ToLowerInvariant(),
             tripleTapLocation = (g.TripleTapLocation ?? "top-left").ToLowerInvariant(),
             quadTapLocation = (g.QuadrupleTapLocation ?? "top-left").ToLowerInvariant(),
+            quintTapLocation = (g.QuintupleTapLocation ?? "top-left").ToLowerInvariant(),
             swipeDir = (g.SwipeDirection ?? "down").ToLowerInvariant(),
+            twoFingerSwipeDir = (g.TwoFingerSwipeDirection ?? "down").ToLowerInvariant(),
             swipeHoldDir = (g.SwipeHoldDirection ?? "down").ToLowerInvariant(),
+            twoFingerSwipeHoldDir = (g.TwoFingerSwipeHoldDirection ?? "down").ToLowerInvariant(),
             swipeHoldMs = (int)Math.Max(100, g.SwipeHoldMs),
+            twoFingerSwipeHoldMs = (int)Math.Max(100, g.TwoFingerSwipeHoldMs),
+            zoomDirection = (g.ZoomDirection ?? "any").ToLowerInvariant(),
             minSwipePx = Math.Max(20, g.MinSwipePixels)
         };
 
@@ -36,11 +52,11 @@ public static class WebViewBridge
         return $$"""
 (function(){
   const cfg = JSON.parse(atob('{{b64}}'));
-  let tripleTapCount = 0, lastTripleTap = 0, tripleTimer = null;
-  let quadTapCount = 0, lastQuadTap = 0;
+  let tapCount = 0, lastTapAt = 0, tapTimer = null, tapX = 0, tapY = 0;
   let sx = 0, sy = 0, st = 0, active = false;
   let maxDx = 0, maxDy = 0, maxD2 = 0;
   let pinchStartDist = 0, pinchActive = false, pinchFired = false, pinchCx = 0, pinchCy = 0;
+  let twoFx = 0, twoFy = 0, twoFst = 0, twoFActive = false, twoFMaxDx = 0, twoFMaxDy = 0, twoFHoldTriggered = false, twoFHoldTimer = null;
   let lastGestureAt = 0;
   let holdTriggered = false;
   let holdTimer = null;
@@ -122,11 +138,16 @@ public static class WebViewBridge
   }
   function actionForGesture(name) {
     switch ((name || '').toLowerCase()) {
+      case 'doubletap': return cfg.doubleTapAction || 'disabled';
       case 'swipe': return cfg.swipeAction || 'disabled';
+      case 'twofingerswipe': return cfg.twoFingerSwipeAction || 'disabled';
       case 'swipehold': return cfg.swipeHoldAction || 'disabled';
+      case 'twofingerswipehold': return cfg.twoFingerSwipeHoldAction || 'disabled';
+      case 'zoom': return cfg.zoomAction || cfg.pinchAction || 'disabled';
       case 'pinch': return cfg.pinchAction || 'disabled';
       case 'tripletap': return cfg.tripleTapAction || 'disabled';
       case 'quadrupletap': return cfg.quadTapAction || 'disabled';
+      case 'quintupletap': return cfg.quintTapAction || 'disabled';
       default: return 'disabled';
     }
   }
@@ -140,51 +161,38 @@ public static class WebViewBridge
     // Give touch devices enough time to paint ack before disruptive actions (reload/settings).
     setTimeout(() => post({ type: 'gesture', gesture: name }), 220);
   }
-  function handleTap(clientX, clientY) {
-    const tripleLocationMatch = cfg.tripleTapEnabled && inTapLocation(cfg.tripleTapLocation, clientX, clientY);
-    const quadLocationMatch = cfg.quadTapEnabled && inTapLocation(cfg.quadTapLocation, clientX, clientY);
-    if (!tripleLocationMatch && !quadLocationMatch) return;
-    const now = Date.now();
-    const sameTapLocation = cfg.tripleTapLocation === cfg.quadTapLocation;
+  function evaluateTapBurst() {
+    const c = tapCount;
+    const x = tapX;
+    const y = tapY;
+    tapCount = 0;
+    tapTimer = null;
 
-    if (quadLocationMatch) {
-      if (now - lastQuadTap > 1200) quadTapCount = 0;
-      lastQuadTap = now;
-      quadTapCount++;
-    }
+    const candidates = [
+      { enabled: cfg.quintTapEnabled, count: 5, key: 'quintupleTap', loc: cfg.quintTapLocation },
+      { enabled: cfg.quadTapEnabled, count: 4, key: 'quadrupleTap', loc: cfg.quadTapLocation },
+      { enabled: cfg.tripleTapEnabled, count: 3, key: 'tripleTap', loc: cfg.tripleTapLocation },
+      { enabled: cfg.doubleTapEnabled, count: 2, key: 'doubleTap', loc: cfg.doubleTapLocation }
+    ];
 
-    if (tripleLocationMatch) {
-      if (now - lastTripleTap > 1200) {
-        tripleTapCount = 0;
-        if (tripleTimer) { clearTimeout(tripleTimer); tripleTimer = null; }
-      }
-      lastTripleTap = now;
-      tripleTapCount++;
-    }
-
-    if (cfg.quadTapEnabled && quadLocationMatch && quadTapCount >= 4) {
-      if (tripleTimer) { clearTimeout(tripleTimer); tripleTimer = null; }
-      triggerGesture('quadrupleTap', clientX, clientY);
-      quadTapCount = 0;
-      if (sameTapLocation) tripleTapCount = 0;
+    for (const g of candidates) {
+      if (!g.enabled) continue;
+      if (c < g.count) continue;
+      if (!inTapLocation(g.loc, x, y)) continue;
+      triggerGesture(g.key, x, y);
       return;
     }
+  }
 
-    if (cfg.tripleTapEnabled && tripleLocationMatch && tripleTapCount >= 3) {
-      if (cfg.quadTapEnabled && sameTapLocation) {
-        if (tripleTimer) clearTimeout(tripleTimer);
-        tripleTimer = setTimeout(() => {
-          if (tripleTapCount === 3) {
-            triggerGesture('tripleTap', clientX, clientY);
-            tripleTapCount = 0;
-          }
-          tripleTimer = null;
-        }, 350);
-      } else {
-        triggerGesture('tripleTap', clientX, clientY);
-        tripleTapCount = 0;
-      }
-    }
+  function handleTap(clientX, clientY) {
+    const now = Date.now();
+    if (now - lastTapAt > 1200) tapCount = 0;
+    lastTapAt = now;
+    tapCount++;
+    tapX = clientX;
+    tapY = clientY;
+    if (tapTimer) clearTimeout(tapTimer);
+    tapTimer = setTimeout(evaluateTapBurst, 360);
   }
 
   function swipeMatches(dx, dy, dir) {
@@ -209,6 +217,20 @@ public static class WebViewBridge
     if (!cfg.swipeEnabled) return false;
     if (!swipeMatches(dx, dy, cfg.swipeDir)) return false;
     triggerGesture('swipe', endX, endY);
+    return true;
+  }
+
+  function doTwoFingerSwipe(dx, dy, dt, endX, endY) {
+    if (!(cfg.twoFingerSwipeEnabled || cfg.twoFingerSwipeHoldEnabled)) return false;
+    if (dt >= cfg.twoFingerSwipeHoldMs) {
+      if (!cfg.twoFingerSwipeHoldEnabled) return false;
+      if (!swipeMatches(twoFMaxDx, twoFMaxDy, cfg.twoFingerSwipeHoldDir)) return false;
+      triggerGesture('twoFingerSwipeHold', endX, endY);
+      return true;
+    }
+    if (!cfg.twoFingerSwipeEnabled) return false;
+    if (!swipeMatches(dx, dy, cfg.twoFingerSwipeDir)) return false;
+    triggerGesture('twoFingerSwipe', endX, endY);
     return true;
   }
 
@@ -281,31 +303,77 @@ public static class WebViewBridge
     } else {
       edgeSwipeTracking = false;
     }
-    if (!cfg.pinchEnabled || e.touches.length !== 2) return;
+    if (e.touches.length !== 2) return;
+    if (!(cfg.pinchEnabled || cfg.zoomEnabled || cfg.twoFingerSwipeEnabled || cfg.twoFingerSwipeHoldEnabled)) return;
     pinchStartDist = dist(e.touches[0], e.touches[1]);
     pinchCx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     pinchCy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-    pinchActive = true;
+    pinchActive = cfg.pinchEnabled || cfg.zoomEnabled;
     pinchFired = false;
+    twoFActive = true;
+    twoFx = pinchCx;
+    twoFy = pinchCy;
+    twoFst = Date.now();
+    twoFMaxDx = 0;
+    twoFMaxDy = 0;
+    twoFHoldTriggered = false;
+    if (twoFHoldTimer) { clearTimeout(twoFHoldTimer); twoFHoldTimer = null; }
+    twoFHoldTimer = setTimeout(() => {
+      if (!twoFActive || twoFHoldTriggered || !cfg.twoFingerSwipeHoldEnabled) return;
+      const endX = twoFx + twoFMaxDx, endY = twoFy + twoFMaxDy;
+      if (!swipeMatches(twoFMaxDx, twoFMaxDy, cfg.twoFingerSwipeHoldDir)) return;
+      twoFHoldTriggered = true;
+      triggerGesture('twoFingerSwipeHold', endX, endY);
+    }, cfg.twoFingerSwipeHoldMs);
   }
 
   function onTouchMove(e) {
     if (edgeSwipeTracking) {
       e.preventDefault();
     }
-    if (!pinchActive || pinchFired || e.touches.length !== 2) return;
+    if (e.touches.length !== 2) return;
     const current = dist(e.touches[0], e.touches[1]);
     pinchCx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     pinchCy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-    if (Math.abs(current - pinchStartDist) >= 40) {
+    const delta = current - pinchStartDist;
+    if (pinchActive && !pinchFired && Math.abs(delta) >= 40) {
       pinchFired = true;
-      triggerGesture('pinch', pinchCx, pinchCy);
+      const zoomDir = delta > 0 ? 'out' : 'in';
+      if (cfg.zoomEnabled && (cfg.zoomDirection === 'any' || cfg.zoomDirection === zoomDir)) {
+        triggerGesture('zoom', pinchCx, pinchCy);
+      } else if (cfg.pinchEnabled) {
+        triggerGesture('pinch', pinchCx, pinchCy);
+      }
+    }
+
+    if (twoFActive) {
+      const dx = pinchCx - twoFx, dy = pinchCy - twoFy;
+      if ((dx * dx + dy * dy) > (twoFMaxDx * twoFMaxDx + twoFMaxDy * twoFMaxDy)) {
+        twoFMaxDx = dx;
+        twoFMaxDy = dy;
+      }
+      if (!twoFHoldTriggered && cfg.twoFingerSwipeHoldEnabled && (Date.now() - twoFst) >= cfg.twoFingerSwipeHoldMs && swipeMatches(twoFMaxDx, twoFMaxDy, cfg.twoFingerSwipeHoldDir)) {
+        twoFHoldTriggered = true;
+        triggerGesture('twoFingerSwipeHold', pinchCx, pinchCy);
+      }
     }
   }
 
-  function onTouchEnd() {
+  function onTouchEnd(e) {
+    const hadTwoF = twoFActive;
+    const endX = pinchCx;
+    const endY = pinchCy;
+    const dx = twoFMaxDx;
+    const dy = twoFMaxDy;
+    const dt = Date.now() - twoFst;
     pinchActive = false;
     edgeSwipeTracking = false;
+    twoFActive = false;
+    if (twoFHoldTimer) { clearTimeout(twoFHoldTimer); twoFHoldTimer = null; }
+    if (hadTwoF && !twoFHoldTriggered && e.touches.length < 2) {
+      doTwoFingerSwipe(dx, dy, dt, endX, endY);
+    }
+    twoFHoldTriggered = false;
   }
 
   function onWheel(e) {
@@ -336,6 +404,8 @@ public static class WebViewBridge
 
   window.__haWinKioskGestureCleanup = function() {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (twoFHoldTimer) { clearTimeout(twoFHoldTimer); twoFHoldTimer = null; }
+    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
     document.documentElement.style.cursor = priorCursor;
     window.removeEventListener('pointerdown', onPointerDown, ptrOpts);
     window.removeEventListener('pointermove', onPointerMove, ptrOpts);

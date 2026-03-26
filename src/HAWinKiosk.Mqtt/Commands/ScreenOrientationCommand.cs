@@ -24,8 +24,8 @@ public static class ScreenOrientationCommand
         {
             "0" or "landscape" or "default" or "primary" => 0,
             "1" or "90" or "portrait" or "dmdo_90" => 1,
-            "2" or "180" or "landscape_flipped" or "upside_down" or "dmdo_180" => 2,
-            "3" or "270" or "portrait_flipped" or "dmdo_270" => 3,
+            "2" or "180" or "landscape_flipped" or "landscapeflipped" or "upside_down" or "dmdo_180" => 2,
+            "3" or "270" or "portrait_flipped" or "portraitflipped" or "dmdo_270" => 3,
             _ => uint.TryParse(s, out var n) && n <= 3 ? n : 0
         };
     }

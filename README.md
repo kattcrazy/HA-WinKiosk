@@ -2,14 +2,14 @@
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
-The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version. The app will always open upon boot, first using Task Scheduler then falling back to Startup apps if that fails.
+The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version. The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
 
-<img height="847" alt="image" src="https://github.com/user-attachments/assets/0afc5f55-55a2-41ce-ad05-28267020d563" />
-<img height="2847" alt="image" src="https://github.com/user-attachments/assets/ae055c43-7757-4b72-812c-8b1e78fe66ef" />
+<img width="200" alt="image" src="https://github.com/user-attachments/assets/0afc5f55-55a2-41ce-ad05-28267020d563" />
+<img width="200" alt="image" src="https://github.com/user-attachments/assets/ae055c43-7757-4b72-812c-8b1e78fe66ef" />
 
 ## Quick Start
 
-1. Download the .exe file from the latest release and double click/open once downloaded to install. It will automatically install .NET 8 if needed.
+1. Download the .exe file from the latest release and once downloaded double click/open to install. It will automatically install .NET 8 if needed.
 2. On first run, Settings will open. Enter your kiosk webpage URL, MQTT host, port, username, password, and other details as needed.
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
@@ -47,59 +47,105 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Run Windows updates | Button | Starts a Windows Update scan/download/install run; app schedules restart if Windows Update reports reboot required |
 | PowerShell command | Button | Executes configured PowerShell command text from settings |
 | Battery level | Sensor | Remaining battery % (`unavailable` on desktops without a battery) |
-| Session state | Sensor | PC session state |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
 | Updates pending | Number | Count of available Windows updates |
-| Monitor brightness | Number | Brightness % (0–100) |s
-| Monitor orientation | Select | Default rotation for the primary display |
+| Monitor brightness | Number | Brightness % (0–100) |
+| Monitor orientation | Select | Default rotation for the primary display (temporarily locks auto-rotate while applying) |
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited either in YAML or in the UI settings.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited either in YAML or in the UI settings. Below is a key of what all the options are, and below that is an example settings.yaml
+
+### All Options
+
+| UI Name | Values | Default | Notes | MQTT? |
+| --- | --- | --- | --- | --- |
+| Kiosk URL | URL | `http://homeassistant.local:8123` | Kiosk page URL | No |
+| Settings PIN | string | `""` | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
+| PIN hint | string | `""` | Hint shown on PIN prompt | No |
+| Verification question | string | `""` | Forgot-PIN verification question | No |
+| PIN reset answer | string | `""` | Forgot-PIN verification answer | No |
+| PIN protection | `true`/`false` | `true` | `false` disables PIN gate | No |
+| Show settings button | `true`/`false` | `true` | Show/hide gear button | No |
+| Theme | `auto` \| `light` \| `dark` | `auto` | UI theme mode | No |
+| Gesture action dropdowns | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | varies | Action behavior for gestures | Indirect (when MQTT message) |
+| Tap location dropdowns | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | `Top left` | Tap gesture location filter | No |
+| Swipe direction dropdowns | `Up` \| `Down` \| `Left` \| `Right` | `Down` | Swipe direction filter | No |
+| Zoom direction | `Any` \| `In` \| `Out` | `Any` | Zoom gesture direction filter | No |
+| Swipe and hold threshold (milliseconds) | integer (ms) | `1000` | Hold threshold for swipe-and-hold | No |
+| Two-finger swipe and hold threshold (milliseconds) | integer (ms) | `1000` | Hold threshold for two-finger swipe-and-hold | No |
+| Gesture MQTT topic fields | string | varies | Topic suffix used when action is MQTT message | Yes |
+| MQTT IP | hostname/IP | `192.168.1.?` | Broker host | Yes |
+| MQTT port | integer | `1883` | Broker port | Yes |
+| MQTT username | string | `""` | Broker username | Yes |
+| MQTT password | string | `""` | Broker password | Yes |
+| Device name | string | `kiosk` | Base ID in MQTT entities/topics | Yes |
+| Discovery prefix | string | `homeassistant` | Home Assistant discovery root | Yes |
+| Sensor toggles | list | `battery,last_active,updates_pending` | Enabled sensor IDs | Yes |
+| Sensor update interval seconds | integer | `30` | Non-Last Active sensor interval | Yes |
+| Command toggles | list | see sample | Enabled command IDs | Yes |
+| PowerShell command text | string | `""` | Command text for powershellcommand MQTT command | Yes |
+| Brightness (%) | `0..100` | `100` | Startup brightness | Yes (number entity) |
+| Default orientation | `landscape` \| `portrait` \| `landscape_flipped` \| `portrait_flipped` | `landscape` | Startup orientation | Yes (select entity) |
+| Start when Windows starts | `true`/`false` | `true` | Launch app at sign-in | No |
+
+### Example `settings.yaml`
 
 ```yaml
 kiosk:
-  url: "http://homeassistant.local:8123"   # full URL of the page to show (e.g. Home Assistant)
-  pin: ""                             # optional; required to open Settings when pin protection is on
-  pinHint: ""                         # optional reminder shown on the PIN screen
-  pinResetQuestion: ""                # optional question shown in the PIN dialog when using Forgot PIN
-  pinResetAnswer: ""                  # optional answer for Forgot PIN (case-insensitive match)
-  pinProtectionDisabled: false        # true = no PIN gate
-  showSettingsButton: true            # false = hide gear; open Settings via gesture action=Settings or MQTT only
-  uiTheme: auto                       # auto (follow Windows app light/dark) | light | dark
+  url: "http://homeassistant.local:8123"
+  pin: ""
+  pinHint: ""
+  pinResetQuestion: ""
+  pinResetAnswer: ""
+  pinProtectionDisabled: false
+  showSettingsButton: true
+  uiTheme: auto
   gestures:
-    swipeAction: reload               # disabled | reload | clearcache_reload | settings | mqtt
-    swipeDirection: down              # down | up | left | right (used when swipeAction set)
-    swipeMqttTopic: "swipe"           # final segment used only when corresponding action is mqtt
-    swipeHoldAction: clearcache_reload
-    swipeHoldDirection: down          # down | up | left | right (used when swipeHoldAction set)
-    swipeHoldMs: 1000                 # swipe-and-hold threshold in milliseconds (used when swipeHoldAction set)
-    swipeHoldMqttTopic: "swipe_hold"
-    pinchAction: disabled
-    pinchMqttTopic: "pinch"
+    doubleTapAction: disabled
+    doubleTapLocation: top-left
+    doubleTapMqttTopic: "double_tap"
     tripleTapAction: disabled
-    quadrupleTapAction: settings
-    tripleTapLocation: top-left       # top-left | top-right | bottom-right | bottom-left | anywhere (used when tripleTapAction set)
+    tripleTapLocation: top-left
     tripleTapMqttTopic: "triple_tap"
-    quadrupleTapLocation: top-left    # top-left | top-right | bottom-right | bottom-left | anywhere (used when quadrupleTapAction set)
+    quadrupleTapAction: settings
+    quadrupleTapLocation: top-left
     quadrupleTapMqttTopic: "quadruple_tap"
+    quintupleTapAction: disabled
+    quintupleTapLocation: top-left
+    quintupleTapMqttTopic: "quintuple_tap"
+    swipeAction: reload
+    swipeDirection: down
+    swipeMqttTopic: "swipe"
+    twoFingerSwipeAction: disabled
+    twoFingerSwipeDirection: down
+    twoFingerSwipeMqttTopic: "two_finger_swipe"
+    swipeHoldAction: clearcache_reload
+    swipeHoldDirection: down
+    swipeHoldMs: 1000
+    swipeHoldMqttTopic: "swipe_hold"
+    twoFingerSwipeHoldAction: disabled
+    twoFingerSwipeHoldDirection: down
+    twoFingerSwipeHoldMs: 1000
+    twoFingerSwipeHoldMqttTopic: "two_finger_swipe_hold"
+    zoomAction: disabled
+    zoomDirection: any
+    zoomMqttTopic: "zoom"
 
 mqtt:
   host: "192.168.1.?"
   port: 1883
   username: ""
   password: ""
-  deviceName: "kiosk"     # used in HA entity IDs (sanitized)
-  discoveryPrefix: "homeassistant"    # Home Assistant MQTT discovery prefix
+  deviceName: "kiosk"
+  discoveryPrefix: "homeassistant"
 
 sensors:
-  enabled: 
-  - battery
-  - sessionstate
-  - last_active
-  - updates_pending
-
-  updateIntervalSeconds: 30           # minimum 5s for battery/session; last_active sensor is always 1s
+  enabled:
+    - battery
+    - last_active
+    - updates_pending
+  updateIntervalSeconds: 30
 
 commands:
   enabled:
@@ -113,16 +159,16 @@ commands:
     - opensettings
     - closesettings
     - windowsupdate
-  powerShellCommand: ""               # command text used by the "powershellcommand" MQTT command
+  powerShellCommand: ""
 
 screenBrightness:
   defaultPercent: 100
 
 screenOrientation:
-  default: landscape                  # landscape | portrait | landscape_flipped | portrait_flipped
+  default: landscape
 
 autoStart:
-  enabled: true                       # Auto start on boot
+  enabled: true
 ```
 
 ## Credits

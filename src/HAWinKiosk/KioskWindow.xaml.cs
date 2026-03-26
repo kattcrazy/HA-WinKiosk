@@ -6,7 +6,9 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using HAWinKiosk.Mqtt;
 using HAWinKiosk.Mqtt.Models;
 using Microsoft.Web.WebView2.Core;
@@ -21,23 +23,30 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private readonly object _gestureFramesLock = new();
     private readonly HashSet<CoreWebView2Frame> _gestureFrames = new();
+    private readonly DispatcherTimer _updatePopupTimer = new();
     private nint _keyboardHookHandle = nint.Zero;
     private LowLevelKeyboardProc? _keyboardHookProc;
     private bool _taskbarHidden;
     private bool _isClosing;
+    private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
 
     public KioskWindow(bool showSettingsFirst = false)
     {
         InitializeComponent();
         _showSettingsFirst = showSettingsFirst;
         SettingsButtonPopup.PlacementTarget = this;
+        _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
+        _updatePopupTimer.Tick += (_, _) =>
+        {
+            _updatePopupTimer.Stop();
+            if (UpdateStatusPopup != null) UpdateStatusPopup.Visibility = Visibility.Collapsed;
+        };
     }
 
     private readonly bool _showSettingsFirst;
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        SessionStateTracker.EnsureInitialized();
         ApplyKioskBounds();
         EnableKioskLockdown();
 
@@ -137,37 +146,56 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void UpdateGestureTopicPrefixPreviews()
     {
         if (DeviceNameBox == null
+            || GestureDoubleTapMqttPrefixText == null
             || GestureSwipeMqttPrefixText == null
+            || GestureTwoFingerSwipeMqttPrefixText == null
             || GestureSwipeHoldMqttPrefixText == null
-            || GesturePinchMqttPrefixText == null
+            || GestureTwoFingerSwipeHoldMqttPrefixText == null
+            || GestureZoomMqttPrefixText == null
             || GestureTripleTapMqttPrefixText == null
-            || GestureQuadTapMqttPrefixText == null)
+            || GestureQuadTapMqttPrefixText == null
+            || GestureQuintTapMqttPrefixText == null)
             return;
 
         var prefix = string.IsNullOrWhiteSpace(_settings.Mqtt.DiscoveryPrefix) ? "homeassistant" : _settings.Mqtt.DiscoveryPrefix.Trim();
         var rawDevice = string.IsNullOrWhiteSpace(DeviceNameBox.Text) ? (_settings.Mqtt.DeviceName ?? "living-room-kiosk") : DeviceNameBox.Text;
         var devId = MqttDiscovery.SanitizeId(rawDevice);
         var topicPrefix = $"{prefix}/command/{devId}/gesture/";
+        GestureDoubleTapMqttPrefixText.Text = topicPrefix;
         GestureSwipeMqttPrefixText.Text = topicPrefix;
+        GestureTwoFingerSwipeMqttPrefixText.Text = topicPrefix;
         GestureSwipeHoldMqttPrefixText.Text = topicPrefix;
-        GesturePinchMqttPrefixText.Text = topicPrefix;
+        GestureTwoFingerSwipeHoldMqttPrefixText.Text = topicPrefix;
+        GestureZoomMqttPrefixText.Text = topicPrefix;
         GestureTripleTapMqttPrefixText.Text = topicPrefix;
         GestureQuadTapMqttPrefixText.Text = topicPrefix;
+        GestureQuintTapMqttPrefixText.Text = topicPrefix;
     }
 
     private void UpdateGestureOptionsVisibility()
     {
+        GestureDoubleTapLocationPanel.Visibility = IsEnabledGestureAction(GestureDoubleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeOptionsPanel.Visibility = IsEnabledGestureAction(GestureSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeDirectionPanel.Visibility = IsEnabledGestureAction(GestureTwoFingerSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeHoldDirectionPanel.Visibility = IsEnabledGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeHoldOptionsPanel.Visibility = IsEnabledGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeHoldDirectionPanel.Visibility = IsEnabledGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeHoldOptionsPanel.Visibility = IsEnabledGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureZoomDirectionPanel.Visibility = IsEnabledGestureAction(GestureZoomActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureTripleTapLocationPanel.Visibility = IsEnabledGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureQuadTapLocationPanel.Visibility = IsEnabledGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureQuintTapLocationPanel.Visibility = IsEnabledGestureAction(GestureQuintTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
 
+        GestureDoubleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureDoubleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeMqttTopicPanel.Visibility = IsMqttGestureAction(GestureSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GesturePinchMqttTopicPanel.Visibility = IsMqttGestureAction(GesturePinchActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureZoomMqttTopicPanel.Visibility = IsMqttGestureAction(GestureZoomActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureTripleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureQuadTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureQuintTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuintTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        TouchOnlyGesturesPanel.Visibility = _hasTouchInput ? Visibility.Visible : Visibility.Collapsed;
         UpdateGestureTopicPrefixPreviews();
     }
 
@@ -194,28 +222,42 @@ public partial class KioskWindow : Window, IKioskHostActions
         PinResetQuestionBox.Text = _settings.Kiosk.PinResetQuestion ?? "";
         PinResetAnswerBox.Text = _settings.Kiosk.PinResetAnswer ?? "";
 
+        SelectComboByTag(GestureDoubleTapActionCombo, _settings.Kiosk.Gestures.DoubleTapAction);
         SelectComboByTag(GestureSwipeActionCombo, _settings.Kiosk.Gestures.SwipeAction);
+        SelectComboByTag(GestureTwoFingerSwipeActionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeAction);
         SelectComboByTag(GestureSwipeHoldActionCombo, _settings.Kiosk.Gestures.SwipeHoldAction);
-        SelectComboByTag(GesturePinchActionCombo, _settings.Kiosk.Gestures.PinchAction);
+        SelectComboByTag(GestureTwoFingerSwipeHoldActionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeHoldAction);
+        SelectComboByTag(GestureZoomActionCombo, _settings.Kiosk.Gestures.ZoomAction);
         SelectComboByTag(GestureTripleTapActionCombo, _settings.Kiosk.Gestures.TripleTapAction);
         SelectComboByTag(GestureQuadTapActionCombo, _settings.Kiosk.Gestures.QuadrupleTapAction);
+        SelectComboByTag(GestureQuintTapActionCombo, _settings.Kiosk.Gestures.QuintupleTapAction);
+        SelectComboByTag(GestureDoubleTapLocationCombo, _settings.Kiosk.Gestures.DoubleTapLocation);
         SelectComboByTag(GestureTripleTapLocationCombo, _settings.Kiosk.Gestures.TripleTapLocation);
         SelectComboByTag(GestureQuadTapLocationCombo, _settings.Kiosk.Gestures.QuadrupleTapLocation);
+        SelectComboByTag(GestureQuintTapLocationCombo, _settings.Kiosk.Gestures.QuintupleTapLocation);
         SelectComboByTag(SwipeDirectionCombo, _settings.Kiosk.Gestures.SwipeDirection);
+        SelectComboByTag(TwoFingerSwipeDirectionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeDirection);
         SelectComboByTag(SwipeHoldDirectionCombo, _settings.Kiosk.Gestures.SwipeHoldDirection);
+        SelectComboByTag(TwoFingerSwipeHoldDirectionCombo, _settings.Kiosk.Gestures.TwoFingerSwipeHoldDirection);
+        SelectComboByTag(ZoomDirectionCombo, _settings.Kiosk.Gestures.ZoomDirection);
         SwipeHoldMsBox.Text = ((int)Math.Round(_settings.Kiosk.Gestures.SwipeHoldMs)).ToString(CultureInfo.InvariantCulture);
+        TwoFingerSwipeHoldMsBox.Text = ((int)Math.Round(_settings.Kiosk.Gestures.TwoFingerSwipeHoldMs)).ToString(CultureInfo.InvariantCulture);
+        GestureDoubleTapMqttTopicBox.Text = _settings.Kiosk.Gestures.DoubleTapMqttTopic ?? "";
         GestureSwipeMqttTopicBox.Text = _settings.Kiosk.Gestures.SwipeMqttTopic ?? "";
+        GestureTwoFingerSwipeMqttTopicBox.Text = _settings.Kiosk.Gestures.TwoFingerSwipeMqttTopic ?? "";
         GestureSwipeHoldMqttTopicBox.Text = _settings.Kiosk.Gestures.SwipeHoldMqttTopic ?? "";
-        GesturePinchMqttTopicBox.Text = _settings.Kiosk.Gestures.PinchMqttTopic ?? "";
+        GestureTwoFingerSwipeHoldMqttTopicBox.Text = _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic ?? "";
+        GestureZoomMqttTopicBox.Text = _settings.Kiosk.Gestures.ZoomMqttTopic ?? "";
         GestureTripleTapMqttTopicBox.Text = _settings.Kiosk.Gestures.TripleTapMqttTopic ?? "";
         GestureQuadTapMqttTopicBox.Text = _settings.Kiosk.Gestures.QuadrupleTapMqttTopic ?? "";
+        GestureQuintTapMqttTopicBox.Text = _settings.Kiosk.Gestures.QuintupleTapMqttTopic ?? "";
 
-        DefaultBrightnessBox.Text = Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100).ToString(CultureInfo.InvariantCulture);
+        DefaultBrightnessSlider.Value = Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100);
+        DefaultBrightnessValueText.Text = $"{(int)Math.Round(DefaultBrightnessSlider.Value)}";
         SelectComboByTag(DefaultOrientationCombo, CanonicalOrientationForCombo(_settings.ScreenOrientation.Default));
 
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
-        MqttSensorSessionToggle.IsChecked = sensors.Contains("sessionstate");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
 
@@ -321,6 +363,12 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void ThemeModeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         ApplySettingsUiTheme();
+    }
+
+    private void DefaultBrightnessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (DefaultBrightnessValueText != null)
+            DefaultBrightnessValueText.Text = ((int)Math.Round(e.NewValue)).ToString(CultureInfo.InvariantCulture);
     }
 
     private string GetEffectiveUiThemeMode()
@@ -521,11 +569,16 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         return gestureKey.ToLowerInvariant() switch
         {
+            "doubletap" => (_settings.Kiosk.Gestures.DoubleTapAction ?? "disabled").ToLowerInvariant(),
             "swipe" => (_settings.Kiosk.Gestures.SwipeAction ?? "disabled").ToLowerInvariant(),
+            "twofingerswipe" => (_settings.Kiosk.Gestures.TwoFingerSwipeAction ?? "disabled").ToLowerInvariant(),
             "swipehold" => (_settings.Kiosk.Gestures.SwipeHoldAction ?? "disabled").ToLowerInvariant(),
-            "pinch" => (_settings.Kiosk.Gestures.PinchAction ?? "disabled").ToLowerInvariant(),
+            "twofingerswipehold" => (_settings.Kiosk.Gestures.TwoFingerSwipeHoldAction ?? "disabled").ToLowerInvariant(),
+            "zoom" => (_settings.Kiosk.Gestures.ZoomAction ?? "disabled").ToLowerInvariant(),
+            "pinch" => (_settings.Kiosk.Gestures.ZoomAction ?? _settings.Kiosk.Gestures.PinchAction ?? "disabled").ToLowerInvariant(),
             "tripletap" => (_settings.Kiosk.Gestures.TripleTapAction ?? "disabled").ToLowerInvariant(),
             "quadrupletap" => (_settings.Kiosk.Gestures.QuadrupleTapAction ?? "disabled").ToLowerInvariant(),
+            "quintupletap" => (_settings.Kiosk.Gestures.QuintupleTapAction ?? "disabled").ToLowerInvariant(),
             _ => "disabled"
         };
     }
@@ -534,11 +587,16 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         return gestureKey.ToLowerInvariant() switch
         {
+            "doubletap" => _settings.Kiosk.Gestures.DoubleTapMqttTopic,
             "swipe" => _settings.Kiosk.Gestures.SwipeMqttTopic,
+            "twofingerswipe" => _settings.Kiosk.Gestures.TwoFingerSwipeMqttTopic,
             "swipehold" => _settings.Kiosk.Gestures.SwipeHoldMqttTopic,
-            "pinch" => _settings.Kiosk.Gestures.PinchMqttTopic,
+            "twofingerswipehold" => _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic,
+            "zoom" => _settings.Kiosk.Gestures.ZoomMqttTopic,
+            "pinch" => _settings.Kiosk.Gestures.ZoomMqttTopic ?? _settings.Kiosk.Gestures.PinchMqttTopic,
             "tripletap" => _settings.Kiosk.Gestures.TripleTapMqttTopic,
             "quadrupletap" => _settings.Kiosk.Gestures.QuadrupleTapMqttTopic,
+            "quintupletap" => _settings.Kiosk.Gestures.QuintupleTapMqttTopic,
             _ => null
         };
     }
@@ -668,17 +726,26 @@ public partial class KioskWindow : Window, IKioskHostActions
             var started = await AutoUpdateService.CheckAndApplyNowAsync();
             if (!started)
             {
-                System.Windows.MessageBox.Show(
-                    "No update found right now.",
-                    "HA WinKiosk",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                ShowUpdateStatusPopup("No update found right now.");
+            }
+            else
+            {
+                ShowUpdateStatusPopup("Update found. Installing now...");
             }
         }
         finally
         {
             CheckUpdatesButton.IsEnabled = true;
         }
+    }
+
+    private void ShowUpdateStatusPopup(string message)
+    {
+        if (UpdateStatusPopup == null || UpdateStatusPopupText == null) return;
+        UpdateStatusPopupText.Text = message;
+        UpdateStatusPopup.Visibility = Visibility.Visible;
+        _updatePopupTimer.Stop();
+        _updatePopupTimer.Start();
     }
 
     private void ApplyFormToSettings()
@@ -709,36 +776,52 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.PinResetQuestion = string.IsNullOrWhiteSpace(PinResetQuestionBox.Text) ? null : PinResetQuestionBox.Text.Trim();
         _settings.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(PinResetAnswerBox.Text) ? null : PinResetAnswerBox.Text.Trim();
 
+        _settings.Kiosk.Gestures.DoubleTapAction = SelectedTag(GestureDoubleTapActionCombo);
         _settings.Kiosk.Gestures.SwipeAction = SelectedTag(GestureSwipeActionCombo);
+        _settings.Kiosk.Gestures.TwoFingerSwipeAction = SelectedTag(GestureTwoFingerSwipeActionCombo);
         _settings.Kiosk.Gestures.SwipeHoldAction = SelectedTag(GestureSwipeHoldActionCombo);
-        _settings.Kiosk.Gestures.PinchAction = SelectedTag(GesturePinchActionCombo);
+        _settings.Kiosk.Gestures.TwoFingerSwipeHoldAction = SelectedTag(GestureTwoFingerSwipeHoldActionCombo);
+        _settings.Kiosk.Gestures.ZoomAction = SelectedTag(GestureZoomActionCombo);
         _settings.Kiosk.Gestures.TripleTapAction = SelectedTag(GestureTripleTapActionCombo);
         _settings.Kiosk.Gestures.QuadrupleTapAction = SelectedTag(GestureQuadTapActionCombo);
+        _settings.Kiosk.Gestures.QuintupleTapAction = SelectedTag(GestureQuintTapActionCombo);
+        _settings.Kiosk.Gestures.DoubleTapLocation = SelectedTag(GestureDoubleTapLocationCombo, "top-left");
         _settings.Kiosk.Gestures.TripleTapLocation = SelectedTag(GestureTripleTapLocationCombo, "top-left");
         _settings.Kiosk.Gestures.QuadrupleTapLocation = SelectedTag(GestureQuadTapLocationCombo, "top-left");
+        _settings.Kiosk.Gestures.QuintupleTapLocation = SelectedTag(GestureQuintTapLocationCombo, "top-left");
         _settings.Kiosk.ShowSettingsButton = ShowSettingsButtonToggle.IsChecked == true;
         if (ThemeModeCombo.SelectedItem is ComboBoxItem themeItem && themeItem.Tag is string ut)
             _settings.Kiosk.UiTheme = UiThemeHelper.NormalizeUiTheme(ut);
         if (SwipeDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem swipeItem && swipeItem.Tag is string dir)
             _settings.Kiosk.Gestures.SwipeDirection = dir;
+        if (TwoFingerSwipeDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem twoSwipeItem && twoSwipeItem.Tag is string twoDir)
+            _settings.Kiosk.Gestures.TwoFingerSwipeDirection = twoDir;
         if (SwipeHoldDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem holdDirItem && holdDirItem.Tag is string holdDir)
             _settings.Kiosk.Gestures.SwipeHoldDirection = holdDir;
+        if (TwoFingerSwipeHoldDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem twoHoldItem && twoHoldItem.Tag is string twoHoldDir)
+            _settings.Kiosk.Gestures.TwoFingerSwipeHoldDirection = twoHoldDir;
+        if (ZoomDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem zoomDirItem && zoomDirItem.Tag is string zoomDir)
+            _settings.Kiosk.Gestures.ZoomDirection = zoomDir;
         if (int.TryParse(SwipeHoldMsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var holdMs))
             _settings.Kiosk.Gestures.SwipeHoldMs = Math.Max(100, holdMs);
+        if (int.TryParse(TwoFingerSwipeHoldMsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var twoHoldMs))
+            _settings.Kiosk.Gestures.TwoFingerSwipeHoldMs = Math.Max(100, twoHoldMs);
+        _settings.Kiosk.Gestures.DoubleTapMqttTopic = string.IsNullOrWhiteSpace(GestureDoubleTapMqttTopicBox.Text) ? null : GestureDoubleTapMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.SwipeMqttTopic = string.IsNullOrWhiteSpace(GestureSwipeMqttTopicBox.Text) ? null : GestureSwipeMqttTopicBox.Text.Trim();
+        _settings.Kiosk.Gestures.TwoFingerSwipeMqttTopic = string.IsNullOrWhiteSpace(GestureTwoFingerSwipeMqttTopicBox.Text) ? null : GestureTwoFingerSwipeMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.SwipeHoldMqttTopic = string.IsNullOrWhiteSpace(GestureSwipeHoldMqttTopicBox.Text) ? null : GestureSwipeHoldMqttTopicBox.Text.Trim();
-        _settings.Kiosk.Gestures.PinchMqttTopic = string.IsNullOrWhiteSpace(GesturePinchMqttTopicBox.Text) ? null : GesturePinchMqttTopicBox.Text.Trim();
+        _settings.Kiosk.Gestures.TwoFingerSwipeHoldMqttTopic = string.IsNullOrWhiteSpace(GestureTwoFingerSwipeHoldMqttTopicBox.Text) ? null : GestureTwoFingerSwipeHoldMqttTopicBox.Text.Trim();
+        _settings.Kiosk.Gestures.ZoomMqttTopic = string.IsNullOrWhiteSpace(GestureZoomMqttTopicBox.Text) ? null : GestureZoomMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.TripleTapMqttTopic = string.IsNullOrWhiteSpace(GestureTripleTapMqttTopicBox.Text) ? null : GestureTripleTapMqttTopicBox.Text.Trim();
         _settings.Kiosk.Gestures.QuadrupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuadTapMqttTopicBox.Text) ? null : GestureQuadTapMqttTopicBox.Text.Trim();
+        _settings.Kiosk.Gestures.QuintupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuintTapMqttTopicBox.Text) ? null : GestureQuintTapMqttTopicBox.Text.Trim();
 
-        if (int.TryParse(DefaultBrightnessBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dbp))
-            _settings.ScreenBrightness.DefaultPercent = Math.Clamp(dbp, 0, 100);
+        _settings.ScreenBrightness.DefaultPercent = Math.Clamp((int)Math.Round(DefaultBrightnessSlider.Value), 0, 100);
         if (DefaultOrientationCombo.SelectedItem is System.Windows.Controls.ComboBoxItem oi && oi.Tag is string ot)
             _settings.ScreenOrientation.Default = ot;
 
         _settings.Sensors.Enabled = new List<string>();
         if (MqttSensorBatteryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("battery");
-        if (MqttSensorSessionToggle.IsChecked == true) _settings.Sensors.Enabled.Add("sessionstate");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 

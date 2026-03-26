@@ -8,6 +8,11 @@ namespace HAWinKiosk.Mqtt;
 
 public static class SettingsManager
 {
+    private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "battery", "last_active", "updates_pending"
+    };
+
     private static readonly string AppDataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "HA-WinKiosk");
@@ -39,6 +44,7 @@ public static class SettingsManager
         s.Sensors.Enabled = s.Sensors.Enabled
             .Select(x => x.Trim())
             .Where(x => x.Length > 0)
+            .Where(x => AllowedSensorIds.Contains(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -49,16 +55,27 @@ public static class SettingsManager
             .ToList();
 
         var g = s.Kiosk.Gestures;
+        g.DoubleTapAction = NormalizeGestureAction(g.DoubleTapAction, "disabled");
         g.SwipeAction = NormalizeGestureAction(g.SwipeAction, "reload");
+        g.TwoFingerSwipeAction = NormalizeGestureAction(g.TwoFingerSwipeAction, "disabled");
         g.SwipeHoldAction = NormalizeGestureAction(g.SwipeHoldAction, "clearcache_reload");
+        g.TwoFingerSwipeHoldAction = NormalizeGestureAction(g.TwoFingerSwipeHoldAction, "disabled");
+        g.ZoomAction = NormalizeGestureAction(g.ZoomAction, "disabled");
         g.PinchAction = NormalizeGestureAction(g.PinchAction, "disabled");
         g.TripleTapAction = NormalizeGestureAction(g.TripleTapAction, "disabled");
         g.QuadrupleTapAction = NormalizeGestureAction(g.QuadrupleTapAction, "settings");
+        g.QuintupleTapAction = NormalizeGestureAction(g.QuintupleTapAction, "disabled");
+        g.DoubleTapLocation = NormalizeTapLocation(g.DoubleTapLocation);
         g.TripleTapLocation = NormalizeTapLocation(g.TripleTapLocation);
         g.QuadrupleTapLocation = NormalizeTapLocation(g.QuadrupleTapLocation);
+        g.QuintupleTapLocation = NormalizeTapLocation(g.QuintupleTapLocation);
         g.SwipeDirection = NormalizeSwipeDirection(g.SwipeDirection);
+        g.TwoFingerSwipeDirection = NormalizeSwipeDirection(g.TwoFingerSwipeDirection);
         g.SwipeHoldDirection = NormalizeSwipeDirection(g.SwipeHoldDirection);
+        g.TwoFingerSwipeHoldDirection = NormalizeSwipeDirection(g.TwoFingerSwipeHoldDirection);
         g.SwipeHoldMs = Math.Max(100, g.SwipeHoldMs);
+        g.TwoFingerSwipeHoldMs = Math.Max(100, g.TwoFingerSwipeHoldMs);
+        g.ZoomDirection = NormalizeZoomDirection(g.ZoomDirection);
         g.MinSwipePixels = Math.Max(20, g.MinSwipePixels);
         s.Kiosk.PinResetQuestion = string.IsNullOrWhiteSpace(s.Kiosk.PinResetQuestion) ? null : s.Kiosk.PinResetQuestion.Trim();
         s.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(s.Kiosk.PinResetAnswer) ? null : s.Kiosk.PinResetAnswer.Trim();
@@ -81,6 +98,12 @@ public static class SettingsManager
     {
         var s = (raw ?? "down").Trim().ToLowerInvariant();
         return s is "down" or "up" or "left" or "right" ? s : "down";
+    }
+
+    private static string NormalizeZoomDirection(string? raw)
+    {
+        var s = (raw ?? "any").Trim().ToLowerInvariant();
+        return s is "any" or "in" or "out" ? s : "any";
     }
 
     public static void Save(AppSettings settings)

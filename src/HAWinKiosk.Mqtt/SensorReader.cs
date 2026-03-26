@@ -119,8 +119,6 @@ public static class SensorReader
         }
     }
 
-    public static string SessionState() => SessionStateTracker.State;
-
     public static string LastActiveSeconds()
     {
         var lii = new NativeMethods.LastInputInfo();

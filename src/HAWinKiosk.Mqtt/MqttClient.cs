@@ -49,7 +49,7 @@ public class MqttClientService : IDisposable
 
     private static readonly string[] OrientationSelectOptions =
     [
-        "landscape", "portrait", "landscape_flipped", "portrait_flipped"
+        "Landscape", "Portrait", "Landscape flipped", "Portrait flipped"
     ];
 
     public bool IsConnected => _client?.IsConnected ?? false;
@@ -221,7 +221,6 @@ public class MqttClientService : IDisposable
             var state = key switch
             {
                 "battery" => SensorReader.BatteryPercentOrUnavailable(),
-                "sessionstate" or "session_state" => SensorReader.SessionState(),
                 "last_active" => SensorReader.LastActiveSeconds(),
                 "updates_pending" => SensorReader.UpdatesPendingCount(),
                 _ => null
@@ -281,11 +280,11 @@ public class MqttClientService : IDisposable
         var n = ScreenOrientationCommand.ParseOrientation(raw);
         return n switch
         {
-            0 => "landscape",
-            1 => "portrait",
-            2 => "landscape_flipped",
-            3 => "portrait_flipped",
-            _ => "landscape"
+            0 => "Landscape",
+            1 => "Portrait",
+            2 => "Landscape flipped",
+            3 => "Portrait flipped",
+            _ => "Landscape"
         };
     }
 
@@ -366,7 +365,6 @@ public class MqttClientService : IDisposable
             var (t, p) = slug switch
             {
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
-                "sessionstate" => MqttDiscovery.StringSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Session state"),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
                 "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Updates pending", null, null),
                 _ => (null, null)!
