@@ -44,13 +44,8 @@ public class MqttClientService : IDisposable
 
     private static readonly HashSet<string> PersistedSettingsSlugs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "orientation_default", "brightness_default"
+        "brightness_default"
     };
-
-    private static readonly string[] OrientationSelectOptions =
-    [
-        "Landscape", "Portrait", "Landscape flipped", "Portrait flipped"
-    ];
 
     public bool IsConnected => _client?.IsConnected ?? false;
 
@@ -239,8 +234,6 @@ public class MqttClientService : IDisposable
 
         var list = new List<(string Topic, string Payload)>
         {
-            MqttDiscovery.MqttSelect(_prefix, _deviceName, _availabilityTopic, _devId, "orientation_default", "Monitor orientation",
-                OrientationSelectOptions),
             MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "brightness_default", "Monitor brightness",
                 0, 100, 1, "%")
         };
@@ -253,17 +246,7 @@ public class MqttClientService : IDisposable
     {
         if (_client == null || !_client.IsConnected) return;
 
-        await PublishSelectStateAsync("orientation_default", CanonicalOrientationForState(_settings.ScreenOrientation.Default), ct);
         await PublishNumberStateAsync("brightness_default", Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100).ToString(CultureInfo.InvariantCulture), ct);
-    }
-
-    private async Task PublishSelectStateAsync(string slug, string value, CancellationToken ct)
-    {
-        if (_client == null || !_client.IsConnected) return;
-        var topic = MqttDiscovery.SelectStateTopic(_prefix, _devId, slug);
-        await _client.PublishAsync(
-            new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(value).Build(),
-            ct);
     }
 
     private async Task PublishNumberStateAsync(string slug, string value, CancellationToken ct)
@@ -273,19 +256,6 @@ public class MqttClientService : IDisposable
         await _client.PublishAsync(
             new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(value).Build(),
             ct);
-    }
-
-    private static string CanonicalOrientationForState(string? raw)
-    {
-        var n = ScreenOrientationCommand.ParseOrientation(raw);
-        return n switch
-        {
-            0 => "Landscape",
-            1 => "Portrait",
-            2 => "Landscape flipped",
-            3 => "Portrait flipped",
-            _ => "Landscape"
-        };
     }
 
     private async Task PersistSettingsFromMqttAsync(CancellationToken ct)
@@ -308,20 +278,6 @@ public class MqttClientService : IDisposable
         var p = payload.Trim();
         switch (slug.ToLowerInvariant())
         {
-            case "orientation_default":
-                var orientCanon = CanonicalOrientationForState(p);
-                _settings.ScreenOrientation.Default = orientCanon;
-                try
-                {
-                    ScreenOrientationCommand.Execute(orientCanon);
-                }
-                catch (Exception ex)
-                {
-                    Error?.Invoke(this, ex);
-                }
-
-                await PersistSettingsFromMqttAsync(ct);
-                return;
             case "brightness_default":
                 if (int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pct))
                 {
@@ -351,8 +307,8 @@ public class MqttClientService : IDisposable
 
         foreach (var slug in _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()))
         {
-            // Brightness/orientation are controlled via number/select entities only (not duplicate buttons).
-            if (slug is "monitorbrightness" or "monitororientation")
+            // Brightness is controlled via a number entity only (not duplicate buttons).
+            if (slug is "monitorbrightness")
                 continue;
             if (!CommandDisplayNames.TryGetValue(slug, out var title))
                 title = slug;

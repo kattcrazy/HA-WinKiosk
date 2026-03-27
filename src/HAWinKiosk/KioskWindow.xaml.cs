@@ -257,7 +257,6 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         DefaultBrightnessSlider.Value = Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100);
         DefaultBrightnessValueText.Text = $"{(int)Math.Round(DefaultBrightnessSlider.Value)}";
-        SelectComboByTag(DefaultOrientationCombo, CanonicalOrientationForCombo(_settings.ScreenOrientation.Default));
 
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
@@ -298,18 +297,6 @@ public partial class KioskWindow : Window, IKioskHostActions
         PinProtectedFieldsPanel.Visibility = PinProtectionToggle.IsChecked == true
             ? Visibility.Visible
             : Visibility.Collapsed;
-    }
-
-    private static string CanonicalOrientationForCombo(string? raw)
-    {
-        var s = (raw ?? "landscape").Trim().ToLowerInvariant().Replace(" ", "").Replace("-", "_");
-        return s switch
-        {
-            "1" or "90" or "portrait" or "dmdo_90" => "portrait",
-            "2" or "180" or "landscape_flipped" or "upside_down" or "dmdo_180" => "landscape_flipped",
-            "3" or "270" or "portrait_flipped" or "dmdo_270" => "portrait_flipped",
-            _ => "landscape"
-        };
     }
 
     private void ShowSettings()
@@ -837,9 +824,6 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.QuintupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuintTapMqttTopicBox.Text) ? null : GestureQuintTapMqttTopicBox.Text.Trim();
 
         _settings.ScreenBrightness.DefaultPercent = Math.Clamp((int)Math.Round(DefaultBrightnessSlider.Value), 0, 100);
-        if (DefaultOrientationCombo.SelectedItem is System.Windows.Controls.ComboBoxItem oi && oi.Tag is string ot)
-            _settings.ScreenOrientation.Default = ot;
-
         _settings.Sensors.Enabled = new List<string>();
         if (MqttSensorBatteryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");

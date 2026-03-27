@@ -22,8 +22,6 @@ public class AppSettings
     [YamlMember(Alias = "screenBrightness")]
     public ScreenBrightnessConfig ScreenBrightness { get; set; } = new();
 
-    [YamlMember(Alias = "screenOrientation")]
-    public ScreenOrientationConfig ScreenOrientation { get; set; } = new();
 }
 
 public class KioskConfig
@@ -236,8 +234,3 @@ public class ScreenBrightnessConfig
     public int DefaultPercent { get; set; } = 100;
 }
 
-public class ScreenOrientationConfig
-{
-    [YamlMember(Alias = "default")]
-    public string Default { get; set; } = "landscape";
-}

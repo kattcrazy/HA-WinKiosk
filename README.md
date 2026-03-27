@@ -20,7 +20,7 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
-- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key, and swipe up from bottom. 
+- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key, and swipe up from bottom.
 
 ## MQTT and Home Assistant
 
@@ -47,7 +47,6 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
 | Updates pending | Number | Count of available Windows updates |
 | Monitor brightness | Number | Brightness % (0–100) |
-| Monitor orientation | Select | Default rotation for the primary display (temporarily locks auto-rotate while applying) |
 
 ## Settings
 
@@ -65,7 +64,6 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. They can be edited
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
 | Brightness (%) | `0..100` | Startup brightness | Yes (number entity) |
-| Default orientation | `landscape` \| `portrait` \| `landscape_flipped` \| `portrait_flipped` | Startup orientation | Yes (select entity) |
 | Start when Windows starts | `true`/`false` | Launch app at sign-in | No |
 
 #### Pin
@@ -215,9 +213,6 @@ commands:
 
 screenBrightness:
   defaultPercent: 100
-
-screenOrientation:
-  default: landscape
 
 autoStart:
   enabled: true

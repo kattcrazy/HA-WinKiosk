@@ -224,14 +224,6 @@
                                                Style="{StaticResource SettingsItemLabel}"
                                                Text="100"/>
                                 </Grid>
-                                <TextBlock Text="Default orientation" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="DefaultOrientationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,12">
-                                    <ComboBoxItem Content="Landscape" Tag="landscape"/>
-                                    <ComboBoxItem Content="Portrait" Tag="portrait"/>
-                                    <ComboBoxItem Content="Landscape flipped" Tag="landscape_flipped"/>
-                                    <ComboBoxItem Content="Portrait flipped" Tag="portrait_flipped"/>
-                                </ComboBox>
-
                                 <Grid Margin="0,0,0,20">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
