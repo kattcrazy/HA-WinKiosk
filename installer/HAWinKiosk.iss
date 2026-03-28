@@ -12,7 +12,8 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\HA WinKiosk
+; Per-user install (no admin / UAC). Matches self-contained publish output from tools\Build-ExeFromGDrive.ps1.
+DefaultDirName={localappdata}\Programs\HA WinKiosk
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -21,7 +22,7 @@ ArchitecturesAllowed=x64compatible
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 OutputDir=.\output
 OutputBaseFilename=HAWinKiosk-Setup
 SetupIconFile=..\logo.ico
@@ -34,14 +35,12 @@ Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Ad
 
 [Files]
 Source: "..\src\HAWinKiosk\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\tools\Install-DotNet8DesktopIfMissing.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{tmp}\Install-DotNet8DesktopIfMissing.ps1"""; StatusMsg: "Checking .NET 8 Desktop Runtime..."; Flags: runhidden waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall
 
 [UninstallDelete]
