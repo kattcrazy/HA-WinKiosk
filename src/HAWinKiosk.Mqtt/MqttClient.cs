@@ -14,6 +14,17 @@ namespace HAWinKiosk.Mqtt;
 /// </summary>
 public class MqttClientService : IDisposable
 {
+    /// <summary>All command slugs that may have a retained <c>homeassistant/button/.../config</c> topic.</summary>
+    private static readonly string[] AllKnownCommandSlugs =
+    [
+        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
+        "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate",
+        "powershellcommand", "monitorbrightness"
+    ];
+
+    /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
+    private static readonly string[] AllKnownSensorSlugs = ["battery", "last_active", "updates_pending"];
+
     private static readonly Dictionary<string, string> CommandDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ["shutdown"] = "Shutdown",
@@ -58,9 +69,9 @@ public class MqttClientService : IDisposable
         _settings = settings;
         _host = host;
         var mqtt = settings.Mqtt;
-        _deviceName = mqtt.DeviceName ?? "living-room-kiosk";
+        _deviceName = MqttDiscovery.NormalizeDeviceDisplayName(mqtt.DeviceName);
         _devId = MqttDiscovery.SanitizeId(_deviceName);
-        _prefix = mqtt.DiscoveryPrefix ?? "homeassistant";
+        _prefix = string.IsNullOrWhiteSpace(mqtt.DiscoveryPrefix) ? "homeassistant" : mqtt.DiscoveryPrefix.Trim();
         _availabilityTopic = MqttDiscovery.GetAvailabilityTopic(_prefix, _deviceName);
 
         var factory = new MqttFactory();
@@ -305,6 +316,8 @@ public class MqttClientService : IDisposable
 
         var availPayload = online ? "online" : "offline";
 
+        await ClearStaleMqttDiscoveryAsync(ct);
+
         foreach (var slug in _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()))
         {
             // Brightness is controlled via a number entity only (not duplicate buttons).
@@ -333,6 +346,47 @@ public class MqttClientService : IDisposable
 
         await _client.PublishAsync(
             new MqttApplicationMessageBuilder().WithTopic(_availabilityTopic).WithPayload(availPayload).WithRetainFlag().Build(),
+            ct);
+    }
+
+    /// <summary>
+    /// Remove retained discovery for disabled entities and for features that were removed from the app.
+    /// Prevents Home Assistant from keeping orphan configs that can split entities across duplicate devices.
+    /// </summary>
+    private async Task ClearStaleMqttDiscoveryAsync(CancellationToken ct)
+    {
+        if (_client == null || !_client.IsConnected) return;
+
+        var enabledCmds = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        foreach (var slug in AllKnownCommandSlugs)
+        {
+            if (enabledCmds.Contains(slug)) continue;
+            var topic = $"{_prefix}/button/{_devId}_{slug}/config";
+            await PublishEmptyRetainedConfigAsync(topic, ct);
+        }
+
+        var enabledSensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        foreach (var slug in AllKnownSensorSlugs)
+        {
+            if (enabledSensors.Contains(slug)) continue;
+            var topic = $"{_prefix}/sensor/{_devId}_{slug}/config";
+            await PublishEmptyRetainedConfigAsync(topic, ct);
+        }
+
+        // Legacy entities no longer published by this app (clear retained configs if present).
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/select/{_devId}_orientation_default/config", ct);
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/sensor/{_devId}_sessionstate/config", ct);
+    }
+
+    private async Task PublishEmptyRetainedConfigAsync(string topic, CancellationToken ct)
+    {
+        if (_client == null || !_client.IsConnected) return;
+        await _client.PublishAsync(
+            new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(Array.Empty<byte>())
+                .WithRetainFlag()
+                .Build(),
             ct);
     }
 

@@ -10,6 +10,10 @@ namespace HAWinKiosk.Mqtt;
 /// </summary>
 public static partial class MqttDiscovery
 {
+    /// <summary>Trim and default MQTT device display name so HA discovery always uses the same <c>device.name</c>.</summary>
+    public static string NormalizeDeviceDisplayName(string? configuredName) =>
+        string.IsNullOrWhiteSpace(configuredName) ? "living-room-kiosk" : configuredName.Trim();
+
     /// <summary>
     /// Sanitize for object_id / unique_id: lowercase, alphanumeric and underscore only.
     /// </summary>
@@ -44,7 +48,7 @@ public static partial class MqttDiscovery
                 model = "HA WinKiosk",
                 manufacturer = "HA WinKiosk"
             }
-        });
+        }, JsonDiscovery);
 
         var topic = $"{prefix}/button/{objectId}/config";
         return (topic, payload);
@@ -73,7 +77,7 @@ public static partial class MqttDiscovery
                 model = "HA WinKiosk",
                 manufacturer = "HA WinKiosk"
             }
-        });
+        }, JsonDiscovery);
 
         var topic = $"{prefix}/button/{objectId}/config";
         return (topic, payload);
