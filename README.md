@@ -9,7 +9,7 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-I reccomend checking out  [Tips and tricks](Tips-and-tricks.md) if you're wanting to sleep/wake your kiosk, use autologin, or have a Surface Pro 3.
+I recommend checking out [Tips and tricks](Tips-and-tricks.md) if you want to sleep/wake your kiosk, use autologin, or have a Surface Pro 3.
 
 ## Requirements
 
@@ -52,7 +52,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 
 ## Settings
 
-Settings are stored at ` %LocalAppData%\Programs\HA WinKiosk`. They can be edited either in YAML or in the UI settings. Below is a key of what all the options are, and below that is an example settings.yaml
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. The per-user app install is under `%LocalAppData%\Programs\HA WinKiosk`. Settings can be edited either in YAML or in the UI. Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
 ![Settings](https://github.com/user-attachments/assets/e09a5801-a07b-45db-98b0-c6f4b96e4eb7)
 
