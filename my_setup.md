@@ -1,5 +1,5 @@
 # My Setup
-How I've set up my Surface Pro 3.
+How I've set up my Surface Pro 3, in the form of a tutorial.
 
 ## Wake up after monitorsleep
 Big thank you to [NexGen3D](https://community.home-assistant.io/t/windows-10-kiosk-app/562484/9) on the Home Assistant Community Forums for this one!
@@ -25,7 +25,7 @@ In netplwiz, there is a checkbox. Uncheck it. If already unchecked, check and un
 Press "apply" and then enter the password as instructed. Then press ok to close the window.
 
 #### Part 2: HA WinKiosk
-In HA WinKiosk settings, at the bottom of the list of possible sensors and commands there is a powershell command option. Enable this. 
+In HA WinKiosk settings in the MQTT section, there is a powershell command toggle. Enable this. 
 In the new input box below it, put `(New-Object -ComObject WScript.Shell).SendKeys("{ENTER}")`. 
 Now press Save & Back to Kiosk.
 
@@ -60,10 +60,17 @@ actions:
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 500 milliseconds, and presses the enter key to bypass the lockscreen.
 
 ## Windows Settings
-This is a work-in-progress section.
+Set the following Windows settings.
 
-- Update at xx time
-- Dnd
-- Remove default apps
-- Allow login automatically after update
-- Never sleep/turn screen off
+#### System > Power
+Power/screen off timeout: Never
+
+#### Accounts > Sign-in Options
+Login automatically after update: On
+
+#### Windows Updates
+Active hours: Set this to something reasonable
+Notify when a restart is required: Off
+
+#### Time & Language > Date & Time
+Make sure that the time is correct. If not, fix it. HA WinKiosk relys on this for its 3am update check.
