@@ -29,6 +29,21 @@ public class KioskConfig
     [YamlMember(Alias = "url")]
     public string Url { get; set; } = "http://homeassistant.local:8123";
 
+    /// <summary>
+    /// When true, HA WinKiosk enables a "Do Not Disturb"/quiet-hours style mode
+    /// by suppressing toast notifications while the kiosk is running.
+    /// Default true.
+    /// </summary>
+    [YamlMember(Alias = "doNotDisturb")]
+    public bool DoNotDisturbEnabled { get; set; } = true;
+
+    /// <summary>
+    /// When true, WebView2 will automatically allow certificate errors for the kiosk URL
+    /// (useful for self-signed certs / internal hosts). Default false.
+    /// </summary>
+    [YamlMember(Alias = "ignoreCertificateErrors")]
+    public bool IgnoreCertificateErrors { get; set; }
+
     [YamlMember(Alias = "pin")]
     public string? Pin { get; set; }
 

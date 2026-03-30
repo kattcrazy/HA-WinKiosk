@@ -20,6 +20,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private MqttClientService? _mqtt;
     private AppSettings _settings = new();
     private bool _webHooksAttached;
+    private bool _serverCertErrorHookAttached;
+    private DoNotDisturbManager? _dndManager;
 
     private readonly object _gestureFramesLock = new();
     private readonly HashSet<CoreWebView2Frame> _gestureFrames = new();
@@ -52,6 +54,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         _settings = SettingsManager.Load();
         ApplySettingsUiTheme();
+        ApplyDoNotDisturbIfEnabled();
 
         if (_showSettingsFirst)
         {
@@ -67,15 +70,43 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
+    private void ApplyDoNotDisturbIfEnabled()
+    {
+        try
+        {
+            _dndManager ??= new DoNotDisturbManager();
+            _dndManager.SetEnabled(_settings.Kiosk.DoNotDisturbEnabled);
+        }
+        catch
+        {
+            // Best-effort: never prevent kiosk from running if Windows settings tweak fails.
+        }
+    }
+
     private void ApplyKioskBounds()
     {
         var hwnd = new WindowInteropHelper(this).EnsureHandle();
         var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
+        // WinForms Screen.Bounds are in device pixels, but WPF layout uses DIPs.
+        // If display scaling isn't 100%, mixing the units can cause small viewport clipping
+        // (more noticeable in portrait).
+        double scaleX = 1, scaleY = 1;
+        try
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            scaleX = dpi.DpiScaleX;
+            scaleY = dpi.DpiScaleY;
+        }
+        catch
+        {
+            // Fallback to 1:1 units if DPI isn't available yet.
+        }
+
         WindowState = WindowState.Normal;
-        Left = screen.Bounds.Left;
-        Top = screen.Bounds.Top;
-        Width = screen.Bounds.Width;
-        Height = screen.Bounds.Height;
+        Left = screen.Bounds.Left / scaleX;
+        Top = screen.Bounds.Top / scaleY;
+        Width = screen.Bounds.Width / scaleX;
+        Height = screen.Bounds.Height / scaleY;
         Topmost = true;
     }
 
@@ -256,6 +287,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void PopulateSettingsForm()
     {
         UrlBox.Text = _settings.Kiosk.Url ?? "";
+        DoNotDisturbToggle.IsChecked = _settings.Kiosk.DoNotDisturbEnabled;
+        IgnoreCertificateErrorsToggle.IsChecked = _settings.Kiosk.IgnoreCertificateErrors;
         MqttHostBox.Text = _settings.Mqtt.Host ?? "";
         MqttPortBox.Text = _settings.Mqtt.Port.ToString();
         MqttUsernameBox.Text = _settings.Mqtt.Username ?? "";
@@ -514,6 +547,32 @@ public partial class KioskWindow : Window, IKioskHostActions
             wv.NavigationCompleted += OnNavigationCompleted;
             wv.FrameCreated += OnCoreWebViewFrameCreated;
         }
+
+        // Optional: auto-allow invalid/self-signed certs to avoid "Advanced > Open page" interstitials.
+        if (!_serverCertErrorHookAttached)
+        {
+            _serverCertErrorHookAttached = true;
+            wv.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
+        }
+    }
+
+    private void OnServerCertificateErrorDetected(object? sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
+    {
+        if (!_settings.Kiosk.IgnoreCertificateErrors)
+            return;
+
+        // Only auto-allow for the kiosk URL host/scheme to avoid globally trusting unrelated cert errors.
+        if (!Uri.TryCreate(_settings.Kiosk.Url ?? "", UriKind.Absolute, out var kioskUri))
+            return;
+
+        var requestUriStr = e.RequestUri?.ToString();
+        if (!Uri.TryCreate(requestUriStr, UriKind.Absolute, out var requestUri))
+            return;
+
+        var sameHost = string.Equals(requestUri.Host, kioskUri.Host, StringComparison.OrdinalIgnoreCase);
+        var sameScheme = string.Equals(requestUri.Scheme, kioskUri.Scheme, StringComparison.OrdinalIgnoreCase);
+        if (sameHost && sameScheme)
+            e.Action = CoreWebView2ServerCertificateErrorAction.AlwaysAllow;
     }
 
     private void OnCoreWebViewFrameCreated(object? sender, CoreWebView2FrameCreatedEventArgs e)
@@ -757,6 +816,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ApplySettingsUiTheme();
 
         SettingsManager.Save(_settings);
+        ApplyDoNotDisturbIfEnabled();
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
 
         ShowKiosk();
@@ -807,6 +867,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         var disk = SettingsManager.Load();
 
         _settings.Kiosk.Url = NormalizeNavigableUrl(UrlBox.Text);
+        _settings.Kiosk.DoNotDisturbEnabled = DoNotDisturbToggle.IsChecked == true;
+        _settings.Kiosk.IgnoreCertificateErrors = IgnoreCertificateErrorsToggle.IsChecked == true;
         _settings.Mqtt.Host = MqttHostBox.Text?.Trim() ?? "";
         if (int.TryParse(MqttPortBox.Text, out var port))
             _settings.Mqtt.Port = port;
@@ -920,6 +982,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         _isClosing = true;
         DisableKioskLockdown();
+        _dndManager?.SetEnabled(false);
         _mqtt?.Dispose();
         base.OnClosed(e);
     }

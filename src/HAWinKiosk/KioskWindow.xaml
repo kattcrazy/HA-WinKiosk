@@ -188,6 +188,35 @@
                                 <TextBlock Text="Config" Style="{StaticResource SettingsSectionHeading}"/>
                                 <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Ignore HTTPS cert warnings"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="IgnoreCertificateErrorsToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Do Not Disturb (quiet hours)"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="DoNotDisturbToggle"
+                                                   Grid.Column="1"
+                                                   Style="{StaticResource SettingsToggleSwitch}"
+                                                   VerticalAlignment="Center"/>
+                                </Grid>
+
                                 <TextBlock Text="Device name" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="DeviceNameBox" Text="living-room-kiosk" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10" TextChanged="DeviceNameBox_TextChanged"/>
 
