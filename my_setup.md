@@ -1,7 +1,7 @@
-# Tips and Tricks
-Things everyone needs to know to have a successful kiosk setup on a Windows device, especially a Surface Pro 3.
+# My Setup
+How I've set up my Surface Pro 3.
 
-## Surface Pro 3 wake up after monitorsleep
+## Wake up after monitorsleep
 Big thank you to [NexGen3D](https://community.home-assistant.io/t/windows-10-kiosk-app/562484/9) on the Home Assistant Community Forums for this one!
 
 In Regedit...
@@ -58,3 +58,12 @@ actions:
       entity_id: button.[your kiosk name]_powershell_command
 ```
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 500 milliseconds, and presses the enter key to bypass the lockscreen.
+
+## Windows Settings
+This is a work-in-progress section.
+
+- Update at xx time
+- Dnd
+- Remove default apps
+- Allow login automatically after update
+- Never sleep/turn screen off
