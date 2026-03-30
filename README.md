@@ -1,4 +1,4 @@
-# HA WinKiosk <img src="logo.png" alt="HA WinKiosk logo" width="36" />
+# <img src="logo.png" alt="HA WinKiosk logo" width="36" /> HA WinKiosk <img src="logo.png" alt="HA WinKiosk logo" width="36" />
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
@@ -22,7 +22,7 @@ I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your 
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
-- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key, and swipe up from bottom.s
+- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key and swipe up from bottom.
 
 ## MQTT and Home Assistant
 
@@ -52,7 +52,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. The per-user app install is under `%LocalAppData%\Programs\HA WinKiosk`. Settings can be edited either in YAML or in the UI. Below is a key of what all the options are, and below that is an example `settings.yaml`.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
 ![Settings](https://github.com/user-attachments/assets/e09a5801-a07b-45db-98b0-c6f4b96e4eb7)
 
@@ -63,6 +63,8 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. The per-user app i
 | UI Name | Values | Notes | Published to HA via MQTT? |
 | --- | --- | --- | --- |
 | Kiosk URL | URL | Kiosk page URL | No |
+| Ignore HTTPS cert warnings | `true`/`false` | Auto-allow invalid/self-signed TLS certs for the kiosk URL | No |
+| Do Not Disturb (quiet hours) | `true`/`false` | Suppress toast notifications while the kiosk is running | No |
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
 | Brightness (%) | `0..100` | Startup brightness | Yes (number entity) |
@@ -144,6 +146,8 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. The per-user app i
 ```yaml
 kiosk:
   url: "http://homeassistant.local:8123"
+  ignoreCertificateErrors: false
+  doNotDisturb: true
   pin: ""
   pinHint: ""
   pinResetQuestion: ""
