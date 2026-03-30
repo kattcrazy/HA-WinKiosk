@@ -9,7 +9,7 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-I recommend checking out [Tips and tricks](Tips-and-tricks.md) if you want to sleep/wake your kiosk, use autologin, or have a Surface Pro 3.
+I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, or have a Surface Pro 3.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ I recommend checking out [Tips and tricks](Tips-and-tricks.md) if you want to sl
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
-- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key, and swipe up from bottom.
+- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key, and swipe up from bottom.s
 
 ## MQTT and Home Assistant
 
