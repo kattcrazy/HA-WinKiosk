@@ -1,27 +1,50 @@
 # My Setup
 How I've set up my Surface Pro 3, in the form of a tutorial.
 
-## Wake up after monitorsleep
+## 1. Windows Settings
+Set the following Windows settings.
+
+#### System > Power
+Power/screen off timeout: Never
+
+#### Accounts > Sign-in Options
+Login automatically after update: On
+
+#### Windows Updates
+Active hours: Set this to something reasonable
+
+Notify when a restart is required: Off
+
+#### Time & Language > Date & Time
+Make sure that the time is correct. If not, fix it. HA WinKiosk relys on this for its 3am update check.
+
+#### Apps > Installed Apps
+Remove any apps that will not be used, for example 'calculator', 'notepad', etc. 
+
+## 2. Wake up after monitorsleep
 Big thank you to [NexGen3D](https://community.home-assistant.io/t/windows-10-kiosk-app/562484/9) on the Home Assistant Community Forums for this one!
 
 In Regedit...
 
 #### Part 1: Power
 `HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Power`
+
 Add the following 32bit Dword if not there already: `PlatformAoAcOverride` and set its value to `0` 
 
 #### Part 2: Passwordless
 `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device`
+
 Change `DevicePasswordLessBuildVersion` from `2` to `0`
 
 Regedit will automatically save your changes so you can now close the window. 
 
-## Monitorwake & autologin
+## 3. Monitorwake & autologin
 Make sure the user you want to autologin has a password set as it won't work without one. 
 
 #### Part 1: Netplwiz
 In netplwiz, there is a checkbox. Uncheck it. If already unchecked, check and uncheck.
 <img width="449" height="117" alt="image" src="https://github.com/user-attachments/assets/3b4a811d-b0b5-4c78-902c-a5bc93d41a70" />
+
 Press "apply" and then enter the password as instructed. Then press ok to close the window.
 
 #### Part 2: HA WinKiosk
@@ -59,18 +82,3 @@ actions:
 ```
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 500 milliseconds, and presses the enter key to bypass the lockscreen.
 
-## Windows Settings
-Set the following Windows settings.
-
-#### System > Power
-Power/screen off timeout: Never
-
-#### Accounts > Sign-in Options
-Login automatically after update: On
-
-#### Windows Updates
-Active hours: Set this to something reasonable
-Notify when a restart is required: Off
-
-#### Time & Language > Date & Time
-Make sure that the time is correct. If not, fix it. HA WinKiosk relys on this for its 3am update check.
