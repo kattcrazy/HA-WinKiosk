@@ -310,6 +310,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureDoubleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
@@ -322,9 +323,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureDoubleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Double tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureDoubleTapMqttTopicHeadingText" Text="Double tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureDoubleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureDoubleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureDoubleTapMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Triple tap" Style="{StaticResource SettingsItemLabel}"/>
@@ -334,6 +336,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureTripleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
@@ -346,9 +349,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureTripleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Triple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureTripleTapMqttTopicHeadingText" Text="Triple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureTripleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureTripleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureTripleTapMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Quadruple tap" Style="{StaticResource SettingsItemLabel}"/>
@@ -358,6 +362,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureQuadTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
@@ -370,9 +375,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureQuadTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Quadruple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureQuadTapMqttTopicHeadingText" Text="Quadruple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureQuadTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureQuadTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureQuadTapMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Quintuple tap" Style="{StaticResource SettingsItemLabel}"/>
@@ -382,6 +388,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureQuintTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
@@ -394,9 +401,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureQuintTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Quintuple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureQuintTapMqttTopicHeadingText" Text="Quintuple tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureQuintTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureQuintTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureQuintTapMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Swipes" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,4,0,6"/>
@@ -407,6 +415,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureSwipeOptionsPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Swipe direction" Style="{StaticResource SettingsItemLabel}"/>
@@ -417,9 +426,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureSwipeMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSwipeMqttTopicHeadingText" Text="Swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureSwipeMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureSwipeMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureSwipeMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Swipe and hold" Style="{StaticResource SettingsItemLabel}"/>
@@ -429,6 +439,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureSwipeHoldDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
@@ -443,9 +454,10 @@
                                     <TextBox x:Name="SwipeHoldMsBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSwipeHoldMqttTopicHeadingText" Text="Swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureSwipeHoldMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <StackPanel x:Name="TouchOnlyGesturesPanel">
@@ -456,6 +468,7 @@
                                         <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                         <ComboBoxItem Content="Settings" Tag="settings"/>
                                         <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                        <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                     </ComboBox>
                                     <StackPanel x:Name="GestureTwoFingerSwipeDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                         <TextBlock Text="Two-finger swipe direction" Style="{StaticResource SettingsItemLabel}"/>
@@ -466,9 +479,10 @@
                                         </ComboBox>
                                     </StackPanel>
                                     <StackPanel x:Name="GestureTwoFingerSwipeMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                        <TextBlock Text="Two-finger swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeMqttTopicHeadingText" Text="Two-finger swipe MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                         <TextBlock x:Name="GestureTwoFingerSwipeMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                         <TextBox x:Name="GestureTwoFingerSwipeMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                     </StackPanel>
 
                                     <TextBlock Text="Two-finger swipe and hold" Style="{StaticResource SettingsItemLabel}"/>
@@ -478,6 +492,7 @@
                                         <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                         <ComboBoxItem Content="Settings" Tag="settings"/>
                                         <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                        <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                     </ComboBox>
                                     <StackPanel x:Name="GestureTwoFingerSwipeHoldDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                         <TextBlock Text="Two-finger swipe and hold direction" Style="{StaticResource SettingsItemLabel}"/>
@@ -492,9 +507,10 @@
                                         <TextBox x:Name="TwoFingerSwipeHoldMsBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                     </StackPanel>
                                     <StackPanel x:Name="GestureTwoFingerSwipeHoldMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                        <TextBlock Text="Two-finger swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeHoldMqttTopicHeadingText" Text="Two-finger swipe and hold MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                         <TextBlock x:Name="GestureTwoFingerSwipeHoldMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                         <TextBox x:Name="GestureTwoFingerSwipeHoldMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                        <TextBlock x:Name="GestureTwoFingerSwipeHoldMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -506,11 +522,13 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GesturePinchMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Pinch MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GesturePinchMqttTopicHeadingText" Text="Pinch MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GesturePinchMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GesturePinchMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GesturePinchMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Zoom" Style="{StaticResource SettingsItemLabel}"/>
@@ -520,6 +538,7 @@
                                     <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
                                     <ComboBoxItem Content="Settings" Tag="settings"/>
                                     <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
                                 </ComboBox>
                                 <StackPanel x:Name="GestureZoomDirectionPanel" Visibility="Collapsed" Margin="16,0,0,0">
                                     <TextBlock Text="Zoom direction" Style="{StaticResource SettingsItemLabel}"/>
@@ -530,9 +549,10 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel x:Name="GestureZoomMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
-                                    <TextBlock Text="Zoom MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureZoomMqttTopicHeadingText" Text="Zoom MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBlock x:Name="GestureZoomMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="GestureZoomMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureZoomMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                             </StackPanel>

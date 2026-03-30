@@ -90,7 +90,7 @@ public static class SettingsManager
     private static string NormalizeGestureAction(string? raw, string fallback)
     {
         var s = (raw ?? fallback).Trim().ToLowerInvariant();
-        return s is "disabled" or "reload" or "clearcache_reload" or "settings" or "mqtt" ? s : fallback;
+        return s is "disabled" or "reload" or "clearcache_reload" or "settings" or "mqtt" or "mqtt_publish" ? s : fallback;
     }
 
     private static string NormalizeTapLocation(string? raw)

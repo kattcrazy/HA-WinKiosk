@@ -4,6 +4,7 @@ using HAWinKiosk.Mqtt.Commands;
 using HAWinKiosk.Mqtt.Models;
 using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Protocol;
 
 namespace HAWinKiosk.Mqtt;
 
@@ -52,6 +53,9 @@ public class MqttClientService : IDisposable
     private Task? _sensorLoopTask;
     private Task? _lastActiveLoopTask;
     private bool _disposed;
+    private bool _intentionalShutdown;
+    private bool _messageHandlerAttached;
+    private readonly SemaphoreSlim _reconnectGate = new(1, 1);
 
     private static readonly HashSet<string> PersistedSettingsSlugs = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -66,6 +70,8 @@ public class MqttClientService : IDisposable
 
     public async Task ConnectAsync(AppSettings settings, IKioskHostActions? host, CancellationToken ct = default)
     {
+        _intentionalShutdown = false;
+        _messageHandlerAttached = false;
         _settings = settings;
         _host = host;
         var mqtt = settings.Mqtt;
@@ -79,7 +85,11 @@ public class MqttClientService : IDisposable
 
         var builder = new MqttClientOptionsBuilder()
             .WithTcpServer(mqtt.Host, mqtt.Port)
-            .WithClientId($"HA-WinKiosk_{_devId}_{Environment.MachineName}");
+            .WithClientId($"HA-WinKiosk_{_devId}_{Environment.MachineName}")
+            .WithWillTopic(_availabilityTopic)
+            .WithWillPayload(Encoding.UTF8.GetBytes("offline"))
+            .WithWillRetain()
+            .WithWillQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
 
         var hasCreds = !string.IsNullOrWhiteSpace(mqtt.Username) || !string.IsNullOrEmpty(mqtt.Password);
         if (hasCreds)
@@ -87,16 +97,14 @@ public class MqttClientService : IDisposable
 
         _options = builder.Build();
 
-        _client.ConnectedAsync += async _ =>
-        {
-            Connected?.Invoke(this, EventArgs.Empty);
-            await PublishDiscoveryAndAvailabilityAsync(online: true, ct);
-            await PublishPersistedSettingsStatesAsync(ct);
-        };
+        _client.ConnectedAsync += OnConnectedAsync;
 
         _client.DisconnectedAsync += args =>
         {
             Disconnected?.Invoke(this, args.Reason.ToString());
+            if (_intentionalShutdown || _disposed)
+                return Task.CompletedTask;
+            _ = Task.Run(TryReconnectLoopAsync);
             return Task.CompletedTask;
         };
 
@@ -131,8 +139,78 @@ public class MqttClientService : IDisposable
         if (connectErr != null)
             throw connectErr;
 
-        await SubscribeCommandsAsync(ct);
+        // First connect: ConnectedAsync may have run before we get here; ensure subscription exists.
+        await EnsureCommandSubscriptionAsync(CancellationToken.None);
         StartSensorLoop();
+    }
+
+    private async Task OnConnectedAsync(MqttClientConnectedEventArgs _)
+    {
+        try
+        {
+            Connected?.Invoke(this, EventArgs.Empty);
+            await PublishDiscoveryAndAvailabilityAsync(online: true, CancellationToken.None);
+            await PublishPersistedSettingsStatesAsync(CancellationToken.None);
+            await EnsureCommandSubscriptionAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, ex);
+        }
+    }
+
+    private async Task EnsureCommandSubscriptionAsync(CancellationToken ct)
+    {
+        if (_client == null || !_client.IsConnected) return;
+
+        var filter = $"{_prefix}/command/{_devId}/+/set";
+        await _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(filter).Build(), ct);
+        if (!_messageHandlerAttached)
+        {
+            _client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
+            _messageHandlerAttached = true;
+        }
+    }
+
+    private async Task TryReconnectLoopAsync()
+    {
+        if (!await _reconnectGate.WaitAsync(0))
+            return;
+        try
+        {
+            var delaySec = 1;
+            while (!_disposed && !_intentionalShutdown && _client != null)
+            {
+                if (_client.IsConnected)
+                    return;
+
+                await Task.Delay(TimeSpan.FromSeconds(Math.Min(60, delaySec)));
+                delaySec = Math.Min(60, delaySec * 2);
+                if (_disposed || _intentionalShutdown)
+                    return;
+
+                try
+                {
+                    await _client.ConnectAsync(_options!, CancellationToken.None);
+                    return;
+                }
+                catch
+                {
+                    // keep backing off until success or shutdown
+                }
+            }
+        }
+        finally
+        {
+            try
+            {
+                _reconnectGate.Release();
+            }
+            catch
+            {
+                // ignore
+            }
+        }
     }
 
     private void StartSensorLoop()
@@ -390,15 +468,6 @@ public class MqttClientService : IDisposable
             ct);
     }
 
-    private async Task SubscribeCommandsAsync(CancellationToken ct)
-    {
-        if (_client == null || !_client.IsConnected) return;
-
-        var filter = $"{_prefix}/command/{_devId}/+/set";
-        await _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(filter).Build(), ct);
-        _client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
-    }
-
     private async Task OnMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs e)
     {
         try
@@ -473,6 +542,7 @@ public class MqttClientService : IDisposable
 
     public async Task DisconnectAsync(CancellationToken ct = default)
     {
+        _intentionalShutdown = true;
         try
         {
             _sensorCts?.Cancel();
@@ -499,9 +569,36 @@ public class MqttClientService : IDisposable
             ct);
     }
 
+    /// <summary>Manual reconnect: disconnects (if connected) so the same backoff loop as automatic recovery runs, or kicks reconnect if already disconnected.</summary>
+    public async Task ReconnectManuallyAsync(CancellationToken ct = default)
+    {
+        if (_disposed || _client == null) return;
+        _intentionalShutdown = false;
+        try
+        {
+            if (_client.IsConnected)
+            {
+                await _client.PublishAsync(
+                    new MqttApplicationMessageBuilder().WithTopic(_availabilityTopic).WithPayload("offline").WithRetainFlag().Build(),
+                    ct);
+                await _client.DisconnectAsync(new MqttClientDisconnectOptions());
+            }
+            else
+            {
+                _ = Task.Run(TryReconnectLoopAsync);
+            }
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, ex);
+            _ = Task.Run(TryReconnectLoopAsync);
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
+        _intentionalShutdown = true;
         try
         {
             _sensorCts?.Cancel();
@@ -511,6 +608,15 @@ public class MqttClientService : IDisposable
 
         _client?.Dispose();
         _disposed = true;
+        try
+        {
+            _reconnectGate.Dispose();
+        }
+        catch
+        {
+            // ignore
+        }
+
         GC.SuppressFinalize(this);
     }
 }

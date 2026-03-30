@@ -124,7 +124,31 @@ public partial class KioskWindow : Window, IKioskHostActions
     }
 
     private static bool IsEnabledGestureAction(System.Windows.Controls.ComboBox cb) => SelectedTag(cb) != "disabled";
-    private static bool IsMqttGestureAction(System.Windows.Controls.ComboBox cb) => SelectedTag(cb) == "mqtt";
+
+    /// <summary>MQTT message (suffix) or manual MQTT reconnect (<c>mqtt_publish</c>).</summary>
+    private static bool IsMqttOrPublishGestureAction(System.Windows.Controls.ComboBox cb)
+    {
+        var t = SelectedTag(cb);
+        return t is "mqtt" or "mqtt_publish";
+    }
+
+    private static void ApplyMqttGesturePanelMode(
+        System.Windows.Controls.ComboBox actionCombo,
+        System.Windows.Controls.TextBlock heading,
+        System.Windows.Controls.TextBlock prefixText,
+        System.Windows.Controls.TextBox topicBox,
+        System.Windows.Controls.TextBlock reconnectHelpText,
+        string headingWhenSuffix,
+        string headingWhenReconnect)
+    {
+        var tag = SelectedTag(actionCombo);
+        var isSuffix = tag == "mqtt";
+        var isReconnect = tag == "mqtt_publish";
+        prefixText.Visibility = isSuffix ? Visibility.Visible : Visibility.Collapsed;
+        topicBox.Visibility = isSuffix ? Visibility.Visible : Visibility.Collapsed;
+        reconnectHelpText.Visibility = isReconnect ? Visibility.Visible : Visibility.Collapsed;
+        heading.Text = isReconnect ? headingWhenReconnect : headingWhenSuffix;
+    }
 
     private void GestureAction_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -186,16 +210,37 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureQuadTapLocationPanel.Visibility = IsEnabledGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
         GestureQuintTapLocationPanel.Visibility = IsEnabledGestureAction(GestureQuintTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
 
-        GestureDoubleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureDoubleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureSwipeMqttTopicPanel.Visibility = IsMqttGestureAction(GestureSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureTwoFingerSwipeMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureTwoFingerSwipeHoldMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GesturePinchMqttTopicPanel.Visibility = IsMqttGestureAction(GesturePinchActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureZoomMqttTopicPanel.Visibility = IsMqttGestureAction(GestureZoomActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureTripleTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureQuadTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
-        GestureQuintTapMqttTopicPanel.Visibility = IsMqttGestureAction(GestureQuintTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureDoubleTapMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureDoubleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureSwipeMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureTwoFingerSwipeActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureSwipeHoldMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTwoFingerSwipeHoldMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureTwoFingerSwipeHoldActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GesturePinchMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GesturePinchActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureZoomMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureZoomActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureTripleTapMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureTripleTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureQuadTapMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureQuadTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+        GestureQuintTapMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(GestureQuintTapActionCombo) ? Visibility.Visible : Visibility.Collapsed;
+
+        ApplyMqttGesturePanelMode(GestureDoubleTapActionCombo, GestureDoubleTapMqttTopicHeadingText, GestureDoubleTapMqttPrefixText, GestureDoubleTapMqttTopicBox, GestureDoubleTapMqttReconnectHelpText,
+            "Double tap MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureTripleTapActionCombo, GestureTripleTapMqttTopicHeadingText, GestureTripleTapMqttPrefixText, GestureTripleTapMqttTopicBox, GestureTripleTapMqttReconnectHelpText,
+            "Triple tap MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureQuadTapActionCombo, GestureQuadTapMqttTopicHeadingText, GestureQuadTapMqttPrefixText, GestureQuadTapMqttTopicBox, GestureQuadTapMqttReconnectHelpText,
+            "Quadruple tap MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureQuintTapActionCombo, GestureQuintTapMqttTopicHeadingText, GestureQuintTapMqttPrefixText, GestureQuintTapMqttTopicBox, GestureQuintTapMqttReconnectHelpText,
+            "Quintuple tap MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureSwipeActionCombo, GestureSwipeMqttTopicHeadingText, GestureSwipeMqttPrefixText, GestureSwipeMqttTopicBox, GestureSwipeMqttReconnectHelpText,
+            "Swipe MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureSwipeHoldActionCombo, GestureSwipeHoldMqttTopicHeadingText, GestureSwipeHoldMqttPrefixText, GestureSwipeHoldMqttTopicBox, GestureSwipeHoldMqttReconnectHelpText,
+            "Swipe and hold MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureTwoFingerSwipeActionCombo, GestureTwoFingerSwipeMqttTopicHeadingText, GestureTwoFingerSwipeMqttPrefixText, GestureTwoFingerSwipeMqttTopicBox, GestureTwoFingerSwipeMqttReconnectHelpText,
+            "Two-finger swipe MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureTwoFingerSwipeHoldActionCombo, GestureTwoFingerSwipeHoldMqttTopicHeadingText, GestureTwoFingerSwipeHoldMqttPrefixText, GestureTwoFingerSwipeHoldMqttTopicBox, GestureTwoFingerSwipeHoldMqttReconnectHelpText,
+            "Two-finger swipe and hold MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GesturePinchActionCombo, GesturePinchMqttTopicHeadingText, GesturePinchMqttPrefixText, GesturePinchMqttTopicBox, GesturePinchMqttReconnectHelpText,
+            "Pinch MQTT topic", "MQTT reconnect");
+        ApplyMqttGesturePanelMode(GestureZoomActionCombo, GestureZoomMqttTopicHeadingText, GestureZoomMqttPrefixText, GestureZoomMqttTopicBox, GestureZoomMqttReconnectHelpText,
+            "Zoom MQTT topic", "MQTT reconnect");
         TouchOnlyGesturesPanel.Visibility = _hasTouchInput ? Visibility.Visible : Visibility.Collapsed;
         UpdateGestureTopicPrefixPreviews();
     }
@@ -613,6 +658,10 @@ public partial class KioskWindow : Window, IKioskHostActions
                 var topic = GestureMqttTopicFor(gestureKey);
                 if (!string.IsNullOrWhiteSpace(topic) && _mqtt != null)
                     _ = _mqtt.PublishGestureMessageAsync(topic);
+                break;
+            case "mqtt_publish":
+                if (_mqtt != null)
+                    _ = _mqtt.ReconnectManuallyAsync();
                 break;
         }
     }
