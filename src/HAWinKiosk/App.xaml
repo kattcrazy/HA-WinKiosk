@@ -7,9 +7,6 @@
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="{StaticResource RalewayFamily}"/>
         </Style>
-        <Style TargetType="{x:Type ToolTip}">
-            <Setter Property="FontFamily" Value="{StaticResource RalewayFamily}"/>
-        </Style>
         <!-- Slight rounding: 6px -->
         <CornerRadius x:Key="UiCornerRadius">6</CornerRadius>
         <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#1A1A1A"/>

@@ -22,6 +22,47 @@ public class AppSettings
     [YamlMember(Alias = "screenBrightness")]
     public ScreenBrightnessConfig ScreenBrightness { get; set; } = new();
 
+    /// <summary>
+    /// Optional Wyoming voice satellite: TCP server for Home Assistant + streaming mic to openWakeWord on the LAN.
+    /// </summary>
+    [YamlMember(Alias = "voiceAssist")]
+    public VoiceAssistConfig VoiceAssist { get; set; } = new();
+
+    /// <summary>Legacy <c>voiceSatellite</c> block; migrated into <see cref="VoiceAssist"/> on load and nulled before save.</summary>
+    [YamlMember(Alias = "voiceSatellite")]
+    public VoiceSatelliteLegacyYaml? VoiceSatelliteMigration { get; set; }
+
+}
+
+/// <summary>
+/// Hands-free Assist: Wyoming satellite (mic + playback). openWakeWord/STT/TTS run on Home Assistant or Docker; see project docs.
+/// Satellite listen address/port are fixed in code (0.0.0.0:10700). Wyoming device name follows MQTT Device name.
+/// </summary>
+public class VoiceAssistConfig
+{
+    /// <summary>When true, run the Wyoming satellite and stream the mic to the configured wake service.</summary>
+    [YamlMember(Alias = "enabled")]
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>Hostname or IP of the machine running openWakeWord (Wyoming).</summary>
+    [YamlMember(Alias = "wyomingHostPc")]
+    public string WyomingHostPc { get; set; } = "";
+
+    [YamlMember(Alias = "wyomingHostPcPort")]
+    public int WyomingHostPcPort { get; set; } = 10400;
+
+    /// <summary>Minimum seconds between handling the same wake word detection again.</summary>
+    [YamlMember(Alias = "wakeWordDelay")]
+    public double WakeWordDelay { get; set; } = 5;
+}
+
+/// <summary>Old <c>voiceSatellite</c> YAML shape (deserialized only for migration).</summary>
+public sealed class VoiceSatelliteLegacyYaml
+{
+    public bool Enabled { get; set; }
+    public string WakeServiceHost { get; set; } = "";
+    public int WakeServicePort { get; set; } = 10400;
+    public double RefractorySeconds { get; set; } = 5;
 }
 
 public class KioskConfig

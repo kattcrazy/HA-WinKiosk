@@ -74,8 +74,7 @@
                Placement="AbsolutePoint">
             <Button Style="{StaticResource SettingsButton}"
                     Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
-                    Click="SettingsButton_Click"
-                    ToolTip="Settings">
+                    Click="SettingsButton_Click">
                 <TextBlock FontFamily="Segoe MDL2 Assets"
                            Text="&#xE713;"
                            FontSize="18"
@@ -182,9 +181,11 @@
                             </Grid>
                         </Border>
 
-                        <!-- Config + Gestures | Pin | MQTT -->
+                        <!-- Config + Pin | Gestures | MQTT | Voice (Wyoming) -->
                         <Grid Grid.Row="1" Margin="24,20,24,28">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
@@ -724,6 +725,37 @@
                                     <TextBlock Text="PowerShell command text" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="MqttCmdPowerShellTextBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="6">
+                                <TextBlock Text="Voice Assist" Style="{StaticResource SettingsSectionHeading}"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Voice Assist"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="VoiceSatelliteEnabledToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="Wyoming Host PC" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="VoiceWakeHostBox"
+                                         Style="{StaticResource RoundedTextBox}"
+                                         Margin="0,0,0,8"/>
+                                <TextBlock Text="Wyoming Host PC port" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="VoiceWakePortBox"
+                                         Text="10400"
+                                         Style="{StaticResource RoundedTextBox}"
+                                         Margin="0,0,0,10"/>
+                                <TextBlock Text="Wake word delay" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBox x:Name="VoiceRefractorySecondsBox"
+                                         Text="5"
+                                         Style="{StaticResource RoundedTextBox}"
+                                         Margin="0,0,0,10"/>
                             </StackPanel>
                         </Grid>
                     </Grid>

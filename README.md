@@ -24,13 +24,15 @@ I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your 
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
 - Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key and swipe up from bottom.
 
+<img width="1250" height="703" alt="image (21)" src="https://github.com/user-attachments/assets/76113480-37a0-43c6-8385-49aeda76daed" />
+
 ## MQTT and Home Assistant
 
 With MQTT configured, the app publishes MQTT payloads that show up in Integrations > MQTT in Home Assistant. In the app Settings, under MQTT, turn Sensors and Commands on or off for which buttons and sensors are discovered.
 
 Entity IDs in HA include your device name (sanitized). Names below match the name field in discovery.
 
-<img width="1250" height="703" alt="image (21)" src="https://github.com/user-attachments/assets/76113480-37a0-43c6-8385-49aeda76daed" />
+### MQTT entities
 
 | Name in HA | Type | Description |
 | --- | --- | --- |
@@ -49,6 +51,51 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
 | Updates pending | Number | Count of available Windows updates |
 | Monitor brightness | Number | Brightness % (0–100) |
+
+## Voice Assist and Home Assistant (beta feature)
+
+When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone audio, sends it to your wake word software, and uses Home Assistant Assist for processing via the voice assistant flow. Speech-to-text and text-to-speech can be handled by Whisper and Piper or your choice of software, then the response audio is played back on the kiosk.
+
+```mermaid
+flowchart TD
+    A[HA WinKiosk Mic] --> B[OpenWakeWord]
+    B --> C[Home Assistant Assist]
+    C --> D[Whisper STT]
+    C --> E[Piper TTS]
+    D --> F[Response Audio]
+    E --> F
+    F --> G[WinKiosk Speaker]
+```
+
+### Software needed (HA Container)
+
+<details>
+<summary>Details</summary>
+
+
+- OpenWakeWord (wake word detection) docker container: https://github.com/rhasspy/wyoming-openwakeword
+
+- Whisper (speech-to-text) docker container: https://github.com/rhasspy/wyoming-whisper  
+
+- Piper (text-to-speech) docker container: https://github.com/rhasspy/wyoming-piper  
+
+- Wyoming integration docker container: https://my.home-assistant.io/redirect/integration/?domain=wyoming
+
+</details>
+
+### Software needed (HAOS)
+<details>
+<summary>Details</summary>
+
+- OpenWakeWord app (wake word detection): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_openwakeword
+
+- Whisper app (speech-to-text): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_whisper
+
+- Piper app (text-to-speech): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_piper 
+
+- Wyoming integration: https://my.home-assistant.io/redirect/integration/?domain=wyoming
+
+</details>
 
 ## Settings
 
@@ -142,6 +189,15 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
 | PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
 
+#### Voice Assist
+
+| UI name | YAML key | Values | Notes |
+| --- | --- | --- | --- |
+| Voice Assist | `enabled` | `true`/`false` | Master switch for Wyoming satellite mode |
+| Wyoming Host PC | `wyomingHostPc` | hostname/IP | Host running the Wyoming wake service (e.g. Docker `rhasspy/wyoming-openwakeword`) |
+| Wyoming Host PC port | `wyomingHostPcPort` | integer | Wyoming port on that host (commonly 10400 for openWakeWord / wyoming-openwakeword) |
+| Wake word delay | `wakeWordDelay` | seconds (≥ 0) | Minimum time before the same wake word fires again |
+
 ### Example `settings.yaml`
 
 ```yaml
@@ -222,6 +278,12 @@ commands:
 screenBrightness:
   defaultPercent: 100
 
+voiceAssist:
+  enabled: false
+  wyomingHostPc: ""
+  wyomingHostPcPort: 10400
+  wakeWordDelay: 5
+
 autoStart:
   enabled: true
 ```
@@ -229,6 +291,8 @@ autoStart:
 ## Autostart and updates
 
 The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.
+
+If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
  The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
 

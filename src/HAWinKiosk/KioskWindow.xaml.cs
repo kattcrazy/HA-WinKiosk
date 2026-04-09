@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using HAWinKiosk.Mqtt;
 using HAWinKiosk.Mqtt.Models;
+using HAWinKiosk.Wyoming;
 using Microsoft.Web.WebView2.Core;
 
 namespace HAWinKiosk;
@@ -18,6 +19,7 @@ namespace HAWinKiosk;
 public partial class KioskWindow : Window, IKioskHostActions
 {
     private MqttClientService? _mqtt;
+    private readonly VoiceSatelliteService _voiceSatellite = new();
     private AppSettings _settings = new();
     private bool _webHooksAttached;
     private bool _serverCertErrorHookAttached;
@@ -60,6 +62,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             PopulateSettingsForm();
             ShowSettings();
+            SyncVoiceSatellite();
         }
         else
         {
@@ -67,7 +70,13 @@ public partial class KioskWindow : Window, IKioskHostActions
             await EnsureWebView2();
             NavigateTo(_settings.Kiosk.Url);
             StartMqttIfConfigured();
+            SyncVoiceSatellite();
         }
+    }
+
+    private void SyncVoiceSatellite()
+    {
+        _voiceSatellite.SyncSettings(_settings);
     }
 
     private void ApplyDoNotDisturbIfEnabled()
@@ -355,6 +364,15 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
         MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
+
+        VoiceSatelliteEnabledToggle.IsChecked = _settings.VoiceAssist.Enabled;
+        var wyomingHost = _settings.VoiceAssist.WyomingHostPc ?? "";
+        if (string.IsNullOrWhiteSpace(wyomingHost) && KioskUrlLiteralHost.TryGetFromUrl(_settings.Kiosk.Url, out var derivedHost))
+            VoiceWakeHostBox.Text = derivedHost;
+        else
+            VoiceWakeHostBox.Text = wyomingHost.Trim();
+        VoiceWakePortBox.Text = _settings.VoiceAssist.WyomingHostPcPort.ToString(CultureInfo.InvariantCulture);
+        VoiceRefractorySecondsBox.Text = _settings.VoiceAssist.WakeWordDelay.ToString(CultureInfo.InvariantCulture);
 
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
@@ -800,6 +818,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         PopulateSettingsForm();
         ShowSettings();
+        SyncVoiceSatellite();
     }
 
     /// <summary>MQTT opensettings command — no PIN gate (trusted broker).</summary>
@@ -808,6 +827,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings = SettingsManager.Load();
         PopulateSettingsForm();
         ShowSettings();
+        SyncVoiceSatellite();
     }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -830,6 +850,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         NavigateTo(_settings.Kiosk.Url);
 
         RestartMqttIfNeeded();
+        SyncVoiceSatellite();
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -955,6 +976,15 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
         _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
+
+        _settings.VoiceAssist.Enabled = VoiceSatelliteEnabledToggle.IsChecked == true;
+        _settings.VoiceAssist.WyomingHostPc = string.IsNullOrWhiteSpace(VoiceWakeHostBox.Text)
+            ? ""
+            : VoiceWakeHostBox.Text.Trim();
+        if (int.TryParse(VoiceWakePortBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var vWake))
+            _settings.VoiceAssist.WyomingHostPcPort = Math.Clamp(vWake, 1, 65535);
+        if (double.TryParse(VoiceRefractorySecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var refr))
+            _settings.VoiceAssist.WakeWordDelay = Math.Max(0, refr);
     }
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)
@@ -964,6 +994,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
         _mqtt?.Dispose();
         _mqtt = null;
+        _voiceSatellite.Dispose();
         System.Windows.Application.Current.Shutdown();
     }
 
@@ -986,6 +1017,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         DisableKioskLockdown();
         _dndManager?.SetEnabled(false);
         _mqtt?.Dispose();
+        _voiceSatellite.Dispose();
         base.OnClosed(e);
     }
 
