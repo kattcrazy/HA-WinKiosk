@@ -2,7 +2,7 @@
 #define MyAppPublisher "HA WinKiosk"
 #define MyAppURL "https://github.com/kattcrazy/HA-WinKiosk"
 #define MyAppExeName "HAWinKiosk.exe"
-#define MyAppVersion "3.4.1"
+#define MyAppVersion "3.5.0"
 
 [Setup]
 AppId={{7E91D8B9-4E5A-4B6B-B3A6-4F89B7A5E2F2}

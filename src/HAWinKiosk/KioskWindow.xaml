@@ -135,6 +135,14 @@
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Beta updates"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"
+                                                   Margin="0,0,8,0"/>
+                                        <ToggleButton x:Name="BetaUpdatesToggle"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"/>
+                                    </StackPanel>
                                     <Button x:Name="CheckUpdatesButton"
                                             Content="Check &amp; run updates"
                                             Style="{StaticResource SecondaryActionButton}"

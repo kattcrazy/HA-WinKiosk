@@ -68,6 +68,12 @@ public class KioskConfig
     [YamlMember(Alias = "uiTheme")]
     public string UiTheme { get; set; } = "auto";
 
+    /// <summary>
+    /// When true, auto-update may install GitHub prereleases; when false, only stable releases (non-prerelease).
+    /// </summary>
+    [YamlMember(Alias = "betaUpdates")]
+    public bool BetaUpdates { get; set; }
+
     [YamlMember(Alias = "gestures")]
     public GesturesConfig Gestures { get; set; } = new();
 }

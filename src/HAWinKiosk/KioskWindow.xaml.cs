@@ -289,6 +289,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         UrlBox.Text = _settings.Kiosk.Url ?? "";
         DoNotDisturbToggle.IsChecked = _settings.Kiosk.DoNotDisturbEnabled;
         IgnoreCertificateErrorsToggle.IsChecked = _settings.Kiosk.IgnoreCertificateErrors;
+        BetaUpdatesToggle.IsChecked = _settings.Kiosk.BetaUpdates;
         MqttHostBox.Text = _settings.Mqtt.Host ?? "";
         MqttPortBox.Text = _settings.Mqtt.Port.ToString();
         MqttUsernameBox.Text = _settings.Mqtt.Username ?? "";
@@ -869,6 +870,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Url = NormalizeNavigableUrl(UrlBox.Text);
         _settings.Kiosk.DoNotDisturbEnabled = DoNotDisturbToggle.IsChecked == true;
         _settings.Kiosk.IgnoreCertificateErrors = IgnoreCertificateErrorsToggle.IsChecked == true;
+        _settings.Kiosk.BetaUpdates = BetaUpdatesToggle.IsChecked == true;
         _settings.Mqtt.Host = MqttHostBox.Text?.Trim() ?? "";
         if (int.TryParse(MqttPortBox.Text, out var port))
             _settings.Mqtt.Port = port;

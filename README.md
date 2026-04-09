@@ -65,6 +65,7 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | Kiosk URL | URL | Kiosk page URL | No |
 | Ignore HTTPS cert warnings | `true`/`false` | Auto-allow invalid/self-signed TLS certs for the kiosk URL | No |
 | Do Not Disturb | `true`/`false` | Suppress toast notifications while the kiosk is running | No |
+| Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases | No |
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
 | Brightness (%) | `0..100` | Startup brightness | Yes (number entity) |
@@ -155,6 +156,7 @@ kiosk:
   pinProtectionDisabled: false
   showSettingsButton: true
   uiTheme: auto
+  betaUpdates: false
   gestures:
     doubleTapAction: disabled
     doubleTapLocation: top-left

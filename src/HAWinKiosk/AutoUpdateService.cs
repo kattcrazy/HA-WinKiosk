@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using HAWinKiosk.Mqtt;
 
 namespace HAWinKiosk;
 
@@ -57,7 +58,10 @@ public static class AutoUpdateService
         if (!await CheckGate.WaitAsync(0)) return false;
         try
         {
-            var latest = await GetLatestReleaseAsync(GitHubOwner, GitHubRepo);
+            var betaUpdates = SettingsManager.Load().Kiosk.BetaUpdates;
+            var latest = betaUpdates
+                ? await GetBestReleaseIncludingPrereleasesAsync(GitHubOwner, GitHubRepo)
+                : await GetLatestStableReleaseAsync(GitHubOwner, GitHubRepo);
             if (latest == null) return false;
 
             var currentVersion = GetCurrentVersion();
@@ -109,15 +113,55 @@ public static class AutoUpdateService
         return v ?? new Version(0, 0, 0, 0);
     }
 
-    private static async Task<LatestRelease?> GetLatestReleaseAsync(string owner, string repo)
+    private static async Task<LatestRelease?> GetLatestStableReleaseAsync(string owner, string repo)
     {
         var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
         using var resp = await Http.GetAsync(url);
         if (!resp.IsSuccessStatusCode) return null;
         var json = await resp.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        return TryBuildLatestReleaseFromRoot(doc.RootElement);
+    }
 
+    private static async Task<LatestRelease?> GetBestReleaseIncludingPrereleasesAsync(string owner, string repo)
+    {
+        var url = $"https://api.github.com/repos/{owner}/{repo}/releases?per_page=100";
+        using var resp = await Http.GetAsync(url);
+        if (!resp.IsSuccessStatusCode) return null;
+        var json = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Array) return null;
+
+        LatestRelease? best = null;
+        DateTimeOffset bestPublished = DateTimeOffset.MinValue;
+
+        foreach (var el in root.EnumerateArray())
+        {
+            if (el.TryGetProperty("draft", out var draftEl) && draftEl.ValueKind == JsonValueKind.True)
+                continue;
+
+            var rel = TryBuildLatestReleaseFromRoot(el);
+            if (rel == null) continue;
+
+            if (!el.TryGetProperty("published_at", out var pubEl)
+                || !DateTimeOffset.TryParse(pubEl.GetString(), out var publishedAt))
+                publishedAt = DateTimeOffset.MinValue;
+
+            if (best == null
+                || rel.Version > best.Version
+                || (rel.Version == best.Version && publishedAt > bestPublished))
+            {
+                best = rel;
+                bestPublished = publishedAt;
+            }
+        }
+
+        return best;
+    }
+
+    private static LatestRelease? TryBuildLatestReleaseFromRoot(JsonElement root)
+    {
         if (!root.TryGetProperty("tag_name", out var tagEl)) return null;
         var tag = tagEl.GetString() ?? "";
         if (!TryParseVersion(tag, out var version)) return null;
