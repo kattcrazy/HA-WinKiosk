@@ -1,4 +1,4 @@
-# <img src="logo.png" alt="HA WinKiosk logo" width="36" /> HA WinKiosk <img src="logo.png" alt="HA WinKiosk logo" width="36" />
+# <img src="light_logo.png" alt="HA WinKiosk logo" width="36" /> HA WinKiosk <img src="light_logo.png" alt="HA WinKiosk logo" width="36" />
 
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
