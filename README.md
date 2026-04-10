@@ -57,7 +57,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone audio, sends it to your wake word software, and uses Home Assistant Assist for processing via the voice assistant flow. Speech-to-text and text-to-speech can be handled by Whisper and Piper or your choice of software, then the response audio is played back on the kiosk.
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#16B9F0', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#16B9F0', 'secondaryColor':'#B9E9FF', 'tertiaryColor':'#E8F7FD', 'lineColor':'#16B9F0', 'textColor':'#1a1a1a'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#16B9F0', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#16B9F0', 'lineColor':'#16B9F0', 'secondaryColor':'#B9E9FF', 'tertiaryColor':'#E8F7FD'}}}%%
 flowchart TD
     A[HA WinKiosk Mic] --> B[OpenWakeWord]
     B --> C[Whisper STT]
