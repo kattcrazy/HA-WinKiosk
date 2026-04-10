@@ -559,8 +559,15 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         VoiceWakePortBox.Text = _settings.VoiceAssist.WyomingHostPcPort.ToString(CultureInfo.InvariantCulture);
         VoiceInputDeviceCombo.Items.Clear();
         VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default input device", Tag = "-1" });
-        foreach (var (deviceNumber, name) in VoiceSatelliteService.EnumerateInputDevices())
-            VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = deviceNumber.ToString(CultureInfo.InvariantCulture) });
+        try
+        {
+            foreach (var (deviceNumber, name) in VoiceSatelliteService.EnumerateInputDevices())
+                VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = deviceNumber.ToString(CultureInfo.InvariantCulture) });
+        }
+        catch
+        {
+            // WaveIn enumeration can throw on some drivers; keep Settings open.
+        }
         SelectVoiceInputDeviceCombo(_settings.VoiceAssist.InputDeviceNumber);
         VoiceRefractorySecondsBox.Text = _settings.VoiceAssist.WakeWordDelay.ToString(CultureInfo.InvariantCulture);
 

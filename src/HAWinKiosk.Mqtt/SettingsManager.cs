@@ -161,7 +161,46 @@ public static class SettingsManager
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
         var yaml = serializer.Serialize(settings);
+        // Legacy migration key: never persist this back to disk.
+        yaml = StripTopLevelYamlKey(yaml, "voiceSatellite");
         File.WriteAllText(SettingsPath, yaml);
+    }
+
+    private static string StripTopLevelYamlKey(string yaml, string key)
+    {
+        if (string.IsNullOrEmpty(yaml))
+            return yaml;
+
+        var lines = yaml.Replace("\r\n", "\n").Split('\n');
+        var kept = new List<string>(lines.Length);
+
+        var i = 0;
+        while (i < lines.Length)
+        {
+            var line = lines[i];
+            var trimmed = line.TrimEnd();
+            if (!line.StartsWith(" ") && trimmed.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
+            {
+                // Drop this top-level key and any indented child lines.
+                i++;
+                while (i < lines.Length)
+                {
+                    var child = lines[i];
+                    if (child.Length == 0 || child.StartsWith(" "))
+                    {
+                        i++;
+                        continue;
+                    }
+                    break;
+                }
+                continue;
+            }
+
+            kept.Add(line);
+            i++;
+        }
+
+        return string.Join("\n", kept);
     }
 
     public static string GetUserDataFolder()

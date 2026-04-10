@@ -525,11 +525,13 @@ public sealed class VoiceSatelliteService : IDisposable
         }
         finally
         {
+            bool close;
             lock (_gate)
             {
-                if (_haClient != client) return;
+                close = _haClient == client;
             }
-            CloseHaSession();
+            if (close)
+                CloseHaSession();
         }
     }
 
