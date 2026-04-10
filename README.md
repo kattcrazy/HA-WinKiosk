@@ -54,7 +54,10 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 
 ## Voice Assist and Home Assistant (beta feature)
 
-When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone audio, sends it to your wake word software, and uses Home Assistant Assist for processing via the voice assistant flow. Speech-to-text and text-to-speech can be handled by Whisper and Piper or your choice of software, then the response audio is played back on the kiosk.
+When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone audio, sends it to your wake word software, and uses Home Assistant Assist for processing via the voice assistant flow. Speech-to-text and text-to-speech can be handled by Whisper and Piper or your choice of software, then the response audio is played back on the kiosk. The kiosk will need to have a static ip set so it can be added in home assistant.
+
+**I will not be providing a full tutorial on how to set this up**
+(Maybe in the future)
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#16B9F0', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#16B9F0', 'lineColor':'#16B9F0', 'secondaryColor':'#B9E9FF', 'tertiaryColor':'#E8F7FD'}}}%%
@@ -64,7 +67,7 @@ flowchart TD
     C --> D[Home Assistant Assist]
     D --> E[Piper TTS]
     E --> F[Response Audio]
-    F --> G[WinKiosk Speaker]
+    F --> G[HA WinKiosk Speaker]
 ```
 
 
@@ -81,6 +84,7 @@ flowchart TD
 - Piper (text-to-speech) docker container: https://github.com/rhasspy/wyoming-piper  
 
 - Wyoming integration docker container: https://my.home-assistant.io/redirect/integration/?domain=wyoming
+
 
 </details>
 
