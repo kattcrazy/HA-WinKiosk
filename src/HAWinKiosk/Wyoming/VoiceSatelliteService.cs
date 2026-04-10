@@ -15,6 +15,16 @@ namespace HAWinKiosk.Wyoming;
 /// </summary>
 public sealed class VoiceSatelliteService : IDisposable
 {
+    public static IEnumerable<(int DeviceNumber, string Name)> EnumerateInputDevices()
+    {
+        for (var i = 0; i < WaveInEvent.DeviceCount; i++)
+        {
+            var caps = WaveInEvent.GetCapabilities(i);
+            var name = string.IsNullOrWhiteSpace(caps.ProductName) ? $"Input {i}" : caps.ProductName.Trim();
+            yield return (i, name);
+        }
+    }
+
     /// <summary>Fixed TCP bind for Home Assistant Wyoming integration (this PC).</summary>
     private const string SatelliteListenHost = "0.0.0.0";
 
@@ -126,8 +136,12 @@ public sealed class VoiceSatelliteService : IDisposable
             _listener.Start();
 
             _tts = new TtsAudioPlayer();
+            var inputDeviceNumber = _settings.VoiceAssist.InputDeviceNumber;
+            if (inputDeviceNumber < 0 || inputDeviceNumber >= WaveInEvent.DeviceCount)
+                inputDeviceNumber = -1;
             _waveIn = new WaveInEvent
             {
+                DeviceNumber = inputDeviceNumber,
                 WaveFormat = new WaveFormat(MicRate, MicWidth * 8, MicChannels),
                 BufferMilliseconds = 50,
                 NumberOfBuffers = 3
@@ -197,33 +211,56 @@ public sealed class VoiceSatelliteService : IDisposable
 
     private void CloseHaSession()
     {
-        try
+        NetworkStream? s;
+        TcpClient? c;
+        lock (_gate)
         {
-            _haStream?.Dispose();
-            _haClient?.Dispose();
+            s = _haStream;
+            c = _haClient;
+            _haStream = null;
+            _haClient = null;
+            _micToHa = false;
         }
-        catch
-        {
-            // ignore
-        }
-        _haStream = null;
-        _haClient = null;
-        _micToHa = false;
+        DisposeTcpGracefully(s, c);
     }
 
     private void CloseWakeSession()
     {
+        NetworkStream? s;
+        TcpClient? c;
+        lock (_gate)
+        {
+            s = _wakeStream;
+            c = _wakeClient;
+            _wakeStream = null;
+            _wakeClient = null;
+        }
+        DisposeTcpGracefully(s, c);
+    }
+
+    /// <summary>
+    /// Flush and send FIN before closing so the peer (e.g. wyoming-openwakeword) does not log ConnectionResetError from RST.
+    /// </summary>
+    private static void DisposeTcpGracefully(NetworkStream? stream, TcpClient? client)
+    {
         try
         {
-            _wakeStream?.Dispose();
-            _wakeClient?.Dispose();
+            if (stream != null)
+            {
+                try { stream.Flush(); } catch { /* ignore */ }
+            }
+            var socket = client?.Client;
+            if (socket != null && socket.Connected)
+            {
+                try { socket.Shutdown(SocketShutdown.Send); } catch { /* peer already closed */ }
+            }
         }
         catch
         {
             // ignore
         }
-        _wakeStream = null;
-        _wakeClient = null;
+        try { stream?.Dispose(); } catch { }
+        try { client?.Dispose(); } catch { }
     }
 
     private void OnMicDataAvailable(object? sender, WaveInEventArgs e)
@@ -353,10 +390,7 @@ public sealed class VoiceSatelliteService : IDisposable
             }
             finally
             {
-                lock (_gate)
-                {
-                    CloseWakeSession();
-                }
+                CloseWakeSession();
             }
             try
             {
@@ -464,20 +498,16 @@ public sealed class VoiceSatelliteService : IDisposable
         try
         {
             var stream = client.GetStream();
+            TcpClient? prevClient;
+            NetworkStream? prevStream;
             lock (_gate)
             {
-                try
-                {
-                    _haStream?.Dispose();
-                    _haClient?.Dispose();
-                }
-                catch
-                {
-                    // ignore
-                }
+                prevClient = _haClient;
+                prevStream = _haStream;
                 _haClient = client;
                 _haStream = stream;
             }
+            DisposeTcpGracefully(prevStream, prevClient);
 
             while (!ct.IsCancellationRequested)
             {
@@ -497,9 +527,9 @@ public sealed class VoiceSatelliteService : IDisposable
         {
             lock (_gate)
             {
-                if (_haClient == client)
-                    CloseHaSession();
+                if (_haClient != client) return;
             }
+            CloseHaSession();
         }
     }
 

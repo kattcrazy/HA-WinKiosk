@@ -557,6 +557,11 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         else
             VoiceWakeHostBox.Text = wyomingHost.Trim();
         VoiceWakePortBox.Text = _settings.VoiceAssist.WyomingHostPcPort.ToString(CultureInfo.InvariantCulture);
+        VoiceInputDeviceCombo.Items.Clear();
+        VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default input device", Tag = "-1" });
+        foreach (var (deviceNumber, name) in VoiceSatelliteService.EnumerateInputDevices())
+            VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = deviceNumber.ToString(CultureInfo.InvariantCulture) });
+        SelectVoiceInputDeviceCombo(_settings.VoiceAssist.InputDeviceNumber);
         VoiceRefractorySecondsBox.Text = _settings.VoiceAssist.WakeWordDelay.ToString(CultureInfo.InvariantCulture);
 
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
@@ -659,6 +664,24 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
 
         if (PlaybackDeviceCombo.Items.Count > 0)
             PlaybackDeviceCombo.SelectedIndex = 0;
+    }
+
+    private void SelectVoiceInputDeviceCombo(int deviceNumber)
+    {
+        var want = deviceNumber.ToString(CultureInfo.InvariantCulture);
+        foreach (var o in VoiceInputDeviceCombo.Items)
+        {
+            if (o is not ComboBoxItem ci) continue;
+            var tag = ci.Tag as string ?? "-1";
+            if (tag == want)
+            {
+                VoiceInputDeviceCombo.SelectedItem = ci;
+                return;
+            }
+        }
+
+        if (VoiceInputDeviceCombo.Items.Count > 0)
+            VoiceInputDeviceCombo.SelectedIndex = 0;
     }
 
     private void PlaybackDeviceCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -1241,6 +1264,15 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             : VoiceWakeHostBox.Text.Trim();
         if (int.TryParse(VoiceWakePortBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var vWake))
             _settings.VoiceAssist.WyomingHostPcPort = Math.Clamp(vWake, 1, 65535);
+        if (VoiceInputDeviceCombo.SelectedItem is ComboBoxItem inputItem
+            && int.TryParse(inputItem.Tag as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var inputDeviceNumber))
+        {
+            _settings.VoiceAssist.InputDeviceNumber = inputDeviceNumber;
+        }
+        else
+        {
+            _settings.VoiceAssist.InputDeviceNumber = -1;
+        }
         if (double.TryParse(VoiceRefractorySecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var refr))
             _settings.VoiceAssist.WakeWordDelay = Math.Max(0, refr);
     }
