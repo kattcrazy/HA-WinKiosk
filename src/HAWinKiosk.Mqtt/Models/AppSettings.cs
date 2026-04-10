@@ -61,6 +61,13 @@ public class VoiceAssistConfig
     /// <summary>Minimum seconds between handling the same wake word detection again.</summary>
     [YamlMember(Alias = "wakeWordDelay")]
     public double WakeWordDelay { get; set; } = 5;
+
+    /// <summary>
+    /// Wyoming <c>detect</c> model names sent to openWakeWord (must match built-in ids or custom model keys on the server).
+    /// If empty, OWW defaults to built-in <c>ok_nabu</c> only — custom wake models must be listed here.
+    /// </summary>
+    [YamlMember(Alias = "wakeWordNames")]
+    public List<string> WakeWordNames { get; set; } = new();
 }
 
 /// <summary>Old <c>voiceSatellite</c> YAML shape (deserialized only for migration).</summary>

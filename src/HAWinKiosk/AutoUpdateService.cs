@@ -13,6 +13,8 @@ public static class AutoUpdateService
     private const string GitHubRepo = "HA-WinKiosk";
     private const int UpdateHourLocal = 3;
     private static readonly HttpClient Http = BuildHttpClient();
+    /// <summary>Longer timeout for multi‑MB installer downloads (GitHub API client stays short).</summary>
+    private static readonly HttpClient DownloadHttp = BuildDownloadHttpClient();
     private static readonly SemaphoreSlim CheckGate = new(1, 1);
 
     public static void Start()
@@ -20,9 +22,68 @@ public static class AutoUpdateService
         _ = Task.Run(RunSchedulerLoopAsync);
     }
 
+    /// <summary>Manual check from Settings: shows progress via <paramref name="reportStatus"/> (marshal to UI thread in the callback).</summary>
+    public static async Task<bool> TryManualUpdateWithProgressAsync(Action<string> reportStatus)
+    {
+        reportStatus("Checking for updates…");
+        await Task.Yield();
+
+        await CheckGate.WaitAsync();
+        try
+        {
+            var latest = await ResolveLatestReleaseAsync();
+            if (latest == null)
+            {
+                reportStatus("No update found right now.");
+                return false;
+            }
+
+            var currentVersion = GetCurrentVersion();
+            if (latest.Version <= currentVersion)
+            {
+                reportStatus("No update found right now.");
+                return false;
+            }
+
+            var label = FormatReleaseLabel(latest);
+            reportStatus($"{label} available. Downloading installer…");
+
+            var tempDir = Path.Combine(Path.GetTempPath(), "HA-WinKiosk", "updates");
+            Directory.CreateDirectory(tempDir);
+            var installerPath = Path.Combine(tempDir, latest.AssetName);
+            await DownloadFileAsync(latest.DownloadUrl, installerPath);
+
+            reportStatus($"{label} — starting installer. The app will close and restart.");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = installerPath,
+                Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+
+            await Task.Delay(2000);
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                System.Windows.Application.Current.Shutdown();
+            });
+            return true;
+        }
+        catch
+        {
+            reportStatus("Update failed. Check your connection and try again.");
+            return false;
+        }
+        finally
+        {
+            CheckGate.Release();
+        }
+    }
+
     public static async Task<bool> CheckAndApplyNowAsync()
     {
-        return await CheckAndApplyAsync();
+        return await TryManualUpdateWithProgressAsync(_ => { });
     }
 
     private static async Task RunSchedulerLoopAsync()
@@ -55,13 +116,10 @@ public static class AutoUpdateService
 
     private static async Task<bool> CheckAndApplyAsync()
     {
-        if (!await CheckGate.WaitAsync(0)) return false;
+        await CheckGate.WaitAsync();
         try
         {
-            var betaUpdates = SettingsManager.Load().Kiosk.BetaUpdates;
-            var latest = betaUpdates
-                ? await GetBestReleaseIncludingPrereleasesAsync(GitHubOwner, GitHubRepo)
-                : await GetLatestStableReleaseAsync(GitHubOwner, GitHubRepo);
+            var latest = await ResolveLatestReleaseAsync();
             if (latest == null) return false;
 
             var currentVersion = GetCurrentVersion();
@@ -98,9 +156,25 @@ public static class AutoUpdateService
         }
     }
 
+    private static async Task<LatestRelease?> ResolveLatestReleaseAsync()
+    {
+        var betaUpdates = SettingsManager.Load().Kiosk.BetaUpdates;
+        return betaUpdates
+            ? await GetBestReleaseIncludingPrereleasesAsync(GitHubOwner, GitHubRepo)
+            : await GetLatestStableReleaseAsync(GitHubOwner, GitHubRepo);
+    }
+
+    private static string FormatReleaseLabel(LatestRelease latest)
+    {
+        var tag = (latest.TagName ?? "").Trim();
+        if (tag.Length > 0)
+            return tag.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? tag : "v" + tag;
+        return "v" + latest.Version.ToString(3);
+    }
+
     private static async Task DownloadFileAsync(string url, string path)
     {
-        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        using var resp = await DownloadHttp.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         resp.EnsureSuccessStatusCode();
         await using var inStream = await resp.Content.ReadAsStreamAsync();
         await using var outStream = File.Create(path);
@@ -174,7 +248,7 @@ public static class AutoUpdateService
             if (!name.Contains("Setup", StringComparison.OrdinalIgnoreCase)) continue;
             var download = asset.TryGetProperty("browser_download_url", out var d) ? (d.GetString() ?? "") : "";
             if (string.IsNullOrWhiteSpace(download)) continue;
-            return new LatestRelease(version, name, download);
+            return new LatestRelease(version, tag, name, download);
         }
         return null;
     }
@@ -196,5 +270,13 @@ public static class AutoUpdateService
         return c;
     }
 
-    private sealed record LatestRelease(Version Version, string AssetName, string DownloadUrl);
+    private static HttpClient BuildDownloadHttpClient()
+    {
+        var c = new HttpClient();
+        c.DefaultRequestHeaders.UserAgent.ParseAdd("HA-WinKiosk-Updater");
+        c.Timeout = TimeSpan.FromMinutes(15);
+        return c;
+    }
+
+    private sealed record LatestRelease(Version Version, string TagName, string AssetName, string DownloadUrl);
 }

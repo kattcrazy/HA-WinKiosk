@@ -866,6 +866,15 @@
                                 <TextBox x:Name="VoiceRefractorySecondsBox"
                                          Text="5"
                                          Style="{StaticResource RoundedTextBox}"
+                                         Margin="0,0,0,8"/>
+                                <TextBlock Text="Wake word model names" Style="{StaticResource SettingsItemLabel}"/>
+                                <TextBlock Text="Comma-separated ids for openWakeWord (e.g. ok_nabu or hey_jarvis). "
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
+                                           FontSize="12"
+                                           Margin="0,0,0,4"/>
+                                <TextBox x:Name="VoiceWakeWordNamesBox"
+                                         Style="{StaticResource RoundedTextBox}"
                                          Margin="0,0,0,10"/>
                             </StackPanel>
                         </Grid>

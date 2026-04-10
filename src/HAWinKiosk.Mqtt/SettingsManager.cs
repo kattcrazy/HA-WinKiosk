@@ -8,6 +8,18 @@ namespace HAWinKiosk.Mqtt;
 
 public static class SettingsManager
 {
+    // =============================================================================================
+    // settings.yaml FORMAT (v2) — introduced with flattened `config`, top-level `gestures`, mqtt nesting.
+    //
+    // RELEASE PLAN (manual):
+    // - First ship this as a prerelease / beta so early adopters migrate disk format.
+    // - First stable release that includes v2 save: still KEEP the legacy v1 reader below (users may
+    //   restore old files or sync from backup).
+    // - After one additional stable release with v2-only on disk for typical users, DELETE the entire
+    //   #region "Legacy settings.yaml v1" block and only accept v2 (or fail closed with defaults).
+    //   Bump README when removing. Search: Legacy settings.yaml v1
+    // =============================================================================================
+
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
         "battery", "last_active", "updates_pending"
@@ -28,16 +40,67 @@ public static class SettingsManager
         if (!File.Exists(SettingsPath))
             return new AppSettings();
 
-        var yaml = File.ReadAllText(SettingsPath);
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .IgnoreUnmatchedProperties()
-            .Build();
+        var yaml = File.ReadAllText(SettingsPath).TrimStart('\uFEFF');
+        if (string.IsNullOrWhiteSpace(yaml))
+            return new AppSettings();
 
-        var s = deserializer.Deserialize<AppSettings>(yaml) ?? new AppSettings();
+        AppSettings s;
+        if (LooksLikeSettingsYamlV2(yaml))
+        {
+            try
+            {
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .IgnoreUnmatchedProperties()
+                    .Build();
+                var v2 = deserializer.Deserialize<SettingsFileV2>(yaml);
+                s = v2 != null ? SettingsYamlConversion.ToAppSettings(v2) : new AppSettings();
+            }
+            catch
+            {
+                s = TryLoadLegacyAppSettings(yaml);
+            }
+        }
+        else
+            s = TryLoadLegacyAppSettings(yaml);
+
         NormalizeAppSettings(s, yaml);
         return s;
     }
+
+    private static bool LooksLikeSettingsYamlV2(string yaml)
+    {
+        foreach (var raw in yaml.Replace("\r\n", "\n").Split('\n'))
+        {
+            var t = raw.Trim();
+            if (t.Length == 0) continue;
+            if (t.StartsWith('#')) continue;
+            if (t == "---") continue;
+            return t.StartsWith("config:", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    #region Legacy settings.yaml v1 (remove after stable+1 — see file header)
+
+    private static AppSettings TryLoadLegacyAppSettings(string yaml)
+    {
+        try
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .IgnoreUnmatchedProperties()
+                .Build();
+            return deserializer.Deserialize<AppSettings>(yaml) ?? new AppSettings();
+        }
+        catch
+        {
+            return new AppSettings();
+        }
+    }
+
+    #endregion
 
     private static void NormalizeAppSettings(AppSettings s, string? rawYaml = null)
     {
@@ -157,50 +220,12 @@ public static class SettingsManager
     public static void Save(AppSettings settings)
     {
         Directory.CreateDirectory(AppDataDir);
+        var v2 = SettingsYamlConversion.FromAppSettings(settings);
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
-        var yaml = serializer.Serialize(settings);
-        // Legacy migration key: never persist this back to disk.
-        yaml = StripTopLevelYamlKey(yaml, "voiceSatellite");
+        var yaml = serializer.Serialize(v2);
         File.WriteAllText(SettingsPath, yaml);
-    }
-
-    private static string StripTopLevelYamlKey(string yaml, string key)
-    {
-        if (string.IsNullOrEmpty(yaml))
-            return yaml;
-
-        var lines = yaml.Replace("\r\n", "\n").Split('\n');
-        var kept = new List<string>(lines.Length);
-
-        var i = 0;
-        while (i < lines.Length)
-        {
-            var line = lines[i];
-            var trimmed = line.TrimEnd();
-            if (!line.StartsWith(" ") && trimmed.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
-            {
-                // Drop this top-level key and any indented child lines.
-                i++;
-                while (i < lines.Length)
-                {
-                    var child = lines[i];
-                    if (child.Length == 0 || child.StartsWith(" "))
-                    {
-                        i++;
-                        continue;
-                    }
-                    break;
-                }
-                continue;
-            }
-
-            kept.Add(line);
-            i++;
-        }
-
-        return string.Join("\n", kept);
     }
 
     public static string GetUserDataFolder()

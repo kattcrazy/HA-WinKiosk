@@ -571,6 +571,7 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
 
         SelectVoiceInputDeviceCombo(_settings.VoiceAssist.InputDeviceId);
         VoiceRefractorySecondsBox.Text = _settings.VoiceAssist.WakeWordDelay.ToString(CultureInfo.InvariantCulture);
+        VoiceWakeWordNamesBox.Text = string.Join(", ", _settings.VoiceAssist.WakeWordNames ?? new List<string>());
 
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
@@ -1141,15 +1142,10 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         try
         {
             CheckUpdatesButton.IsEnabled = false;
-            var started = await AutoUpdateService.CheckAndApplyNowAsync();
-            if (!started)
+            await AutoUpdateService.TryManualUpdateWithProgressAsync(msg =>
             {
-                ShowUpdateStatusPopup("No update found right now.");
-            }
-            else
-            {
-                ShowUpdateStatusPopup("Update found. Installing now...");
-            }
+                _ = Dispatcher.BeginInvoke(new Action(() => ShowUpdateStatusPopup(msg)));
+            });
         }
         finally
         {
@@ -1277,6 +1273,17 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             _settings.VoiceAssist.InputDeviceId = "";
         if (double.TryParse(VoiceRefractorySecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var refr))
             _settings.VoiceAssist.WakeWordDelay = Math.Max(0, refr);
+        _settings.VoiceAssist.WakeWordNames = ParseCommaSeparatedList(VoiceWakeWordNamesBox.Text);
+    }
+
+    private static List<string> ParseCommaSeparatedList(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return new List<string>();
+        return raw
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(s => s.Length > 0)
+            .ToList();
     }
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)

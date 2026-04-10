@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Channels;
 using HAWinKiosk.Mqtt.Models;
 using NAudio.CoreAudioApi;
@@ -49,6 +51,7 @@ public sealed class VoiceSatelliteService : IDisposable
     private Task? _wakeWritePumpTask;
     private Task? _haWritePumpTask;
     private Task? _wakeReadTask;
+    private int _runGeneration;
 
     private bool _disposed;
     private volatile bool _micToHa;
@@ -72,24 +75,29 @@ public sealed class VoiceSatelliteService : IDisposable
     {
         _settings = settings;
         var vs = settings.VoiceAssist;
+        int previousGeneration;
         lock (_gate)
         {
             _cts?.Cancel();
             _cts?.Dispose();
             _cts = null;
             _runTask = null;
+            previousGeneration = _runGeneration;
         }
 
-        StopHardware();
+        StopHardware(previousGeneration, force: true);
 
         if (!vs.Enabled || string.IsNullOrWhiteSpace(GetEffectiveWyomingHost()))
             return;
 
         var cts = new CancellationTokenSource();
+        int newGeneration;
         lock (_gate)
         {
+            newGeneration = unchecked(previousGeneration + 1);
+            _runGeneration = newGeneration;
             _cts = cts;
-            _runTask = Task.Run(() => RunAsync(cts.Token), CancellationToken.None);
+            _runTask = Task.Run(() => RunAsync(newGeneration, cts.Token), CancellationToken.None);
         }
     }
 
@@ -98,9 +106,11 @@ public sealed class VoiceSatelliteService : IDisposable
         if (_disposed) return;
         _disposed = true;
         CancelSessionEndDelay();
+        int generation;
         lock (_gate)
         {
             _cts?.Cancel();
+            generation = _runGeneration;
         }
         try
         {
@@ -110,7 +120,7 @@ public sealed class VoiceSatelliteService : IDisposable
         {
             // ignore
         }
-        StopHardware();
+        StopHardware(generation, force: true);
         _cts?.Dispose();
     }
 
@@ -162,7 +172,7 @@ public sealed class VoiceSatelliteService : IDisposable
         }
     }
 
-    private async Task RunAsync(CancellationToken ct)
+    private async Task RunAsync(int generation, CancellationToken ct)
     {
         try
         {
@@ -198,12 +208,18 @@ public sealed class VoiceSatelliteService : IDisposable
         }
         finally
         {
-            StopHardware();
+            StopHardware(generation);
         }
     }
 
-    private void StopHardware()
+    private void StopHardware(int generation, bool force = false)
     {
+        lock (_gate)
+        {
+            if (!force && generation != _runGeneration)
+                return;
+        }
+
         try
         {
             _listener?.Stop();
@@ -448,7 +464,21 @@ public sealed class VoiceSatelliteService : IDisposable
 
     private Task SendWakeDetectAsync(CancellationToken ct)
     {
-        var detect = WyomingOutgoingEvent.FromDataObject("detect", new Dictionary<string, object?> { ["names"] = null });
+        // wyoming-openwakeword: if names is empty/null it only enables DEFAULT_MODEL (ok_nabu). Custom models must be named here.
+        var raw = _settings.VoiceAssist.WakeWordNames;
+        List<string>? names = null;
+        if (raw is { Count: > 0 })
+        {
+            names = raw
+                .Select(s => (s ?? "").Trim())
+                .Where(s => s.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (names.Count == 0)
+                names = null;
+        }
+
+        var detect = WyomingOutgoingEvent.FromDataObject("detect", new Dictionary<string, object?> { ["names"] = names });
         var audioStart = WyomingOutgoingEvent.FromDataObject("audio-start", new Dictionary<string, object?>
         {
             ["rate"] = MicRate,
