@@ -8,6 +8,8 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using HAWinKiosk.Mqtt;
 using HAWinKiosk.Mqtt.Models;
@@ -16,7 +18,7 @@ using Microsoft.Web.WebView2.Core;
 
 namespace HAWinKiosk;
 
-public partial class KioskWindow : Window, IKioskHostActions
+public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
 {
     private MqttClientService? _mqtt;
     private readonly VoiceSatelliteService _voiceSatellite = new();
@@ -33,6 +35,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private bool _taskbarHidden;
     private bool _isClosing;
     private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
+    private bool _voiceOutroInProgress;
+    private bool _audioUiPopulating;
 
     public KioskWindow(bool showSettingsFirst = false)
     {
@@ -56,6 +60,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         _settings = SettingsManager.Load();
         ApplySettingsUiTheme();
+        PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
 
         if (_showSettingsFirst)
@@ -76,7 +81,171 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void SyncVoiceSatellite()
     {
+        _voiceSatellite.VoiceUi = _settings.VoiceAssist.Enabled ? this : null;
         _voiceSatellite.SyncSettings(_settings);
+        if (!_settings.VoiceAssist.Enabled)
+            VoiceUiDispatch(HideVoiceAssistUiImmediate);
+    }
+
+    private void VoiceUiDispatch(Action action)
+    {
+        if (_isClosing) return;
+        if (Dispatcher.CheckAccess())
+            action();
+        else
+            Dispatcher.BeginInvoke(action);
+    }
+
+    private void HideVoiceAssistUiImmediate()
+    {
+        _voiceOutroInProgress = false;
+        VoiceAssistOverlay.Visibility = Visibility.Collapsed;
+        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
+        VoiceAssistRoot.BeginAnimation(OpacityProperty, null);
+        VoiceUserText.BeginAnimation(OpacityProperty, null);
+        VoiceAssistantText.BeginAnimation(OpacityProperty, null);
+        VoiceLineBorder.BeginAnimation(OpacityProperty, null);
+        VoiceAssistSlideTransform.Y = 280;
+        VoiceAssistRoot.Opacity = 1;
+        VoiceUserText.Opacity = 0;
+        VoiceUserText.Text = "";
+        VoiceAssistantText.Opacity = 0;
+        VoiceAssistantText.Text = "";
+        VoiceLineBorder.Opacity = 0;
+        VoiceProcessingLabel.Visibility = Visibility.Collapsed;
+    }
+
+    private void RunVoiceIntroAnimation()
+    {
+        VoiceAssistSlideTransform.Y = 280;
+        VoiceLineBorder.Opacity = 0;
+        VoiceUserText.Opacity = 0;
+        VoiceAssistantText.Opacity = 0;
+        VoiceProcessingLabel.Visibility = Visibility.Collapsed;
+
+        var slide = new DoubleAnimation(280, 0, TimeSpan.FromMilliseconds(460))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, slide);
+
+        var lineFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(70),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        VoiceLineBorder.BeginAnimation(OpacityProperty, lineFade);
+    }
+
+    private void RunVoiceOutroAnimation()
+    {
+        if (_voiceOutroInProgress) return;
+        _voiceOutroInProgress = true;
+        var dur = TimeSpan.FromMilliseconds(420);
+        var fade = new DoubleAnimation(1, 0, dur)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        fade.Completed += (_, _) =>
+        {
+            HideVoiceAssistUiImmediate();
+        };
+        VoiceAssistRoot.BeginAnimation(OpacityProperty, fade);
+        var slideOut = new DoubleAnimation(0, 200, dur)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, slideOut);
+        VoiceUserText.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceUserText.Opacity, 0, dur));
+        VoiceAssistantText.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceAssistantText.Opacity, 0, dur));
+        VoiceLineBorder.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceLineBorder.Opacity, 0, dur));
+    }
+
+    void IVoiceAssistUiHost.VoiceAssistSessionStarted()
+    {
+        VoiceUiDispatch(() =>
+        {
+            _voiceOutroInProgress = false;
+            VoiceAssistOverlay.Visibility = Visibility.Visible;
+            RunVoiceIntroAnimation();
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceTranscriptPartial(string? text)
+    {
+        VoiceUiDispatch(() =>
+        {
+            VoiceUserText.Text = text?.Trim() ?? "";
+            if (VoiceUserText.Opacity < 0.05)
+            {
+                var a = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                VoiceUserText.BeginAnimation(OpacityProperty, a);
+            }
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceTranscriptFinal(string? text)
+    {
+        VoiceUiDispatch(() =>
+        {
+            VoiceUserText.Text = text?.Trim() ?? "";
+            VoiceUserText.Opacity = 1;
+            VoiceProcessingLabel.Visibility = Visibility.Collapsed;
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceProcessing()
+    {
+        VoiceUiDispatch(() =>
+        {
+            VoiceProcessingLabel.Visibility = Visibility.Visible;
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceAssistantReplyClear()
+    {
+        VoiceUiDispatch(() =>
+        {
+            VoiceAssistantText.Text = "";
+            VoiceAssistantText.Opacity = 0;
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceAssistantReplyAppend(string? chunk)
+    {
+        VoiceUiDispatch(() =>
+        {
+            if (string.IsNullOrEmpty(chunk)) return;
+            VoiceProcessingLabel.Visibility = Visibility.Collapsed;
+            VoiceAssistantText.Visibility = Visibility.Visible;
+            VoiceAssistantText.Text += chunk;
+            if (VoiceAssistantText.Opacity < 0.05)
+            {
+                var a = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                VoiceAssistantText.BeginAnimation(OpacityProperty, a);
+            }
+        });
+    }
+
+    void IVoiceAssistUiHost.VoiceTtsPlaybackStarted()
+    {
+        VoiceUiDispatch(() => { VoiceProcessingLabel.Visibility = Visibility.Collapsed; });
+    }
+
+    void IVoiceAssistUiHost.VoiceAssistSessionEnded()
+    {
+        VoiceUiDispatch(() =>
+        {
+            if (VoiceAssistOverlay.Visibility != Visibility.Visible) return;
+            if (_voiceOutroInProgress) return;
+            RunVoiceOutroAnimation();
+        });
     }
 
     private void ApplyDoNotDisturbIfEnabled()
@@ -346,6 +515,22 @@ public partial class KioskWindow : Window, IKioskHostActions
         DefaultBrightnessSlider.Value = Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100);
         DefaultBrightnessValueText.Text = $"{(int)Math.Round(DefaultBrightnessSlider.Value)}";
 
+        _audioUiPopulating = true;
+        try
+        {
+            PlaybackDeviceCombo.Items.Clear();
+            PlaybackDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default", Tag = "" });
+            foreach (var (id, name) in PlaybackAudio.EnumerateRenderDevices())
+                PlaybackDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = id });
+            SelectPlaybackDeviceCombo(_settings.AudioOutput.PlaybackDeviceId);
+            VolumePercentSlider.Value = Math.Clamp(_settings.AudioOutput.VolumePercent, 0, 100);
+            VolumePercentValueText.Text = $"{(int)Math.Round(VolumePercentSlider.Value)}";
+        }
+        finally
+        {
+            _audioUiPopulating = false;
+        }
+
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
@@ -458,6 +643,43 @@ public partial class KioskWindow : Window, IKioskHostActions
             DefaultBrightnessValueText.Text = ((int)Math.Round(e.NewValue)).ToString(CultureInfo.InvariantCulture);
     }
 
+    private void SelectPlaybackDeviceCombo(string? deviceId)
+    {
+        var want = deviceId ?? "";
+        foreach (var o in PlaybackDeviceCombo.Items)
+        {
+            if (o is not ComboBoxItem ci) continue;
+            var tag = ci.Tag as string ?? "";
+            if (tag == want)
+            {
+                PlaybackDeviceCombo.SelectedItem = ci;
+                return;
+            }
+        }
+
+        if (PlaybackDeviceCombo.Items.Count > 0)
+            PlaybackDeviceCombo.SelectedIndex = 0;
+    }
+
+    private void PlaybackDeviceCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_audioUiPopulating || SettingsPanel.Visibility != Visibility.Visible)
+            return;
+        if (PlaybackDeviceCombo.SelectedItem is not ComboBoxItem ci) return;
+        var id = ci.Tag as string ?? "";
+        if (!string.IsNullOrEmpty(id))
+            PlaybackAudio.TrySetDefaultPlaybackDevice(id);
+    }
+
+    private void VolumePercentSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (VolumePercentValueText != null)
+            VolumePercentValueText.Text = ((int)Math.Round(e.NewValue)).ToString(CultureInfo.InvariantCulture);
+        if (_audioUiPopulating || SettingsPanel.Visibility != Visibility.Visible)
+            return;
+        PlaybackAudio.TrySetDefaultVolumePercent((int)Math.Round(e.NewValue));
+    }
+
     private string GetEffectiveUiThemeMode()
     {
         if (SettingsPanel.Visibility == Visibility.Visible
@@ -480,7 +702,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         if (dark)
         {
-            SetBrush("Theme.Kiosk.Bg", System.Windows.Media.Color.FromRgb(0x00, 0x00, 0x00));
+            SetBrush("Theme.Kiosk.Bg", System.Windows.Media.Color.FromRgb(0x21, 0x21, 0x21));
             SetBrush("Theme.Kiosk.SettingsButtonBg", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
             SetBrush("Theme.Settings.PanelBg", System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E));
             SetBrush("Theme.Settings.CardBg", System.Windows.Media.Color.FromRgb(0x25, 0x25, 0x26));
@@ -501,6 +723,12 @@ public partial class KioskWindow : Window, IKioskHostActions
             SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
             SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0x3C, 0x3C, 0x40));
             SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0x84, 0x84, 0x88));
+            SetBrush("Theme.Voice.Backdrop", System.Windows.Media.Color.FromArgb(0xE8, 0x21, 0x21, 0x21));
+            SetBrush("Theme.Voice.BackdropBorder", System.Windows.Media.Color.FromArgb(0x45, 0xFF, 0xFF, 0xFF));
+            SetBrush("Theme.Voice.UserText", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrush("Theme.Voice.AssistantText", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
+            SetBrush("Theme.Voice.Processing", System.Windows.Media.Color.FromArgb(0xCC, 0xD0, 0xD0, 0xD0));
+            SetBrush("Theme.Voice.Line", System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
         }
         else
         {
@@ -525,6 +753,29 @@ public partial class KioskWindow : Window, IKioskHostActions
             SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
             SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0xB8, 0xC2, 0xD0));
             SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0xE5, 0xE8, 0xEE));
+            SetBrush("Theme.Voice.Backdrop", System.Windows.Media.Color.FromArgb(0xE8, 0xFF, 0xFF, 0xFF));
+            SetBrush("Theme.Voice.BackdropBorder", System.Windows.Media.Color.FromArgb(0x22, 0x00, 0x00, 0x00));
+            SetBrush("Theme.Voice.UserText", System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x1A));
+            SetBrush("Theme.Voice.AssistantText", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
+            SetBrush("Theme.Voice.Processing", System.Windows.Media.Color.FromArgb(0x99, 0x00, 0x00, 0x00));
+            SetBrush("Theme.Voice.Line", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
+        }
+
+        ApplyWindowIconForTheme(dark);
+    }
+
+    private void ApplyWindowIconForTheme(bool dark)
+    {
+        try
+        {
+            var pack = dark
+                ? "pack://application:,,,/dark_logo.png"
+                : "pack://application:,,,/light_logo.png";
+            Icon = BitmapFrame.Create(new Uri(pack, UriKind.Absolute), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        }
+        catch
+        {
+            // Missing design-time asset or load failure — keep default icon.
         }
     }
 
@@ -806,7 +1057,7 @@ public partial class KioskWindow : Window, IKioskHostActions
                 _settings.Kiosk.Pin,
                 _settings.Kiosk.PinResetQuestion,
                 _settings.Kiosk.PinResetAnswer,
-                GetEffectiveUiThemeMode()) { Owner = this };
+                GetEffectiveUiThemeMode()) { Owner = this, Icon = Icon };
             if (dlg.ShowDialog() != true) return;
             if (dlg.PinResetRequested)
             {
@@ -837,6 +1088,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ApplySettingsUiTheme();
 
         SettingsManager.Save(_settings);
+        PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
 
@@ -958,6 +1210,12 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.QuintupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuintTapMqttTopicBox.Text) ? null : GestureQuintTapMqttTopicBox.Text.Trim();
 
         _settings.ScreenBrightness.DefaultPercent = Math.Clamp((int)Math.Round(DefaultBrightnessSlider.Value), 0, 100);
+        _settings.AudioOutput.VolumePercent = Math.Clamp((int)Math.Round(VolumePercentSlider.Value), 0, 100);
+        if (PlaybackDeviceCombo.SelectedItem is ComboBoxItem playItem && playItem.Tag is string devTag)
+            _settings.AudioOutput.PlaybackDeviceId = devTag;
+        else
+            _settings.AudioOutput.PlaybackDeviceId = "";
+
         _settings.Sensors.Enabled = new List<string>();
         if (MqttSensorBatteryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
@@ -991,6 +1249,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         ApplyFormToSettings();
         SettingsManager.Save(_settings);
+        PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
         _mqtt?.Dispose();
         _mqtt = null;

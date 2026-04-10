@@ -51,6 +51,11 @@ public sealed class VoiceSatelliteService : IDisposable
     private volatile bool _micToHa;
     private readonly ConcurrentDictionary<string, double> _refractoryUntil = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Optional UI host (e.g. kiosk overlay). Called from background threads.</summary>
+    public IVoiceAssistUiHost? VoiceUi { get; set; }
+
+    private CancellationTokenSource? _sessionEndDelayCts;
+
     /// <summary>Configured Wyoming host, or a literal IP taken from the kiosk URL when blank.</summary>
     private string? GetEffectiveWyomingHost()
     {
@@ -89,6 +94,7 @@ public sealed class VoiceSatelliteService : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        CancelSessionEndDelay();
         lock (_gate)
         {
             _cts?.Cancel();
@@ -161,6 +167,8 @@ public sealed class VoiceSatelliteService : IDisposable
             // ignore
         }
         _listener = null;
+
+        CancelSessionEndDelay();
 
         if (_waveIn != null)
         {
@@ -406,7 +414,49 @@ public sealed class VoiceSatelliteService : IDisposable
         }));
         _haSend.Writer.TryWrite(WyomingOutgoingEvent.FromDataObject("streaming-started", new Dictionary<string, object?>()));
         _micToHa = true;
+        CancelSessionEndDelay();
+        NotifyVoice(v => v.VoiceAssistSessionStarted());
         return Task.CompletedTask;
+    }
+
+    private void CancelSessionEndDelay()
+    {
+        try
+        {
+            _sessionEndDelayCts?.Cancel();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _sessionEndDelayCts?.Dispose();
+        _sessionEndDelayCts = null;
+    }
+
+    private void ScheduleSessionEndAfterTts()
+    {
+        CancelSessionEndDelay();
+        _sessionEndDelayCts = new CancellationTokenSource();
+        var token = _sessionEndDelayCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(450, token).ConfigureAwait(false);
+                NotifyVoice(v => v.VoiceAssistSessionEnded());
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, CancellationToken.None);
+    }
+
+    private void NotifyVoice(Action<IVoiceAssistUiHost> action)
+    {
+        var ui = VoiceUi;
+        if (ui == null || !_settings.VoiceAssist.Enabled) return;
+        action(ui);
     }
 
     private async Task HandleHaClientAsync(TcpClient client, CancellationToken ct)
@@ -494,7 +544,18 @@ public sealed class VoiceSatelliteService : IDisposable
             }
             case "pong":
                 return Task.CompletedTask;
+            case "transcript-chunk":
+            {
+                var chunkText = GetJsonString(ev.Data, "text");
+                NotifyVoice(v => v.VoiceTranscriptPartial(chunkText));
+                return Task.CompletedTask;
+            }
+            case "transcript-start":
+                return Task.CompletedTask;
+            case "transcript-stop":
+                return Task.CompletedTask;
             case "audio-start":
+                NotifyVoice(v => v.VoiceTtsPlaybackStarted());
                 _tts?.BeginUtterance(ev);
                 return Task.CompletedTask;
             case "audio-chunk":
@@ -503,12 +564,59 @@ public sealed class VoiceSatelliteService : IDisposable
             case "audio-stop":
                 _tts?.EndUtterance();
                 _haSend.Writer.TryWrite(WyomingOutgoingEvent.FromDataObject("played", new Dictionary<string, object?>()));
+                ScheduleSessionEndAfterTts();
                 return Task.CompletedTask;
+            case "synthesize-start":
+            {
+                NotifyVoice(v =>
+                {
+                    v.VoiceAssistantReplyClear();
+                    var t = GetJsonString(ev.Data, "text");
+                    if (!string.IsNullOrEmpty(t))
+                        v.VoiceAssistantReplyAppend(t);
+                });
+                return Task.CompletedTask;
+            }
+            case "synthesize-chunk":
+            {
+                var t = GetJsonString(ev.Data, "text");
+                NotifyVoice(v => v.VoiceAssistantReplyAppend(t));
+                return Task.CompletedTask;
+            }
+            case "synthesize":
+            {
+                NotifyVoice(v =>
+                {
+                    v.VoiceAssistantReplyClear();
+                    var t = GetJsonString(ev.Data, "text");
+                    if (!string.IsNullOrEmpty(t))
+                        v.VoiceAssistantReplyAppend(t);
+                });
+                return Task.CompletedTask;
+            }
             case "transcript":
+            {
+                var t = GetJsonString(ev.Data, "text");
+                if (GetJsonBool(ev.Data, "partial") == true)
+                {
+                    NotifyVoice(v => v.VoiceTranscriptPartial(t));
+                    return Task.CompletedTask;
+                }
+
+                NotifyVoice(v =>
+                {
+                    v.VoiceTranscriptFinal(t);
+                    v.VoiceProcessing();
+                });
                 return EndStreamingFromHaAsync(ct);
+            }
             case "error":
+                CancelSessionEndDelay();
+                NotifyVoice(v => v.VoiceAssistSessionEnded());
                 return EndStreamingFromHaAsync(ct);
             case "pause-satellite":
+                CancelSessionEndDelay();
+                NotifyVoice(v => v.VoiceAssistSessionEnded());
                 return EndStreamingFromHaAsync(ct);
             default:
                 return Task.CompletedTask;
@@ -538,6 +646,18 @@ public sealed class VoiceSatelliteService : IDisposable
         if (data == null || !data.TryGetValue(key, out var el)) return null;
         if (el.ValueKind == JsonValueKind.Number && el.TryGetInt64(out var n)) return n;
         return null;
+    }
+
+    private static bool? GetJsonBool(Dictionary<string, JsonElement>? data, string key)
+    {
+        if (data == null || !data.TryGetValue(key, out var el)) return null;
+        return el.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String => bool.TryParse(el.GetString(), out var b) ? b : null,
+            _ => null
+        };
     }
 
     private sealed class TtsAudioPlayer : IDisposable

@@ -22,6 +22,9 @@ public class AppSettings
     [YamlMember(Alias = "screenBrightness")]
     public ScreenBrightnessConfig ScreenBrightness { get; set; } = new();
 
+    [YamlMember(Alias = "audioOutput")]
+    public AudioOutputConfig AudioOutput { get; set; } = new();
+
     /// <summary>
     /// Optional Wyoming voice satellite: TCP server for Home Assistant + streaming mic to openWakeWord on the LAN.
     /// </summary>
@@ -294,5 +297,16 @@ public class ScreenBrightnessConfig
 {
     [YamlMember(Alias = "defaultPercent")]
     public int DefaultPercent { get; set; } = 100;
+}
+
+public class AudioOutputConfig
+{
+    /// <summary>Master volume 0–100 for the default playback device (after optional device switch).</summary>
+    [YamlMember(Alias = "volumePercent")]
+    public int VolumePercent { get; set; } = 100;
+
+    /// <summary>Windows MMDevice ID to set as default playback device; empty = do not change OS default.</summary>
+    [YamlMember(Alias = "playbackDeviceId")]
+    public string PlaybackDeviceId { get; set; } = "";
 }
 

@@ -6,12 +6,12 @@
     <UseAppHost Condition="'$(BundleAsExe)' == 'true'">true</UseAppHost>
     <UseAppHost Condition="'$(BundleAsExe)' != 'true'">false</UseAppHost>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Version>3.6.0</Version>
+    <Version>3.9.3</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>..\..\logo.ico</ApplicationIcon>
+    <ApplicationIcon>..\..\light_logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,8 +26,10 @@
 
   <ItemGroup>
     <Resource Include="Fonts\Raleway-VariableFont_wght.ttf" />
-    <Resource Include="..\..\logo.png" Link="logo.png" />
-    <None Include="..\..\logo.ico" Link="logo.ico" />
+    <Resource Include="..\..\dark_logo.png" Link="dark_logo.png" />
+    <Resource Include="..\..\light_logo.png" Link="light_logo.png" />
+    <None Include="..\..\dark_logo.ico" Link="dark_logo.ico" />
+    <None Include="..\..\light_logo.ico" Link="light_logo.ico" />
   </ItemGroup>
 
 </Project>

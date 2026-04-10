@@ -2,7 +2,7 @@
 #define MyAppPublisher "HA WinKiosk"
 #define MyAppURL "https://github.com/kattcrazy/HA-WinKiosk"
 #define MyAppExeName "HAWinKiosk.exe"
-#define MyAppVersion "3.6.0"
+#define MyAppVersion "3.9.3"
 
 [Setup]
 AppId={{7E91D8B9-4E5A-4B6B-B3A6-4F89B7A5E2F2}
@@ -25,7 +25,7 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 OutputDir=.\output
 OutputBaseFilename=HAWinKiosk-Setup
-SetupIconFile=..\logo.ico
+SetupIconFile=..\light_logo.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

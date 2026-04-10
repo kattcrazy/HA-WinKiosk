@@ -1,0 +1,7 @@
+<Project>
+  <!-- `dotnet build` defaults to Debug; write those binaries to bin\Release\... so the path matches
+       manual testing and Inno (no more stale Release DLL when you forgot -c Release). -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <OutputPath>bin\Release\$(TargetFramework)\</OutputPath>
+  </PropertyGroup>
+</Project>

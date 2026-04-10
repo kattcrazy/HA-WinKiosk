@@ -43,7 +43,9 @@ public static class WebViewBridge
             swipeHoldMs = (int)Math.Max(100, g.SwipeHoldMs),
             twoFingerSwipeHoldMs = (int)Math.Max(100, g.TwoFingerSwipeHoldMs),
             zoomDirection = (g.ZoomDirection ?? "any").ToLowerInvariant(),
-            minSwipePx = Math.Max(20, g.MinSwipePixels)
+            minSwipePx = Math.Max(20, g.MinSwipePixels),
+            // Matches kiosk chrome: white tick in light mode, near-black tick + cyan glow in dark mode (see theme mockups).
+            gestureTickDark = UiThemeHelper.ResolveEffectiveDark(kiosk.UiTheme)
         };
 
         var json = JsonSerializer.Serialize(dto);
@@ -96,44 +98,64 @@ public static class WebViewBridge
   }
   function showAck(x, y) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const d = document.createElement('div');
-    d.style.position = 'fixed';
-    d.style.left = Math.max(24, Math.min(window.innerWidth - 24, x)) + 'px';
-    d.style.top = Math.max(24, Math.min(window.innerHeight - 24, y)) + 'px';
-    d.style.width = '68px';
-    d.style.height = '68px';
-    d.style.marginLeft = '-34px';
-    d.style.marginTop = '-34px';
-    d.style.borderRadius = '9999px';
-    d.style.background = '#16B9F0';
-    d.style.boxShadow = '0 0 0 8px rgba(22,185,240,.28), 0 0 0 16px rgba(22,185,240,.18)';
-    d.style.zIndex = '2147483647';
-    d.style.pointerEvents = 'none';
-    d.style.display = 'grid';
-    d.style.placeItems = 'center';
-    d.style.opacity = '0';
-    d.style.transform = 'scale(.6)';
-    d.style.transition = 'transform 220ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease';
-    d.style.color = 'white';
-    d.style.fontFamily = 'Segoe UI, sans-serif';
-    d.style.fontSize = '38px';
-    d.style.fontWeight = '700';
-    d.style.lineHeight = '1';
-    d.style.textAlign = 'center';
-    d.textContent = '✓';
+    const outer = document.createElement('div');
+    outer.style.position = 'fixed';
+    outer.style.left = Math.max(24, Math.min(window.innerWidth - 24, x)) + 'px';
+    outer.style.top = Math.max(24, Math.min(window.innerHeight - 24, y)) + 'px';
+    outer.style.width = '100px';
+    outer.style.height = '100px';
+    outer.style.marginLeft = '-50px';
+    outer.style.marginTop = '-50px';
+    outer.style.zIndex = '2147483647';
+    outer.style.pointerEvents = 'none';
+    outer.style.display = 'flex';
+    outer.style.alignItems = 'center';
+    outer.style.justifyContent = 'center';
+    outer.style.opacity = '0';
+    outer.style.transform = 'scale(.6)';
+    outer.style.transition = 'transform 220ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease';
+
+    const glow = document.createElement('div');
+    glow.style.position = 'absolute';
+    glow.style.left = '0';
+    glow.style.top = '0';
+    glow.style.width = '100%';
+    glow.style.height = '100%';
+    glow.style.borderRadius = '50%';
+    glow.style.pointerEvents = 'none';
+    glow.style.background = 'radial-gradient(circle closest-side, rgba(22,185,240,0.58) 0%, rgba(22,185,240,0.28) 38%, rgba(22,185,240,0.09) 58%, transparent 76%)';
+
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNs, 'svg');
+    svg.setAttribute('width', '52');
+    svg.setAttribute('height', '52');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.style.position = 'relative';
+    svg.style.zIndex = '1';
+    svg.style.filter = cfg.gestureTickDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))';
+    const path = document.createElementNS(svgNs, 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', cfg.gestureTickDark ? '#141414' : '#ffffff');
+    path.setAttribute('stroke-width', '3');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('d', 'M5.5 12.5l4 4L18.5 7');
+    svg.appendChild(path);
+
+    outer.appendChild(glow);
+    outer.appendChild(svg);
     const root = document.body || document.documentElement;
-    root.appendChild(d);
-    // Force layout so the element is definitely committed before action dispatch.
-    d.getBoundingClientRect();
+    root.appendChild(outer);
+    outer.getBoundingClientRect();
     requestAnimationFrame(() => {
-      d.style.opacity = '1';
-      d.style.transform = 'scale(1.08)';
-      requestAnimationFrame(() => { d.style.transform = 'scale(1)'; });
+      outer.style.opacity = '1';
+      outer.style.transform = 'scale(1.08)';
+      requestAnimationFrame(() => { outer.style.transform = 'scale(1)'; });
     });
     setTimeout(() => {
-      d.style.opacity = '0';
-      d.style.transform = 'scale(.86)';
-      setTimeout(() => d.remove(), 280);
+      outer.style.opacity = '0';
+      outer.style.transform = 'scale(.86)';
+      setTimeout(() => outer.remove(), 280);
     }, 760);
   }
   function actionForGesture(name) {

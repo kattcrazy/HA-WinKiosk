@@ -59,13 +59,13 @@ When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone au
 ```mermaid
 flowchart TD
     A[HA WinKiosk Mic] --> B[OpenWakeWord]
-    B --> C[Home Assistant Assist]
-    C --> D[Whisper STT]
-    C --> E[Piper TTS]
-    D --> F[Response Audio]
-    E --> F
+    B --> C[Whisper STT]
+    C --> D[Home Assistant Assist]
+    D --> E[Piper TTS]
+    E --> F[Response Audio]
     F --> G[WinKiosk Speaker]
 ```
+
 
 ### Software needed (HA Container)
 
