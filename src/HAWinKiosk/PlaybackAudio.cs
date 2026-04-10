@@ -42,6 +42,33 @@ internal static class PlaybackAudio
         return list;
     }
 
+    /// <summary>Active capture (recording) endpoints; IDs are Windows MMDevice strings (same style as <see cref="EnumerateRenderDevices"/>).</summary>
+    public static IReadOnlyList<(string Id, string Name)> EnumerateCaptureDevices()
+    {
+        var list = new List<(string, string)>();
+        try
+        {
+            using var en = new MMDeviceEnumerator();
+            foreach (var d in en.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+            {
+                try
+                {
+                    list.Add((d.ID, d.FriendlyName));
+                }
+                finally
+                {
+                    d.Dispose();
+                }
+            }
+        }
+        catch
+        {
+            // no devices or access denied
+        }
+
+        return list;
+    }
+
     public static bool TryGetDefaultVolumePercent(out int percent)
     {
         percent = 100;

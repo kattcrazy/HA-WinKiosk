@@ -54,9 +54,9 @@ public class VoiceAssistConfig
     [YamlMember(Alias = "wyomingHostPcPort")]
     public int WyomingHostPcPort { get; set; } = 10400;
 
-    /// <summary>NAudio WaveIn device number for microphone capture; -1 = system default input device.</summary>
-    [YamlMember(Alias = "inputDeviceNumber")]
-    public int InputDeviceNumber { get; set; } = -1;
+    /// <summary>Windows MMDevice ID for capture (same kind of string as <see cref="AudioOutputConfig.PlaybackDeviceId"/>). Empty = system default input.</summary>
+    [YamlMember(Alias = "inputDeviceId")]
+    public string InputDeviceId { get; set; } = "";
 
     /// <summary>Minimum seconds between handling the same wake word detection again.</summary>
     [YamlMember(Alias = "wakeWordDelay")]

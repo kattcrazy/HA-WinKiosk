@@ -122,11 +122,9 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
 | Brightness (%) | `0..100` | Startup brightness | Yes (number entity) |
 | Start when Windows starts | `true`/`false` | Launch app at sign-in | No |
-
-#### Pin
-
-| UI Name | Values | Notes | Published to HA via MQTT? |
-| --- | --- | --- | --- |
+| Playback device | `audioOutput.playbackDeviceId` | string (MMDevice ID) | Default / empty = do not change the Windows default playback device; otherwise sets default output to the chosen device on startup | No |
+| Input device | `voiceAssist.inputDeviceId` | string (MMDevice ID) | Default / empty = Windows default capture device; otherwise the chosen microphone by device ID (same style as playback) |
+/| Volume (%) | `audioOutput.volumePercent` | `0..100` | Master volume for the playback device the kiosk uses | No |
 | Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
 | PIN hint | string | Hint shown on PIN prompt | No |
 | Verification question | string | Forgot-PIN verification question | No |
@@ -168,6 +166,7 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | Zoom action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for zoom gesture | Indirect (when MQTT message) |
 | Zoom direction | `Any` \| `In` \| `Out` | Zoom gesture direction filter | No |
 | Zoom MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+| Min swipe distance (pixels) | integer (≥ 20 enforced on load) | YAML key **`minSwipePixels`** — minimum swipe length in pixels before a swipe counts (default 80). Not exposed in the Settings UI. | No |
 
 #### MQTT
 
@@ -178,6 +177,7 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | MQTT username | string | Broker username | No |
 | MQTT password | string | Broker password | No |
 | Device name | string | Base ID in MQTT entities/topics | No |
+| Discovery prefix | string | MQTT discovery prefix for Home Assistant (default `homeassistant`) | No |
 | Sensor: Battery level | `On`/`Off` | Publishes battery percentage | Yes |
 | Sensor: Last Active | `On`/`Off` | Publishes seconds since last input (1s cadence) | Yes |
 | Sensor: Updates pending | `On`/`Off` | Publishes Windows update count | Yes |
@@ -193,13 +193,14 @@ Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be ed
 | Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
 | Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
 | PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
+| (YAML only) | `sensors.updateIntervalSeconds` | integer ≥ 5 | How often batter and updates_pendinG refresh. last_active still updates every 1 second when enabled. | NO |
 
 #### Voice Assist
 
 | UI name | YAML key | Values | Notes |
 | --- | --- | --- | --- |
 | Voice Assist | `enabled` | `true`/`false` | Master switch for Wyoming satellite mode |
-| Wyoming Host PC | `wyomingHostPc` | hostname/IP | Host running the Wyoming wake service (e.g. Docker `rhasspy/wyoming-openwakeword`) |
+| Wyoming Host PC | `wyomingHostPc` | hostname/IP | Host running the Wyoming wake service (e.g. Docker `rhasspy/wyoming-openwakeword`). If empty, the app may derive a host from the kiosk URL. |
 | Wyoming Host PC port | `wyomingHostPcPort` | integer | Wyoming port on that host (commonly 10400 for openWakeWord / wyoming-openwakeword) |
 | Wake word delay | `wakeWordDelay` | seconds (≥ 0) | Minimum time before the same wake word fires again |
 
@@ -250,6 +251,7 @@ kiosk:
     zoomAction: disabled
     zoomDirection: any
     zoomMqttTopic: "zoom"
+    minSwipePixels: 80
 
 mqtt:
   host: "192.168.1.?"
@@ -283,10 +285,15 @@ commands:
 screenBrightness:
   defaultPercent: 100
 
+audioOutput:
+  playbackDeviceId: ""
+  volumePercent: 100
+
 voiceAssist:
   enabled: false
   wyomingHostPc: ""
   wyomingHostPcPort: 10400
+  inputDeviceId: ""
   wakeWordDelay: 5
 
 autoStart:

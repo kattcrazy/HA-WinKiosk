@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Channels;
 using HAWinKiosk.Mqtt.Models;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace HAWinKiosk.Wyoming;
@@ -15,16 +16,6 @@ namespace HAWinKiosk.Wyoming;
 /// </summary>
 public sealed class VoiceSatelliteService : IDisposable
 {
-    public static IEnumerable<(int DeviceNumber, string Name)> EnumerateInputDevices()
-    {
-        for (var i = 0; i < WaveInEvent.DeviceCount; i++)
-        {
-            var caps = WaveInEvent.GetCapabilities(i);
-            var name = string.IsNullOrWhiteSpace(caps.ProductName) ? $"Input {i}" : caps.ProductName.Trim();
-            yield return (i, name);
-        }
-    }
-
     /// <summary>Fixed TCP bind for Home Assistant Wyoming integration (this PC).</summary>
     private const string SatelliteListenHost = "0.0.0.0";
 
@@ -41,7 +32,9 @@ public sealed class VoiceSatelliteService : IDisposable
     private AppSettings _settings = new();
 
     private TcpListener? _listener;
-    private WaveInEvent? _waveIn;
+    private IWaveIn? _waveIn;
+    /// <summary>Holds the MMDevice used by <see cref="WasapiCapture"/> so it is not finalized while recording.</summary>
+    private MMDevice? _captureMmDevice;
     private TtsAudioPlayer? _tts;
 
     private TcpClient? _wakeClient;
@@ -121,6 +114,54 @@ public sealed class VoiceSatelliteService : IDisposable
         _cts?.Dispose();
     }
 
+    /// <summary>WASAPI capture by MMDevice ID (same IDs as the Settings list). Empty ID = default capture device.</summary>
+    private void CreateMicrophoneCapture()
+    {
+        var vs = _settings.VoiceAssist;
+        var id = (vs.InputDeviceId ?? "").Trim();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            MMDevice? mmTry = null;
+            try
+            {
+                using var en = new MMDeviceEnumerator();
+                mmTry = en.GetDevice(id);
+                var cap = new WasapiCapture(mmTry)
+                {
+                    WaveFormat = new WaveFormat(MicRate, MicWidth * 8, MicChannels)
+                };
+                _captureMmDevice = mmTry;
+                mmTry = null;
+                _waveIn = cap;
+                return;
+            }
+            catch
+            {
+                mmTry?.Dispose();
+            }
+            // Invalid or unusable ID: fall through to default WASAPI capture.
+        }
+
+        MMDevice? def = null;
+        try
+        {
+            def = WasapiCapture.GetDefaultCaptureDevice();
+            var w = new WasapiCapture(def)
+            {
+                WaveFormat = new WaveFormat(MicRate, MicWidth * 8, MicChannels)
+            };
+            _captureMmDevice = def;
+            def = null;
+            _waveIn = w;
+        }
+        catch
+        {
+            def?.Dispose();
+            throw;
+        }
+    }
+
     private async Task RunAsync(CancellationToken ct)
     {
         try
@@ -136,17 +177,8 @@ public sealed class VoiceSatelliteService : IDisposable
             _listener.Start();
 
             _tts = new TtsAudioPlayer();
-            var inputDeviceNumber = _settings.VoiceAssist.InputDeviceNumber;
-            if (inputDeviceNumber < 0 || inputDeviceNumber >= WaveInEvent.DeviceCount)
-                inputDeviceNumber = -1;
-            _waveIn = new WaveInEvent
-            {
-                DeviceNumber = inputDeviceNumber,
-                WaveFormat = new WaveFormat(MicRate, MicWidth * 8, MicChannels),
-                BufferMilliseconds = 50,
-                NumberOfBuffers = 3
-            };
-            _waveIn.DataAvailable += OnMicDataAvailable;
+            CreateMicrophoneCapture();
+            _waveIn!.DataAvailable += OnMicDataAvailable;
             _waveIn.StartRecording();
 
             _wakeReadTask = WakeReadLoopAsync(ct);
@@ -198,6 +230,17 @@ public sealed class VoiceSatelliteService : IDisposable
             }
             _waveIn = null;
         }
+
+        try
+        {
+            _captureMmDevice?.Dispose();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _captureMmDevice = null;
 
         _tts?.Dispose();
         _tts = null;

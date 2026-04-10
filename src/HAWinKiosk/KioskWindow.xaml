@@ -344,11 +344,6 @@
                                           Margin="0,0,0,10"
                                           SelectionChanged="PlaybackDeviceCombo_SelectionChanged"/>
 
-                                <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="VoiceInputDeviceCombo"
-                                          Style="{StaticResource SettingsComboBox}"
-                                          Margin="0,0,0,10"/>
-
                                 <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
@@ -372,6 +367,11 @@
                                                Style="{StaticResource SettingsItemLabel}"
                                                Text="100"/>
                                 </Grid>
+
+                                <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="VoiceInputDeviceCombo"
+                                          Style="{StaticResource SettingsComboBox}"
+                                          Margin="0,0,0,10"/>
 
                                 <Grid Margin="0,0,0,20">
                                     <Grid.ColumnDefinitions>
