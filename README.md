@@ -104,7 +104,7 @@ flowchart TD
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. The file uses top-level **`config`**, **`gestures`**, **`mqtt`** (with **`sensors`** and **`commands`** nested under `mqtt`), and **`voiceAssist`**. Older layouts (e.g. top-level `kiosk`, `sensors`, `commands`) are still **read** once and migrated to the new shape the next time settings are saved.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older layouts are migrated to the new shape the next time settings are saved.
 
 Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
