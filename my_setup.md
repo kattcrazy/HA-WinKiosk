@@ -12,7 +12,9 @@ When should windows require you to sign in again? Never
 
 #### Windows Updates
 Active hours: Set this to something reasonable
-Use your login details to automatically finish setting up after updating: On
+
+Automatically finish setting up after updating: On
+
 Notify when a restart is required: Off
 
 #### Time & Language > Date & Time
