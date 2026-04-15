@@ -8,11 +8,11 @@ Set the following Windows settings.
 Power/screen off timeout: Never
 
 #### Accounts > Sign-in Options
-Login automatically after update: On
+When should windows require you to sign in again? Never
 
 #### Windows Updates
 Active hours: Set this to something reasonable
-
+Use your login details to automatically finish setting up after updating: On
 Notify when a restart is required: Off
 
 #### Time & Language > Date & Time
@@ -73,12 +73,22 @@ actions:
       hours: 0
       minutes: 0
       seconds: 0
-      milliseconds: 500
+      milliseconds: 700
+  - action: button.press
+    metadata: {}
+    data: {}
+    target:
+      entity_id: button.[your kiosk name]_powershell_command
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 0
+      milliseconds: 700
   - action: button.press
     metadata: {}
     data: {}
     target:
       entity_id: button.[your kiosk name]_powershell_command
 ```
-This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 500 milliseconds, and presses the enter key to bypass the lockscreen.
+This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 700 milliseconds, presses the enter key to bypass the lockscreen, then repeats the last 2 steps to ensure it worked.
 
