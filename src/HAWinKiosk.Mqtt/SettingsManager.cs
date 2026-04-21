@@ -64,7 +64,7 @@ public static class SettingsManager
         else
             s = TryLoadLegacyAppSettings(yaml);
 
-        NormalizeAppSettings(s, yaml);
+        NormalizeAppSettings(s);
         return s;
     }
 
@@ -102,7 +102,7 @@ public static class SettingsManager
 
     #endregion
 
-    private static void NormalizeAppSettings(AppSettings s, string? rawYaml = null)
+    private static void NormalizeAppSettings(AppSettings s)
     {
         s.Sensors.Enabled = s.Sensors.Enabled
             .Select(x => x.Trim())
@@ -149,48 +149,7 @@ public static class SettingsManager
             ? "homeassistant"
             : s.Mqtt.DiscoveryPrefix.Trim();
 
-        MigrateVoiceAssist(s, rawYaml);
-    }
-
-    private static void MigrateVoiceAssist(AppSettings s, string? rawYaml)
-    {
-        var leg = s.VoiceSatelliteMigration;
-        if (leg == null)
-            return;
-
-        var hasVoiceAssistSection = rawYaml != null && YamlHasTopLevelKey(rawYaml, "voiceAssist");
-        if (!hasVoiceAssistSection)
-        {
-            s.VoiceAssist.Enabled = leg.Enabled;
-            s.VoiceAssist.WyomingHostPc = (leg.WakeServiceHost ?? "").Trim();
-            if (leg.WakeServicePort > 0)
-                s.VoiceAssist.WyomingHostPcPort = leg.WakeServicePort;
-            if (leg.RefractorySeconds >= 0)
-                s.VoiceAssist.WakeWordDelay = leg.RefractorySeconds;
-        }
-        else if (string.IsNullOrWhiteSpace(s.VoiceAssist.WyomingHostPc) && !string.IsNullOrWhiteSpace(leg.WakeServiceHost))
-        {
-            s.VoiceAssist.WyomingHostPc = leg.WakeServiceHost.Trim();
-        }
-
-        s.VoiceSatelliteMigration = null;
-    }
-
-    private static bool YamlHasTopLevelKey(string yaml, string key)
-    {
-        foreach (var raw in yaml.Replace("\r\n", "\n").Split('\n'))
-        {
-            if (raw.Length == 0) continue;
-            if (char.IsWhiteSpace(raw[0]))
-                continue;
-            var t = raw.TrimEnd();
-            if (t.Length == 0) continue;
-            if (t.TrimStart().StartsWith("#", StringComparison.Ordinal))
-                continue;
-            if (t.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
+        // Legacy voice settings are intentionally ignored.
     }
 
     private static string NormalizeGestureAction(string? raw, string fallback)

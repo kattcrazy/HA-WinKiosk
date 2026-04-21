@@ -1,5 +1,4 @@
 # <img src="light_logo.png" alt="HA WinKiosk logo" width="36" /> HA WinKiosk <img src="light_logo.png" alt="HA WinKiosk logo" width="36" />
-
 Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
 ## Quick Start
@@ -22,9 +21,68 @@ I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your 
 - WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
-- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu WILL still come up on windows key and swipe up from bottom.
+- Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu will still come up on windows key/swipe up from bottom.
 
 <img width="1250" height="703" alt="image (21)" src="https://github.com/user-attachments/assets/76113480-37a0-43c6-8385-49aeda76daed" />
+
+## Voice Assist
+
+While I previously attempted to add native openwakeword and wyoming services support with releases [v3.9.3-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.9.3-beta) to [v3.10.9-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.10.9-beta) I have discovered a wonderful intergration that does this just as well, if not better, with a lot less work. 
+
+Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea.
+
+Mic access, input device, output device, and volume can be changed from the config section of settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css. I have prewritten some css styles below if you wish to use them.
+
+<details>
+  <summary>Styles</summary>
+
+```
+/* --- GLOBAL BAR STYLING --- */
+#voice-satellite-ui .vs-activity-bar {
+  height: 4px !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+}
+
+/* --- LIGHT THEME --- */
+#voice-satellite-ui.vs-light {
+  --vs-text-user-color: #000000;
+  --vs-text-assistant-color: #29b6f6;
+}
+
+#voice-satellite-ui.vs-light .vs-text-user {
+  color: var(--vs-text-user-color) !important;
+}
+
+#voice-satellite-ui.vs-light .vs-text-assistant {
+  color: var(--vs-text-assistant-color) !important;
+}
+
+#voice-satellite-ui.vs-light .vs-activity-bar {
+  background: #ffffff !important;
+  box-shadow: 0 0 15px 4px rgba(79, 195, 247, 0.8) !important;
+}
+
+/* --- DARK THEME --- */
+#voice-satellite-ui.vs-dark {
+  --vs-text-user-color: #ffffff;
+  --vs-text-assistant-color: #03a9f4;
+}
+
+  color: var(--vs-text-user-color) !important;
+}
+
+#voice-satellite-ui.vs-dark .vs-text-assistant {
+  color: var(--vs-text-assistant-color) !important;
+}
+
+#voice-satellite-ui.vs-dark .vs-activity-bar {
+  background: #222222 !important;
+  box-shadow: 0 0 20px 6px rgba(3, 169, 244, 0.7) !important;
+}
+
+```
+</details>
 
 ## MQTT and Home Assistant
 
@@ -52,59 +110,9 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Updates pending | Number | Count of available Windows updates |
 | Monitor brightness | Number | Brightness % (0–100) |
 
-## Voice Assist and Home Assistant (beta feature)
-
-When enabled, HA WinKiosk acts as a Wyoming satellite. It captures microphone audio, sends it to your wake word software, and uses Home Assistant Assist for processing via the voice assistant flow. Speech-to-text and text-to-speech can be handled by Whisper and Piper or your choice of software, then the response audio is played back on the kiosk. The kiosk will need to have a static ip set so it can be added in home assistant.
-
-**I will not be providing a full tutorial on how to set this up**
-(Maybe in the future)
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#16B9F0', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#16B9F0', 'lineColor':'#16B9F0', 'secondaryColor':'#B9E9FF', 'tertiaryColor':'#E8F7FD'}}}%%
-flowchart TD
-    A[HA WinKiosk Mic] --> B[OpenWakeWord]
-    B --> C[Whisper STT]
-    C --> D[Home Assistant Assist]
-    D --> E[Piper TTS]
-    E --> F[Response Audio]
-    F --> G[HA WinKiosk Speaker]
-```
-
-
-### Software needed (HA Container)
-
-<details>
-<summary>Details</summary>
-
-
-- OpenWakeWord (wake word detection) docker container: https://github.com/rhasspy/wyoming-openwakeword
-
-- Whisper (speech-to-text) docker container: https://github.com/rhasspy/wyoming-whisper  
-
-- Piper (text-to-speech) docker container: https://github.com/rhasspy/wyoming-piper  
-
-- Wyoming integration docker container: https://my.home-assistant.io/redirect/integration/?domain=wyoming
-
-
-</details>
-
-### Software needed (HAOS)
-<details>
-<summary>Details</summary>
-
-- OpenWakeWord app (wake word detection): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_openwakeword
-
-- Whisper app (speech-to-text): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_whisper
-
-- Piper app (text-to-speech): https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_piper 
-
-- Wyoming integration: https://my.home-assistant.io/redirect/integration/?domain=wyoming
-
-</details>
-
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older layouts are migrated to the new shape the next time settings are saved.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older layouts (e.g. top-level `kiosk`, `sensors`, `commands`) are still read once and migrated to the new shape the next time settings are saved.
 
 Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
@@ -122,11 +130,11 @@ Below is a key of what all the options are, and below that is an example `settin
 | Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases | No |
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
-| Brightness (%) | `config.brightnessPercent` | `0..100` | Startup screen brightness | Yes (number entity) |
-| Start when Windows starts | `config.autoStartEnabled` | `true`/`false` | Launch app at sign-in | No |
-| Playback device | `config.playbackDeviceId` | string (MMDevice ID) | Default / empty = do not change the Windows default playback device; otherwise sets default output to the chosen device on startup | No |
-| Input device | `config.inputDeviceId` | string (MMDevice ID) | Default / empty = Windows default capture device; otherwise the chosen microphone by device ID  |
-| Volume (%) | `config.volumePercent` | `0..100` | Master volume for the playback device the kiosk uses | No |
+| Brightness (%) | `0..100` | YAML key: `config.brightnessPercent`. Startup screen brightness. | Yes (number entity) |
+| Start when Windows starts | `true`/`false` | YAML key: `config.autoStartEnabled`. Launch app at sign-in. | No |
+| Playback device | string (MMDevice ID) | YAML key: `config.playbackDeviceId`. Empty keeps Windows default playback device. | No |
+| Input device | string (MMDevice ID) | YAML key: `config.inputDeviceId`. Empty uses Windows default capture device. | No |
+| Volume (%) | `0..100` | YAML key: `config.volumePercent`. Master volume for the playback device. | No |
 | Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
 | PIN hint | string | Hint shown on PIN prompt | No |
 | Verification question | string | Forgot-PIN verification question | No |
@@ -195,17 +203,7 @@ Below is a key of what all the options are, and below that is an example `settin
 | Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
 | Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
 | PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
-| (YAML only) | `mqtt.sensors.updateIntervalSeconds` | integer ≥ 5 | How often battery and updates_pending refresh. last_active still updates every 1 second when enabled. | No |
-
-#### Voice Assist
-
-| UI name | YAML key | Values | Notes |
-| --- | --- | --- | --- |
-| Voice Assist | `voiceAssist.enabled` | `true`/`false` | Master switch for Wyoming satellite mode |
-| Wyoming Host PC | `voiceAssist.wyomingHostPc` | hostname/IP | Host running the Wyoming wake service (e.g. Docker `rhasspy/wyoming-openwakeword`). If empty, the app may derive a host from the kiosk URL. |
-| Wyoming Host PC port | `voiceAssist.wyomingHostPcPort` | integer | Wyoming port on that host (commonly 10400 for openWakeWord / wyoming-openwakeword) |
-| Wake word delay | `voiceAssist.wakeWordDelay` | seconds (≥ 0) | Minimum time before the same wake word fires again |
-| Wake word model names | `voiceAssist.wakeWordNames` | list of strings (UI: comma-separated) | Sent to openWakeWord in the Wyoming `detect` event. |
+| (YAML only) `mqtt.sensors.updateIntervalSeconds` | integer ≥ 5 | How often `battery` and `updates_pending` refresh. `last_active` still updates every 1 second when enabled. | No |
 
 ### Example `settings.yaml`
 
@@ -288,13 +286,6 @@ mqtt:
       - closesettings
       - windowsupdate
     powerShellCommand: ""
-
-voiceAssist:
-  enabled: false
-  wyomingHostPc: ""
-  wyomingHostPcPort: 10400
-  wakeWordDelay: 5
-  wakeWordNames: []
 ```
 
 ## Autostart and updates

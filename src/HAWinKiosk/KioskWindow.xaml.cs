@@ -13,18 +13,17 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using HAWinKiosk.Mqtt;
 using HAWinKiosk.Mqtt.Models;
-using HAWinKiosk.Wyoming;
 using Microsoft.Web.WebView2.Core;
 
 namespace HAWinKiosk;
 
-public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
+public partial class KioskWindow : Window, IKioskHostActions
 {
     private MqttClientService? _mqtt;
-    private readonly VoiceSatelliteService _voiceSatellite = new();
     private AppSettings _settings = new();
     private bool _webHooksAttached;
     private bool _serverCertErrorHookAttached;
+    private bool _permissionRequestHookAttached;
     private DoNotDisturbManager? _dndManager;
 
     private readonly object _gestureFramesLock = new();
@@ -35,7 +34,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
     private bool _taskbarHidden;
     private bool _isClosing;
     private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
-    private bool _voiceOutroInProgress;
     private bool _audioUiPopulating;
 
     public KioskWindow(bool showSettingsFirst = false)
@@ -67,7 +65,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         {
             PopulateSettingsForm();
             ShowSettings();
-            SyncVoiceSatellite();
         }
         else
         {
@@ -75,177 +72,7 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             await EnsureWebView2();
             NavigateTo(_settings.Kiosk.Url);
             StartMqttIfConfigured();
-            SyncVoiceSatellite();
         }
-    }
-
-    private void SyncVoiceSatellite()
-    {
-        _voiceSatellite.VoiceUi = _settings.VoiceAssist.Enabled ? this : null;
-        _voiceSatellite.SyncSettings(_settings);
-        if (!_settings.VoiceAssist.Enabled)
-            VoiceUiDispatch(HideVoiceAssistUiImmediate);
-    }
-
-    private void VoiceUiDispatch(Action action)
-    {
-        if (_isClosing) return;
-        if (Dispatcher.CheckAccess())
-            action();
-        else
-            Dispatcher.BeginInvoke(action);
-    }
-
-    private void HideVoiceAssistUiImmediate()
-    {
-        _voiceOutroInProgress = false;
-        VoiceAssistOverlay.Visibility = Visibility.Collapsed;
-        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
-        VoiceAssistRoot.BeginAnimation(OpacityProperty, null);
-        VoiceUserText.BeginAnimation(OpacityProperty, null);
-        VoiceAssistantText.BeginAnimation(OpacityProperty, null);
-        VoiceLineBorder.BeginAnimation(OpacityProperty, null);
-        VoiceAssistSlideTransform.Y = 280;
-        VoiceAssistRoot.Opacity = 1;
-        VoiceUserText.Opacity = 0;
-        VoiceUserText.Text = "";
-        VoiceAssistantText.Opacity = 0;
-        VoiceAssistantText.Text = "";
-        VoiceLineBorder.Opacity = 0;
-        VoiceProcessingLabel.Visibility = Visibility.Collapsed;
-    }
-
-    private void RunVoiceIntroAnimation()
-    {
-        VoiceAssistSlideTransform.Y = 280;
-        VoiceLineBorder.Opacity = 0;
-        VoiceUserText.Opacity = 0;
-        VoiceAssistantText.Opacity = 0;
-        VoiceProcessingLabel.Visibility = Visibility.Collapsed;
-
-        var slide = new DoubleAnimation(280, 0, TimeSpan.FromMilliseconds(460))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, slide);
-
-        var lineFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360))
-        {
-            BeginTime = TimeSpan.FromMilliseconds(70),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        VoiceLineBorder.BeginAnimation(OpacityProperty, lineFade);
-    }
-
-    private void RunVoiceOutroAnimation()
-    {
-        if (_voiceOutroInProgress) return;
-        _voiceOutroInProgress = true;
-        var dur = TimeSpan.FromMilliseconds(420);
-        var fade = new DoubleAnimation(1, 0, dur)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-        fade.Completed += (_, _) =>
-        {
-            HideVoiceAssistUiImmediate();
-        };
-        VoiceAssistRoot.BeginAnimation(OpacityProperty, fade);
-        var slideOut = new DoubleAnimation(0, 200, dur)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-        VoiceAssistSlideTransform.BeginAnimation(TranslateTransform.YProperty, slideOut);
-        VoiceUserText.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceUserText.Opacity, 0, dur));
-        VoiceAssistantText.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceAssistantText.Opacity, 0, dur));
-        VoiceLineBorder.BeginAnimation(OpacityProperty, new DoubleAnimation(VoiceLineBorder.Opacity, 0, dur));
-    }
-
-    void IVoiceAssistUiHost.VoiceAssistSessionStarted()
-    {
-        VoiceUiDispatch(() =>
-        {
-            _voiceOutroInProgress = false;
-            VoiceAssistOverlay.Visibility = Visibility.Visible;
-            RunVoiceIntroAnimation();
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceTranscriptPartial(string? text)
-    {
-        VoiceUiDispatch(() =>
-        {
-            VoiceUserText.Text = text?.Trim() ?? "";
-            if (VoiceUserText.Opacity < 0.05)
-            {
-                var a = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
-                {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                VoiceUserText.BeginAnimation(OpacityProperty, a);
-            }
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceTranscriptFinal(string? text)
-    {
-        VoiceUiDispatch(() =>
-        {
-            VoiceUserText.Text = text?.Trim() ?? "";
-            VoiceUserText.Opacity = 1;
-            VoiceProcessingLabel.Visibility = Visibility.Collapsed;
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceProcessing()
-    {
-        VoiceUiDispatch(() =>
-        {
-            VoiceProcessingLabel.Visibility = Visibility.Visible;
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceAssistantReplyClear()
-    {
-        VoiceUiDispatch(() =>
-        {
-            VoiceAssistantText.Text = "";
-            VoiceAssistantText.Opacity = 0;
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceAssistantReplyAppend(string? chunk)
-    {
-        VoiceUiDispatch(() =>
-        {
-            if (string.IsNullOrEmpty(chunk)) return;
-            VoiceProcessingLabel.Visibility = Visibility.Collapsed;
-            VoiceAssistantText.Visibility = Visibility.Visible;
-            VoiceAssistantText.Text += chunk;
-            if (VoiceAssistantText.Opacity < 0.05)
-            {
-                var a = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
-                {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                VoiceAssistantText.BeginAnimation(OpacityProperty, a);
-            }
-        });
-    }
-
-    void IVoiceAssistUiHost.VoiceTtsPlaybackStarted()
-    {
-        VoiceUiDispatch(() => { VoiceProcessingLabel.Visibility = Visibility.Collapsed; });
-    }
-
-    void IVoiceAssistUiHost.VoiceAssistSessionEnded()
-    {
-        VoiceUiDispatch(() =>
-        {
-            if (VoiceAssistOverlay.Visibility != Visibility.Visible) return;
-            if (_voiceOutroInProgress) return;
-            RunVoiceOutroAnimation();
-        });
     }
 
     private void ApplyDoNotDisturbIfEnabled()
@@ -369,6 +196,11 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         UpdatePowerShellCommandVisibility();
     }
 
+    private void EnableMicToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateMicInputVisibility();
+    }
+
     private void DeviceNameBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateGestureTopicPrefixPreviews();
@@ -462,6 +294,14 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             : Visibility.Collapsed;
     }
 
+    private void UpdateMicInputVisibility()
+    {
+        if (InputDevicePanel == null || EnableMicToggle == null) return;
+        InputDevicePanel.Visibility = EnableMicToggle.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
     private void PopulateSettingsForm()
     {
         UrlBox.Text = _settings.Kiosk.Url ?? "";
@@ -549,34 +389,26 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
         MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
+        EnableMicToggle.IsChecked = _settings.Kiosk.EnableMic;
 
-        VoiceSatelliteEnabledToggle.IsChecked = _settings.VoiceAssist.Enabled;
-        var wyomingHost = _settings.VoiceAssist.WyomingHostPc ?? "";
-        if (string.IsNullOrWhiteSpace(wyomingHost) && KioskUrlLiteralHost.TryGetFromUrl(_settings.Kiosk.Url, out var derivedHost))
-            VoiceWakeHostBox.Text = derivedHost;
-        else
-            VoiceWakeHostBox.Text = wyomingHost.Trim();
-        VoiceWakePortBox.Text = _settings.VoiceAssist.WyomingHostPcPort.ToString(CultureInfo.InvariantCulture);
-        VoiceInputDeviceCombo.Items.Clear();
-        VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default input device", Tag = "" });
+        InputDeviceCombo.Items.Clear();
+        InputDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default input device", Tag = "" });
         try
         {
             foreach (var (devId, name) in PlaybackAudio.EnumerateCaptureDevices())
-                VoiceInputDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = devId });
+                InputDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = devId });
         }
         catch
         {
             // Enumeration can throw on some drivers; keep Settings open.
         }
 
-        SelectVoiceInputDeviceCombo(_settings.VoiceAssist.InputDeviceId);
-        VoiceRefractorySecondsBox.Text = _settings.VoiceAssist.WakeWordDelay.ToString(CultureInfo.InvariantCulture);
-        VoiceWakeWordNamesBox.Text = string.Join(", ", _settings.VoiceAssist.WakeWordNames ?? new List<string>());
-
+        SelectInputDeviceCombo(_settings.Kiosk.InputDeviceId);
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
         UpdateGestureOptionsVisibility();
         UpdatePowerShellCommandVisibility();
+        UpdateMicInputVisibility();
         UpdateExitButtonVisibility();
 
         UpdatePinProtectedFieldsVisibility();
@@ -675,21 +507,21 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             PlaybackDeviceCombo.SelectedIndex = 0;
     }
 
-    private void SelectVoiceInputDeviceCombo(string? deviceId)
+    private void SelectInputDeviceCombo(string? deviceId)
     {
         var wantId = deviceId?.Trim() ?? "";
-        foreach (var o in VoiceInputDeviceCombo.Items)
+        foreach (var o in InputDeviceCombo.Items)
         {
             if (o is not ComboBoxItem ci) continue;
             if (ci.Tag is string t && t == wantId)
             {
-                VoiceInputDeviceCombo.SelectedItem = ci;
+                InputDeviceCombo.SelectedItem = ci;
                 return;
             }
         }
 
-        if (VoiceInputDeviceCombo.Items.Count > 0)
-            VoiceInputDeviceCombo.SelectedIndex = 0;
+        if (InputDeviceCombo.Items.Count > 0)
+            InputDeviceCombo.SelectedIndex = 0;
     }
 
     private void PlaybackDeviceCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -754,12 +586,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
             SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0x3C, 0x3C, 0x40));
             SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0x84, 0x84, 0x88));
-            SetBrush("Theme.Voice.Backdrop", System.Windows.Media.Color.FromArgb(0xE8, 0x21, 0x21, 0x21));
-            SetBrush("Theme.Voice.BackdropBorder", System.Windows.Media.Color.FromArgb(0x45, 0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Voice.UserText", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Voice.AssistantText", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Voice.Processing", System.Windows.Media.Color.FromArgb(0xCC, 0xD0, 0xD0, 0xD0));
-            SetBrush("Theme.Voice.Line", System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
         }
         else
         {
@@ -784,12 +610,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
             SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0xB8, 0xC2, 0xD0));
             SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0xE5, 0xE8, 0xEE));
-            SetBrush("Theme.Voice.Backdrop", System.Windows.Media.Color.FromArgb(0xE8, 0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Voice.BackdropBorder", System.Windows.Media.Color.FromArgb(0x22, 0x00, 0x00, 0x00));
-            SetBrush("Theme.Voice.UserText", System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x1A));
-            SetBrush("Theme.Voice.AssistantText", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Voice.Processing", System.Windows.Media.Color.FromArgb(0x99, 0x00, 0x00, 0x00));
-            SetBrush("Theme.Voice.Line", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
         }
 
         ApplyWindowIconForTheme(dark);
@@ -855,6 +675,21 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
             _serverCertErrorHookAttached = true;
             wv.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
         }
+
+        // Auto-approve microphone access so kiosk pages do not show permission prompts.
+        if (!_permissionRequestHookAttached)
+        {
+            _permissionRequestHookAttached = true;
+            wv.PermissionRequested += OnPermissionRequested;
+        }
+    }
+
+    private void OnPermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
+    {
+        if (e.PermissionKind == CoreWebView2PermissionKind.Microphone)
+            e.State = _settings.Kiosk.EnableMic
+                ? CoreWebView2PermissionState.Allow
+                : CoreWebView2PermissionState.Deny;
     }
 
     private void OnServerCertificateErrorDetected(object? sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
@@ -1100,7 +935,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
 
         PopulateSettingsForm();
         ShowSettings();
-        SyncVoiceSatellite();
     }
 
     /// <summary>MQTT opensettings command — no PIN gate (trusted broker).</summary>
@@ -1109,7 +943,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         _settings = SettingsManager.Load();
         PopulateSettingsForm();
         ShowSettings();
-        SyncVoiceSatellite();
     }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -1133,7 +966,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         NavigateTo(_settings.Kiosk.Url);
 
         RestartMqttIfNeeded();
-        SyncVoiceSatellite();
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -1260,30 +1092,12 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
         _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
+        _settings.Kiosk.EnableMic = EnableMicToggle.IsChecked == true;
 
-        _settings.VoiceAssist.Enabled = VoiceSatelliteEnabledToggle.IsChecked == true;
-        _settings.VoiceAssist.WyomingHostPc = string.IsNullOrWhiteSpace(VoiceWakeHostBox.Text)
-            ? ""
-            : VoiceWakeHostBox.Text.Trim();
-        if (int.TryParse(VoiceWakePortBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var vWake))
-            _settings.VoiceAssist.WyomingHostPcPort = Math.Clamp(vWake, 1, 65535);
-        if (VoiceInputDeviceCombo.SelectedItem is ComboBoxItem inputItem && inputItem.Tag is string inputTag)
-            _settings.VoiceAssist.InputDeviceId = inputTag.Length == 0 ? "" : inputTag.Trim();
+        if (_settings.Kiosk.EnableMic && InputDeviceCombo.SelectedItem is ComboBoxItem inputItem && inputItem.Tag is string inputTag)
+            _settings.Kiosk.InputDeviceId = inputTag.Length == 0 ? "" : inputTag.Trim();
         else
-            _settings.VoiceAssist.InputDeviceId = "";
-        if (double.TryParse(VoiceRefractorySecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var refr))
-            _settings.VoiceAssist.WakeWordDelay = Math.Max(0, refr);
-        _settings.VoiceAssist.WakeWordNames = ParseCommaSeparatedList(VoiceWakeWordNamesBox.Text);
-    }
-
-    private static List<string> ParseCommaSeparatedList(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-        return raw
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(s => s.Length > 0)
-            .ToList();
+            _settings.Kiosk.InputDeviceId = "";
     }
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)
@@ -1294,7 +1108,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
         _mqtt?.Dispose();
         _mqtt = null;
-        _voiceSatellite.Dispose();
         System.Windows.Application.Current.Shutdown();
     }
 
@@ -1317,7 +1130,6 @@ public partial class KioskWindow : Window, IKioskHostActions, IVoiceAssistUiHost
         DisableKioskLockdown();
         _dndManager?.SetEnabled(false);
         _mqtt?.Dispose();
-        _voiceSatellite.Dispose();
         base.OnClosed(e);
     }
 

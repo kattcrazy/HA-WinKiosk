@@ -3,7 +3,7 @@ using YamlDotNet.Serialization;
 namespace HAWinKiosk.Mqtt.Models;
 
 /// <summary>
-/// Root shape for <c>settings.yaml</c> v2 (<c>config</c>, <c>gestures</c>, nested <c>mqtt</c>, <c>voiceAssist</c>).
+/// Root shape for <c>settings.yaml</c> v2 (<c>config</c>, <c>gestures</c>, nested <c>mqtt</c>).
 /// Runtime code still uses <see cref="AppSettings"/>; this type is load/save only.
 /// </summary>
 public sealed class SettingsFileV2
@@ -13,8 +13,6 @@ public sealed class SettingsFileV2
     public GesturesConfig Gestures { get; set; } = new();
 
     public MqttSectionV2 Mqtt { get; set; } = new();
-
-    public VoiceAssistYamlV2 VoiceAssist { get; set; } = new();
 }
 
 /// <summary>
@@ -58,9 +56,12 @@ public sealed class ConfigSectionV2
     [YamlMember(Alias = "playbackDeviceId")]
     public string PlaybackDeviceId { get; set; } = "";
 
-    /// <summary>Voice capture device id (Wyoming); same as former <c>voiceAssist.inputDeviceId</c>.</summary>
+    /// <summary>Capture device id for microphone selection in settings.</summary>
     [YamlMember(Alias = "inputDeviceId")]
     public string InputDeviceId { get; set; } = "";
+
+    [YamlMember(Alias = "enableMic")]
+    public bool EnableMic { get; set; } = true;
 
     [YamlMember(Alias = "volumePercent")]
     public int VolumePercent { get; set; } = 100;
@@ -103,27 +104,6 @@ public sealed class MqttSectionV2
     public CommandsConfig Commands { get; set; } = new();
 }
 
-/// <summary>
-/// Wyoming wake streaming fields for YAML v2 (no <c>inputDeviceId</c> here — lives under <see cref="ConfigSectionV2"/>).
-/// </summary>
-public sealed class VoiceAssistYamlV2
-{
-    [YamlMember(Alias = "enabled")]
-    public bool Enabled { get; set; }
-
-    [YamlMember(Alias = "wyomingHostPc")]
-    public string WyomingHostPc { get; set; } = "";
-
-    [YamlMember(Alias = "wyomingHostPcPort")]
-    public int WyomingHostPcPort { get; set; } = 10400;
-
-    [YamlMember(Alias = "wakeWordDelay")]
-    public double WakeWordDelay { get; set; } = 5;
-
-    [YamlMember(Alias = "wakeWordNames")]
-    public List<string> WakeWordNames { get; set; } = new();
-}
-
 /// <summary>Maps between <see cref="SettingsFileV2"/> and the runtime <see cref="AppSettings"/> graph.</summary>
 public static class SettingsYamlConversion
 {
@@ -159,13 +139,8 @@ public static class SettingsYamlConversion
         s.Sensors = m.Sensors ?? new SensorsConfig();
         s.Commands = m.Commands ?? new CommandsConfig();
 
-        var va = v.VoiceAssist ?? new VoiceAssistYamlV2();
-        s.VoiceAssist.Enabled = va.Enabled;
-        s.VoiceAssist.WyomingHostPc = va.WyomingHostPc ?? "";
-        s.VoiceAssist.WyomingHostPcPort = va.WyomingHostPcPort;
-        s.VoiceAssist.WakeWordDelay = va.WakeWordDelay;
-        s.VoiceAssist.WakeWordNames = va.WakeWordNames ?? new List<string>();
-        s.VoiceAssist.InputDeviceId = c.InputDeviceId ?? "";
+        s.Kiosk.InputDeviceId = c.InputDeviceId ?? "";
+        s.Kiosk.EnableMic = c.EnableMic;
 
         return s;
     }
@@ -188,7 +163,8 @@ public static class SettingsYamlConversion
                 UiTheme = s.Kiosk.UiTheme,
                 BetaUpdates = s.Kiosk.BetaUpdates,
                 PlaybackDeviceId = s.AudioOutput.PlaybackDeviceId,
-                InputDeviceId = s.VoiceAssist.InputDeviceId ?? "",
+                InputDeviceId = s.Kiosk.InputDeviceId ?? "",
+                EnableMic = s.Kiosk.EnableMic,
                 VolumePercent = s.AudioOutput.VolumePercent,
                 BrightnessPercent = s.ScreenBrightness.DefaultPercent,
                 AutoStartEnabled = s.AutoStart.Enabled
@@ -204,14 +180,6 @@ public static class SettingsYamlConversion
                 DiscoveryPrefix = s.Mqtt.DiscoveryPrefix,
                 Sensors = s.Sensors,
                 Commands = s.Commands
-            },
-            VoiceAssist = new VoiceAssistYamlV2
-            {
-                Enabled = s.VoiceAssist.Enabled,
-                WyomingHostPc = s.VoiceAssist.WyomingHostPc,
-                WyomingHostPcPort = s.VoiceAssist.WyomingHostPcPort,
-                WakeWordDelay = s.VoiceAssist.WakeWordDelay,
-                WakeWordNames = s.VoiceAssist.WakeWordNames ?? new List<string>()
             }
         };
     }

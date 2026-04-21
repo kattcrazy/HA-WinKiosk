@@ -25,58 +25,6 @@ public class AppSettings
     [YamlMember(Alias = "audioOutput")]
     public AudioOutputConfig AudioOutput { get; set; } = new();
 
-    /// <summary>
-    /// Optional Wyoming voice satellite: TCP server for Home Assistant + streaming mic to openWakeWord on the LAN.
-    /// </summary>
-    [YamlMember(Alias = "voiceAssist")]
-    public VoiceAssistConfig VoiceAssist { get; set; } = new();
-
-    /// <summary>Legacy <c>voiceSatellite</c> block; migrated into <see cref="VoiceAssist"/> on load and nulled before save.</summary>
-    [YamlMember(Alias = "voiceSatellite")]
-    public VoiceSatelliteLegacyYaml? VoiceSatelliteMigration { get; set; }
-
-}
-
-/// <summary>
-/// Hands-free Assist: Wyoming satellite (mic + playback). openWakeWord/STT/TTS run on Home Assistant or Docker; see project docs.
-/// Satellite listen address/port are fixed in code (0.0.0.0:10700). Wyoming device name follows MQTT Device name.
-/// </summary>
-public class VoiceAssistConfig
-{
-    /// <summary>When true, run the Wyoming satellite and stream the mic to the configured wake service.</summary>
-    [YamlMember(Alias = "enabled")]
-    public bool Enabled { get; set; } = false;
-
-    /// <summary>Hostname or IP of the machine running openWakeWord (Wyoming).</summary>
-    [YamlMember(Alias = "wyomingHostPc")]
-    public string WyomingHostPc { get; set; } = "";
-
-    [YamlMember(Alias = "wyomingHostPcPort")]
-    public int WyomingHostPcPort { get; set; } = 10400;
-
-    /// <summary>Windows MMDevice ID for capture (same kind of string as <see cref="AudioOutputConfig.PlaybackDeviceId"/>). Empty = system default input.</summary>
-    [YamlMember(Alias = "inputDeviceId")]
-    public string InputDeviceId { get; set; } = "";
-
-    /// <summary>Minimum seconds between handling the same wake word detection again.</summary>
-    [YamlMember(Alias = "wakeWordDelay")]
-    public double WakeWordDelay { get; set; } = 5;
-
-    /// <summary>
-    /// Wyoming <c>detect</c> model names sent to openWakeWord (must match built-in ids or custom model keys on the server).
-    /// If empty, OWW defaults to built-in <c>ok_nabu</c> only — custom wake models must be listed here.
-    /// </summary>
-    [YamlMember(Alias = "wakeWordNames")]
-    public List<string> WakeWordNames { get; set; } = new();
-}
-
-/// <summary>Old <c>voiceSatellite</c> YAML shape (deserialized only for migration).</summary>
-public sealed class VoiceSatelliteLegacyYaml
-{
-    public bool Enabled { get; set; }
-    public string WakeServiceHost { get; set; } = "";
-    public int WakeServicePort { get; set; } = 10400;
-    public double RefractorySeconds { get; set; } = 5;
 }
 
 public class KioskConfig
@@ -128,6 +76,14 @@ public class KioskConfig
     /// </summary>
     [YamlMember(Alias = "betaUpdates")]
     public bool BetaUpdates { get; set; }
+
+    /// <summary>Windows MMDevice ID for capture; empty = system default input.</summary>
+    [YamlMember(Alias = "inputDeviceId")]
+    public string InputDeviceId { get; set; } = "";
+
+    /// <summary>When false, kiosk denies microphone permission requests from WebView pages.</summary>
+    [YamlMember(Alias = "enableMic")]
+    public bool EnableMic { get; set; } = true;
 
     [YamlMember(Alias = "gestures")]
     public GesturesConfig Gestures { get; set; } = new();

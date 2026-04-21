@@ -25,13 +25,6 @@
         <SolidColorBrush x:Key="Theme.Settings.FgSub" Color="#333333"/>
         <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="Theme.Settings.InputBorder" Color="#CCCCCC"/>
-        <!-- Voice assist (defaults = light; ApplySettingsUiTheme overwrites) -->
-        <SolidColorBrush x:Key="Theme.Voice.Backdrop" Color="#E8FFFFFF"/>
-        <SolidColorBrush x:Key="Theme.Voice.BackdropBorder" Color="#26000000"/>
-        <SolidColorBrush x:Key="Theme.Voice.UserText" Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="Theme.Voice.AssistantText" Color="#16B9F0"/>
-        <SolidColorBrush x:Key="Theme.Voice.Processing" Color="#99000000"/>
-        <SolidColorBrush x:Key="Theme.Voice.Line" Color="#FFFFFF"/>
         <!-- Page title: dialog chrome only -->
         <Style x:Key="SettingsPageHeading" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
@@ -72,74 +65,6 @@
     <Grid>
         <Grid x:Name="KioskPanel" Background="{DynamicResource Theme.Kiosk.Bg}">
             <wv2:WebView2 x:Name="WebView"/>
-        </Grid>
-
-        <!-- Voice Assist: above WebView, below settings; does not capture input -->
-        <Grid x:Name="VoiceAssistOverlay"
-              Panel.ZIndex="500"
-              IsHitTestVisible="False"
-              Visibility="Collapsed"
-              Background="Transparent">
-            <Grid x:Name="VoiceAssistRoot"
-                  VerticalAlignment="Bottom"
-                  HorizontalAlignment="Stretch"
-                  Margin="24,0,24,20"
-                  Opacity="1"
-                  RenderTransformOrigin="0.5,1">
-                <Grid.RenderTransform>
-                    <TranslateTransform x:Name="VoiceAssistSlideTransform" Y="280"/>
-                </Grid.RenderTransform>
-                <Border x:Name="VoiceAssistBackdrop"
-                        Background="{DynamicResource Theme.Voice.Backdrop}"
-                        BorderBrush="{DynamicResource Theme.Voice.BackdropBorder}"
-                        BorderThickness="1"
-                        CornerRadius="20"
-                        Padding="28,22,28,24">
-                    <StackPanel x:Name="VoiceAssistStack"
-                                VerticalAlignment="Bottom"
-                                HorizontalAlignment="Stretch">
-                        <TextBlock x:Name="VoiceUserText"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Theme.Voice.UserText}"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   TextAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   MaxWidth="1400"
-                                   Margin="0,0,0,14"
-                                   Opacity="0"/>
-                        <Border x:Name="VoiceLineBorder"
-                                Height="2"
-                                CornerRadius="1"
-                                Background="{DynamicResource Theme.Voice.Line}"
-                                HorizontalAlignment="Stretch"
-                                Margin="0,0,0,14"
-                                Opacity="0">
-                            <Border.Effect>
-                                <DropShadowEffect x:Name="VoiceLineGlow" Color="#16B9F0" BlurRadius="26" ShadowDepth="0" Opacity="0.95"/>
-                            </Border.Effect>
-                        </Border>
-                        <TextBlock x:Name="VoiceProcessingLabel"
-                                   Text="Working…"
-                                   Foreground="{DynamicResource Theme.Voice.Processing}"
-                                   FontSize="15"
-                                   TextAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,10"
-                                   Visibility="Collapsed"/>
-                        <TextBlock x:Name="VoiceAssistantText"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Theme.Voice.AssistantText}"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   TextAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   MaxWidth="1400"
-                                   Margin="0,0,0,0"
-                                   Opacity="0"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
         </Grid>
 
         <Popup x:Name="SettingsButtonPopup"
@@ -256,11 +181,9 @@
                             </Grid>
                         </Border>
 
-                        <!-- Config + Pin | Gestures | MQTT | Voice (Wyoming) -->
+                        <!-- Config + Pin | Gestures | MQTT -->
                         <Grid Grid.Row="1" Margin="24,20,24,28">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
@@ -338,12 +261,6 @@
                                                Text="100"/>
                                 </Grid>
 
-                                <TextBlock Text="Playback device" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="PlaybackDeviceCombo"
-                                          Style="{StaticResource SettingsComboBox}"
-                                          Margin="0,0,0,10"
-                                          SelectionChanged="PlaybackDeviceCombo_SelectionChanged"/>
-
                                 <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
@@ -368,10 +285,33 @@
                                                Text="100"/>
                                 </Grid>
 
-                                <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="VoiceInputDeviceCombo"
+                                <TextBlock Text="Playback device" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="PlaybackDeviceCombo"
                                           Style="{StaticResource SettingsComboBox}"
-                                          Margin="0,0,0,10"/>
+                                          Margin="0,0,0,10"
+                                          SelectionChanged="PlaybackDeviceCombo_SelectionChanged"/>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Enable mic"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="EnableMicToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="EnableMicToggle_Changed"
+                                                  Unchecked="EnableMicToggle_Changed"/>
+                                </Grid>
+
+                                <StackPanel x:Name="InputDevicePanel" Margin="0,0,0,10">
+                                    <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="InputDeviceCombo"
+                                              Style="{StaticResource SettingsComboBox}"/>
+                                </StackPanel>
 
                                 <Grid Margin="0,0,0,20">
                                     <Grid.ColumnDefinitions>
@@ -379,7 +319,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
-                                               Text="Start when Windows starts"
+                                               Text="Start on boot"
                                                Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="AutoStartToggle"
                                                   Grid.Column="1"
@@ -838,45 +778,6 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Grid.Column="6">
-                                <TextBlock Text="Voice Assist" Style="{StaticResource SettingsSectionHeading}"/>
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Voice Assist"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="VoiceSatelliteEnabledToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="Wyoming Host PC" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="VoiceWakeHostBox"
-                                         Style="{StaticResource RoundedTextBox}"
-                                         Margin="0,0,0,8"/>
-                                <TextBlock Text="Wyoming Host PC port" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="VoiceWakePortBox"
-                                         Text="10400"
-                                         Style="{StaticResource RoundedTextBox}"
-                                         Margin="0,0,0,10"/>
-                                <TextBlock Text="Wake word delay" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="VoiceRefractorySecondsBox"
-                                         Text="5"
-                                         Style="{StaticResource RoundedTextBox}"
-                                         Margin="0,0,0,8"/>
-                                <TextBlock Text="Wake word model names" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBlock Text="Comma-separated ids for openWakeWord (e.g. ok_nabu or hey_jarvis). "
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
-                                           FontSize="12"
-                                           Margin="0,0,0,4"/>
-                                <TextBox x:Name="VoiceWakeWordNamesBox"
-                                         Style="{StaticResource RoundedTextBox}"
-                                         Margin="0,0,0,10"/>
-                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Border>
