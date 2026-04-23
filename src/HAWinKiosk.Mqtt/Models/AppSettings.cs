@@ -258,6 +258,9 @@ public class CommandsConfig
 
     [YamlMember(Alias = "powerShellCommand")]
     public string? PowerShellCommand { get; set; }
+
+    [YamlMember(Alias = "windowsUpdateRespectActiveHours")]
+    public bool WindowsUpdateRespectActiveHours { get; set; } = true;
 }
 
 public class ScreenBrightnessConfig

@@ -201,6 +201,7 @@ Below is a key of what all the options are, and below that is an example `settin
 | Command: Open settings | `On`/`Off` | Exposes Open settings MQTT button | Yes |
 | Command: Close settings | `On`/`Off` | Exposes Close settings MQTT button | Yes |
 | Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
+| Respect active hours | `On`/`Off` | Sub-toggle under Run Windows updates. When on, reboot (if required) is deferred to outside active hours; when off, reboot is scheduled in 30 seconds. | No |
 | Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
 | PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
 | (YAML only) `mqtt.sensors.updateIntervalSeconds` | integer ≥ 5 | How often `battery` and `updates_pending` refresh. `last_active` still updates every 1 second when enabled. | No |
@@ -285,6 +286,7 @@ mqtt:
       - opensettings
       - closesettings
       - windowsupdate
+    windowsUpdateRespectActiveHours: true
     powerShellCommand: ""
 ```
 

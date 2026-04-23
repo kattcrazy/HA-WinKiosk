@@ -762,8 +762,18 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Run Windows updates" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                    <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdWindowsUpdateToggle_Changed" Unchecked="MqttCmdWindowsUpdateToggle_Changed"/>
                                 </Grid>
+                                <StackPanel x:Name="MqttCmdWindowsUpdateOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Respect active hours" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="MqttCmdWindowsUpdateRespectActiveHoursToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>

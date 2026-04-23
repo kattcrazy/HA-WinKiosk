@@ -527,7 +527,7 @@ public class MqttClientService : IDisposable
                     _host?.CloseSettings();
                     break;
                 case "windowsupdate":
-                    WindowsUpdateCommand.Execute();
+                    WindowsUpdateCommand.Execute(_settings.Commands.WindowsUpdateRespectActiveHours);
                     break;
                 case "powershellcommand":
                     PowerShellCommand.Execute(_settings.Commands.PowerShellCommand ?? "");

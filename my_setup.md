@@ -94,3 +94,49 @@ actions:
 ```
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 700 milliseconds, presses the enter key to bypass the lockscreen, then repeats the last 2 steps to ensure it worked.
 
+## 4. Longterm management
+Make sure the user you want to autologin has a password set as it won't work without one. 
+
+#### Updates
+In Home Assistant, you'll see 'Run windows updates' as a MQTT button (if you've set up MQTT).
+Make a Home Assistant automation like this, replacing the time interval with your chosen interval and `[your kiosk name]`  with your kiosk's name. I reccomend not setting the time to 3am or just before as that is when HA WinKiosk updates itself. 
+
+```
+alias: Update Kiosk
+triggers:
+  - at: "04:00:00"
+    trigger: time
+    weekday:
+      - sat
+conditions: []
+actions:
+  - action: button.press
+    metadata: {}
+    target:
+      entity_id: button.[your kiosk name]_run_windows_updates
+    data: {}
+
+```
+
+This triggers Windows to check and run updates, and restart if required either outside of your active hours or in 30 seconds, depending on your settings in HA WinKiosk. 
+
+#### Memory Refresh
+In Home Assistant, you'll see 'Refresh Kiosk' as a MQTT button (if you've set up MQTT).
+Make a Home Assistant automation like this, replacing the time interval with your chosen interval and `[your kiosk name]`  with your kiosk's name. I reccomend not setting the time to 3am or just before as that is when HA WinKiosk updates itself. 
+
+```
+alias: Update Kiosk
+triggers:
+  - trigger: time
+    at: "05:00:00"
+conditions: []
+actions:
+  - action: button.press
+    metadata: {}
+    target:
+      entity_id: button.[your kiosk name]_refresh_kiosk
+    data: {}
+
+```
+
+This refreshes the kiosk webpage to prevent memory buildup. If prefered, you could trigger the button `[your kiosk name]`_clear_kiosk_cache instead.

@@ -196,6 +196,11 @@ public partial class KioskWindow : Window, IKioskHostActions
         UpdatePowerShellCommandVisibility();
     }
 
+    private void MqttCmdWindowsUpdateToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateWindowsUpdateOptionsVisibility();
+    }
+
     private void EnableMicToggle_Changed(object sender, RoutedEventArgs e)
     {
         UpdateMicInputVisibility();
@@ -294,6 +299,14 @@ public partial class KioskWindow : Window, IKioskHostActions
             : Visibility.Collapsed;
     }
 
+    private void UpdateWindowsUpdateOptionsVisibility()
+    {
+        if (MqttCmdWindowsUpdateOptionsPanel == null || MqttCmdWindowsUpdateToggle == null) return;
+        MqttCmdWindowsUpdateOptionsPanel.Visibility = MqttCmdWindowsUpdateToggle.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
     private void UpdateMicInputVisibility()
     {
         if (InputDevicePanel == null || EnableMicToggle == null) return;
@@ -387,6 +400,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdOpenSettingsToggle.IsChecked = cmds.Contains("opensettings");
         MqttCmdCloseSettingsToggle.IsChecked = cmds.Contains("closesettings");
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
+        MqttCmdWindowsUpdateRespectActiveHoursToggle.IsChecked = _settings.Commands.WindowsUpdateRespectActiveHours;
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
         MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
         EnableMicToggle.IsChecked = _settings.Kiosk.EnableMic;
@@ -408,6 +422,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
         UpdateGestureOptionsVisibility();
         UpdatePowerShellCommandVisibility();
+        UpdateWindowsUpdateOptionsVisibility();
         UpdateMicInputVisibility();
         UpdateExitButtonVisibility();
 
@@ -1091,6 +1106,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdCloseSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("closesettings");
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
+        _settings.Commands.WindowsUpdateRespectActiveHours = MqttCmdWindowsUpdateRespectActiveHoursToggle.IsChecked == true;
         _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
         _settings.Kiosk.EnableMic = EnableMicToggle.IsChecked == true;
 

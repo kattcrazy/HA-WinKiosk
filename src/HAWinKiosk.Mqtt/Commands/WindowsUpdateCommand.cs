@@ -8,9 +8,10 @@ namespace HAWinKiosk.Mqtt.Commands;
 /// </summary>
 public static class WindowsUpdateCommand
 {
-    public static void Execute()
+    public static void Execute(bool respectActiveHours)
     {
-        const string script = """
+        var respectLiteral = respectActiveHours ? "$true" : "$false";
+        var script = $$"""
 $ErrorActionPreference = 'Stop'
 $session = New-Object -ComObject Microsoft.Update.Session
 $searcher = $session.CreateUpdateSearcher()
@@ -26,7 +27,42 @@ $installer.Updates = $result.Updates
 $installResult = $installer.Install()
 
 if ($installResult.RebootRequired) {
-  Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 30 /c "Restarting to complete Windows updates (HA WinKiosk command)."' -WindowStyle Hidden
+  $delaySeconds = 30
+  if ({{respectLiteral}}) {
+    try {
+      $uxPath = 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings'
+      $start = [int](Get-ItemProperty -Path $uxPath -Name ActiveHoursStart -ErrorAction Stop).ActiveHoursStart
+      $end = [int](Get-ItemProperty -Path $uxPath -Name ActiveHoursEnd -ErrorAction Stop).ActiveHoursEnd
+      $now = Get-Date
+      $hour = $now.Hour
+
+      $inActiveHours = if ($start -lt $end) {
+        ($hour -ge $start) -and ($hour -lt $end)
+      } elseif ($start -gt $end) {
+        ($hour -ge $start) -or ($hour -lt $end)
+      } else {
+        $true
+      }
+
+      if ($inActiveHours) {
+        $restartAt = Get-Date -Hour $end -Minute 5 -Second 0
+        if ($start -lt $end -and $hour -ge $end) {
+          $restartAt = $restartAt.AddDays(1)
+        } elseif ($start -gt $end -and $hour -ge $start) {
+          $restartAt = $restartAt.AddDays(1)
+        }
+
+        $candidateDelay = [int][Math]::Ceiling(($restartAt - (Get-Date)).TotalSeconds)
+        if ($candidateDelay -gt $delaySeconds) {
+          $delaySeconds = [Math]::Min($candidateDelay, 315360000)
+        }
+      }
+    } catch {
+      # Fallback to immediate-ish reboot when active-hours lookup fails.
+    }
+  }
+
+  & shutdown.exe /r /t $delaySeconds /c "Restarting to complete Windows updates (HA WinKiosk command)."
 }
 """;
 
