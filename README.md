@@ -201,7 +201,7 @@ Below is a key of what all the options are, and below that is an example `settin
 | Command: Open settings | `On`/`Off` | Exposes Open settings MQTT button | Yes |
 | Command: Close settings | `On`/`Off` | Exposes Close settings MQTT button | Yes |
 | Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
-| Respect active hours | `On`/`Off` | Sub-toggle under Run Windows updates. When on, reboot (if required) is deferred to outside active hours; when off, reboot is scheduled in 30 seconds. | No |
+| Respect active hours | `On`/`Off` | Toggle under Run Windows updates. When on, reboot (if required) is deferred to outside active hours; when off, reboot is scheduled in 30 seconds. | No |
 | Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
 | PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
 | (YAML only) `mqtt.sensors.updateIntervalSeconds` | integer ≥ 5 | How often `battery` and `updates_pending` refresh. `last_active` still updates every 1 second when enabled. | No |
@@ -297,6 +297,10 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
  The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
+
+## License
+
+This project uses the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). See [LICENSE](LICENSE) for the full legal text. In short: you can use, change, and share it freely. If you distribute a modified version, you must offer it under the same license and share the source too, so the work (and its derivatives) stay open. You cannot take this code, tweak it, and ship it as a closed product.
 
 ## Credits
 
