@@ -305,3 +305,10 @@ This project uses the [GNU General Public License v3.0](https://www.gnu.org/lice
 ## Credits
 
 [HASS.Agent 2.0](https://github.com/hass-agent/HASS.Agent) (hass-agent, forked from LAB02-Research) was heavily leaned on for implementation of sensors and commands, and in the case of monitor wake/sleep, directly mirrored. Go check out this amazing program if you're just looking for sensors and commands without a kiosk!
+
+## About
+This is my first Windows app (super excited that I finally made one). I use it for my own setup and it's been really helpful. Please report an issue if something doesn't work, I'll try my best to fix it.
+
+Contributions/PRs welcome. 
+
+If this app helps you out, consider supporting me [here](https://kattcrazy.nz/product/support-me/) :)
