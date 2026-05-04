@@ -12,7 +12,7 @@ I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your 
 
 ## Requirements
 
-- Windows 10/11
+- Windows 10/11 (I would be interested to know if this works on previous versions)
 - [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) (the installer will install this automatically if not already present)
 - [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
 
@@ -112,7 +112,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older layouts (e.g. top-level `kiosk`, `sensors`, `commands`) are still read once and migrated to the new shape the next time settings are saved.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older settings layouts are read once and migrated to the new layout the next time settings are saved.
 
 Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
@@ -130,11 +130,11 @@ Below is a key of what all the options are, and below that is an example `settin
 | Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases | No |
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
-| Brightness (%) | `0..100` | YAML key: `config.brightnessPercent`. Startup screen brightness. | Yes (number entity) |
-| Start when Windows starts | `true`/`false` | YAML key: `config.autoStartEnabled`. Launch app at sign-in. | No |
-| Playback device | string (MMDevice ID) | YAML key: `config.playbackDeviceId`. Empty keeps Windows default playback device. | No |
-| Input device | string (MMDevice ID) | YAML key: `config.inputDeviceId`. Empty uses Windows default capture device. | No |
-| Volume (%) | `0..100` | YAML key: `config.volumePercent`. Master volume for the playback device. | No |
+| Brightness (%) | `0..100` | Screen brightness. | Yes (number entity) |
+| Start when Windows starts | `true`/`false` |Launch app at sign-in. | No |
+| Playback device | string (MMDevice ID) | Empty keeps Windows default playback device. | No |
+| Input device | string (MMDevice ID) | Empty uses Windows default capture device. | No |
+| Volume (%) | `0..100` | Master volume for the playback device. | No |
 | Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
 | PIN hint | string | Hint shown on PIN prompt | No |
 | Verification question | string | Forgot-PIN verification question | No |
@@ -296,7 +296,7 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
- The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails.
+The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
 
 ## License
 
