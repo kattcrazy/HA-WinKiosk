@@ -8,7 +8,7 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, or have a Surface Pro 3.
+I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!
 
 ## Requirements
 
