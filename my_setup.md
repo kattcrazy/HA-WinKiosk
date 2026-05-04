@@ -4,6 +4,9 @@ How I've set up my Surface Pro 3, in the form of a tutorial.
 ## 1. Windows Settings
 Set the following Windows settings.
 
+#### Windows Security > App & Browser control > Smart app control
+Turn this off! I know this does expose your device, but unfortunately this is the only way I have found to stop it from randomly preventing the kiosk app from opening.
+
 #### System > Power
 Power/screen off timeout: Never
 
