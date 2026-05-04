@@ -1,5 +1,5 @@
 # My Setup
-How I've set up my Surface Pro 3, in the form of a tutorial.
+How I've set up my Surface Pro 3, in the form of a tutorial. This guide assumes you've connected this to Home Assistant via MQTT and are alright making basic automations/editing Windows settings.
 
 ## 1. Windows Settings
 Set the following Windows settings.
@@ -31,13 +31,29 @@ Big thank you to [NexGen3D](https://community.home-assistant.io/t/windows-10-kio
 
 In Regedit...
 
+<details>
+  <summary>How to use regedit?</summary>
+
+  Regedit can be opened like any other app by pressing the windows button then searching by name.
+
+  Once you've opened it, you'll see the following or similar:
+
+  <img width="666" height="375" alt="#363636" src="https://github.com/user-attachments/assets/34e4c8c0-25c0-4938-92b5-5e107db19c22" />
+
+  To make a new key:
+
+  <img width="522" height="278" alt="image" src="https://github.com/user-attachments/assets/5837263b-0068-4f87-91c1-389bfc49b8fa" />
+
+
+</details>
+
 #### Part 1: Power
-`HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Power`
+Path: `HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Power`
 
 Add the following 32bit Dword if not there already: `PlatformAoAcOverride` and set its value to `0` 
 
 #### Part 2: Passwordless
-`HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device`
+Path: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device`
 
 Change `DevicePasswordLessBuildVersion` from `2` to `0`
 
