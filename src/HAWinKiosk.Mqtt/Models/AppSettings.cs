@@ -173,9 +173,6 @@ public class GesturesConfig
     [YamlMember(Alias = "zoomDirection")]
     public string ZoomDirection { get; set; } = "any";
 
-    [YamlMember(Alias = "minSwipePixels")]
-    public int MinSwipePixels { get; set; } = 80;
-
     [YamlMember(Alias = "doubleTapMqttTopic")]
     public string? DoubleTapMqttTopic { get; set; }
 

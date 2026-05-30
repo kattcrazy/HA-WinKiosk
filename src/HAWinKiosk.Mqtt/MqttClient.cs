@@ -59,7 +59,8 @@ public class MqttClientService : IDisposable
 
     private static readonly HashSet<string> PersistedSettingsSlugs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "brightness_default"
+        "monitor_brightness",
+        "brightness_default" // legacy command topic; discovery uses monitor_brightness
     };
 
     public bool IsConnected => _client?.IsConnected ?? false;
@@ -323,7 +324,7 @@ public class MqttClientService : IDisposable
 
         var list = new List<(string Topic, string Payload)>
         {
-            MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "brightness_default", "Monitor brightness",
+            MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "monitor_brightness", "Monitor brightness",
                 0, 100, 1, "%")
         };
 
@@ -335,7 +336,7 @@ public class MqttClientService : IDisposable
     {
         if (_client == null || !_client.IsConnected) return;
 
-        await PublishNumberStateAsync("brightness_default", Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100).ToString(CultureInfo.InvariantCulture), ct);
+        await PublishNumberStateAsync("monitor_brightness", Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100).ToString(CultureInfo.InvariantCulture), ct);
     }
 
     private async Task PublishNumberStateAsync(string slug, string value, CancellationToken ct)
@@ -367,7 +368,8 @@ public class MqttClientService : IDisposable
         var p = payload.Trim();
         switch (slug.ToLowerInvariant())
         {
-            case "brightness_default":
+            case "monitor_brightness":
+            case "brightness_default": // legacy MQTT slug before rename
                 if (int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pct))
                 {
                     pct = Math.Clamp(pct, 0, 100);
@@ -454,6 +456,7 @@ public class MqttClientService : IDisposable
         // Legacy entities no longer published by this app (clear retained configs if present).
         await PublishEmptyRetainedConfigAsync($"{_prefix}/select/{_devId}_orientation_default/config", ct);
         await PublishEmptyRetainedConfigAsync($"{_prefix}/sensor/{_devId}_sessionstate/config", ct);
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/number/{_devId}_brightness_default/config", ct);
     }
 
     private async Task PublishEmptyRetainedConfigAsync(string topic, CancellationToken ct)

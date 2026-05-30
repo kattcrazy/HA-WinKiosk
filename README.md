@@ -107,7 +107,7 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Battery level | Sensor | Remaining battery % (`unavailable` on desktops without a battery) |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
 | Updates pending | Number | Count of available Windows updates |
-| Monitor brightness | Number | Brightness % (0–100) |
+| Monitor brightness | Number | Brightness % (0–100). Entity ID suffix: `{device}_monitor_brightness`. |
 
 ## Settings
 
@@ -129,8 +129,8 @@ Below is a key of what all the options are, and below that is an example `settin
 | Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases | No |
 | Show settings button | `true`/`false` | Show/hide gear button | No |
 | Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
-| Brightness (%) | `0..100` | Screen brightness. | Yes (number entity) |
-| Start when Windows starts | `true`/`false` |Launch app at sign-in. | No |
+| Brightness (%) | `0..100` | Screen brightness. | Yes (`number.{device}_monitor_brightness`) |
+| Start when Windows starts | `true`/`false` | Launch app at sign-in. | No |
 | Playback device | string (MMDevice ID) | Empty keeps Windows default playback device. | No |
 | Input device | string (MMDevice ID) | Empty uses Windows default capture device. | No |
 | Volume (%) | `0..100` | Master volume for the playback device. | No |
@@ -175,7 +175,6 @@ Below is a key of what all the options are, and below that is an example `settin
 | Zoom action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for zoom gesture | Indirect (when MQTT message) |
 | Zoom direction | `Any` \| `In` \| `Out` | Zoom gesture direction filter | No |
 | Zoom MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Min swipe distance (pixels) | integer (≥ 20 enforced on load) | Minimum swipe length in pixels before a swipe counts (default 80). Not exposed in the Settings UI. | No |
 
 #### MQTT
 
@@ -258,7 +257,6 @@ gestures:
   zoomAction: disabled
   zoomDirection: any
   zoomMqttTopic: "zoom"
-  minSwipePixels: 80
 
 mqtt:
   host: "192.168.1.?"

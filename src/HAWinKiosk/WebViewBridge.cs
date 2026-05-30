@@ -43,7 +43,6 @@ public static class WebViewBridge
             swipeHoldMs = (int)Math.Max(100, g.SwipeHoldMs),
             twoFingerSwipeHoldMs = (int)Math.Max(100, g.TwoFingerSwipeHoldMs),
             zoomDirection = (g.ZoomDirection ?? "any").ToLowerInvariant(),
-            minSwipePx = Math.Max(20, g.MinSwipePixels),
             // Matches kiosk chrome: white tick in light mode, near-black tick + cyan glow in dark mode (see theme mockups).
             gestureTickDark = UiThemeHelper.ResolveEffectiveDark(kiosk.UiTheme)
         };
@@ -218,7 +217,7 @@ public static class WebViewBridge
   }
 
   function swipeMatches(dx, dy, dir) {
-    const m = cfg.minSwipePx, ax = Math.abs(dx), ay = Math.abs(dy);
+    const m = 80, ax = Math.abs(dx), ay = Math.abs(dy);
     const dominance = 1.15;
     switch (dir) {
       case 'up': return dy < -m && ay > ax * dominance;

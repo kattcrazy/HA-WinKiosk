@@ -139,7 +139,6 @@ public static class SettingsManager
         g.SwipeHoldMs = Math.Max(100, g.SwipeHoldMs);
         g.TwoFingerSwipeHoldMs = Math.Max(100, g.TwoFingerSwipeHoldMs);
         g.ZoomDirection = NormalizeZoomDirection(g.ZoomDirection);
-        g.MinSwipePixels = Math.Max(20, g.MinSwipePixels);
         s.Kiosk.PinResetQuestion = string.IsNullOrWhiteSpace(s.Kiosk.PinResetQuestion) ? null : s.Kiosk.PinResetQuestion.Trim();
         s.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(s.Kiosk.PinResetAnswer) ? null : s.Kiosk.PinResetAnswer.Trim();
         s.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(s.Commands.PowerShellCommand) ? null : s.Commands.PowerShellCommand.Trim();
