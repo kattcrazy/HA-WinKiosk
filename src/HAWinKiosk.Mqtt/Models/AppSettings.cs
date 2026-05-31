@@ -92,6 +92,10 @@ public class KioskConfig
 public class GesturesConfig
 {
     /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
+    [YamlMember(Alias = "singleTapAction")]
+    public string SingleTapAction { get; set; } = "disabled";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
     [YamlMember(Alias = "doubleTapAction")]
     public string DoubleTapAction { get; set; } = "disabled";
 
@@ -130,6 +134,10 @@ public class GesturesConfig
     /// <summary>disabled | reload | clearcache_reload | settings | mqtt</summary>
     [YamlMember(Alias = "quintupleTapAction")]
     public string QuintupleTapAction { get; set; } = "disabled";
+
+    /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
+    [YamlMember(Alias = "singleTapLocation")]
+    public string SingleTapLocation { get; set; } = "top-left";
 
     /// <summary>top-left | top-right | bottom-right | bottom-left | anywhere</summary>
     [YamlMember(Alias = "doubleTapLocation")]
@@ -172,6 +180,9 @@ public class GesturesConfig
     /// <summary>any | in | out</summary>
     [YamlMember(Alias = "zoomDirection")]
     public string ZoomDirection { get; set; } = "any";
+
+    [YamlMember(Alias = "singleTapMqttTopic")]
+    public string? SingleTapMqttTopic { get; set; }
 
     [YamlMember(Alias = "doubleTapMqttTopic")]
     public string? DoubleTapMqttTopic { get; set; }

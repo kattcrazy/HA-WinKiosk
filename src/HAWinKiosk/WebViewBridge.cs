@@ -12,6 +12,7 @@ public static class WebViewBridge
         var g = kiosk.Gestures;
         var dto = new
         {
+            singleTapEnabled = !string.Equals(g.SingleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             doubleTapEnabled = !string.Equals(g.DoubleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             swipeEnabled = !string.Equals(g.SwipeAction, "disabled", StringComparison.OrdinalIgnoreCase),
             twoFingerSwipeEnabled = !string.Equals(g.TwoFingerSwipeAction, "disabled", StringComparison.OrdinalIgnoreCase),
@@ -22,6 +23,7 @@ public static class WebViewBridge
             tripleTapEnabled = !string.Equals(g.TripleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             quadTapEnabled = !string.Equals(g.QuadrupleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
             quintTapEnabled = !string.Equals(g.QuintupleTapAction, "disabled", StringComparison.OrdinalIgnoreCase),
+            singleTapAction = (g.SingleTapAction ?? "disabled").ToLowerInvariant(),
             doubleTapAction = (g.DoubleTapAction ?? "disabled").ToLowerInvariant(),
             swipeAction = (g.SwipeAction ?? "disabled").ToLowerInvariant(),
             twoFingerSwipeAction = (g.TwoFingerSwipeAction ?? "disabled").ToLowerInvariant(),
@@ -32,6 +34,7 @@ public static class WebViewBridge
             tripleTapAction = (g.TripleTapAction ?? "disabled").ToLowerInvariant(),
             quadTapAction = (g.QuadrupleTapAction ?? "disabled").ToLowerInvariant(),
             quintTapAction = (g.QuintupleTapAction ?? "disabled").ToLowerInvariant(),
+            singleTapLocation = (g.SingleTapLocation ?? "top-left").ToLowerInvariant(),
             doubleTapLocation = (g.DoubleTapLocation ?? "top-left").ToLowerInvariant(),
             tripleTapLocation = (g.TripleTapLocation ?? "top-left").ToLowerInvariant(),
             quadTapLocation = (g.QuadrupleTapLocation ?? "top-left").ToLowerInvariant(),
@@ -159,6 +162,7 @@ public static class WebViewBridge
   }
   function actionForGesture(name) {
     switch ((name || '').toLowerCase()) {
+      case 'singletap': return cfg.singleTapAction || 'disabled';
       case 'doubletap': return cfg.doubleTapAction || 'disabled';
       case 'swipe': return cfg.swipeAction || 'disabled';
       case 'twofingerswipe': return cfg.twoFingerSwipeAction || 'disabled';
@@ -193,7 +197,8 @@ public static class WebViewBridge
       { enabled: cfg.quintTapEnabled, count: 5, key: 'quintupleTap', loc: cfg.quintTapLocation },
       { enabled: cfg.quadTapEnabled, count: 4, key: 'quadrupleTap', loc: cfg.quadTapLocation },
       { enabled: cfg.tripleTapEnabled, count: 3, key: 'tripleTap', loc: cfg.tripleTapLocation },
-      { enabled: cfg.doubleTapEnabled, count: 2, key: 'doubleTap', loc: cfg.doubleTapLocation }
+      { enabled: cfg.doubleTapEnabled, count: 2, key: 'doubleTap', loc: cfg.doubleTapLocation },
+      { enabled: cfg.singleTapEnabled, count: 1, key: 'singleTap', loc: cfg.singleTapLocation }
     ];
 
     for (const g of candidates) {

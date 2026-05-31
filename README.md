@@ -144,6 +144,9 @@ Below is a key of what all the options are, and below that is an example `settin
 
 | UI Name | Values | Notes | Published to HA via MQTT? |
 | --- | --- | --- | --- |
+| Single tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for single tap | Indirect (when MQTT message) |
+| Single tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Single-tap screen region | No |
+| Single tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
 | Double tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for double tap | Indirect (when MQTT message) |
 | Double tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Double-tap screen region | No |
 | Double tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
@@ -226,6 +229,9 @@ config:
   autoStartEnabled: true
 
 gestures:
+  singleTapAction: disabled
+  singleTapLocation: top-left
+  singleTapMqttTopic: "single_tap"
   doubleTapAction: disabled
   doubleTapLocation: top-left
   doubleTapMqttTopic: "double_tap"
@@ -293,7 +299,7 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
-When **Start on boot** is enabled in Settings, the app adds itself to the current-user Run key (same approach as [HASS Agent 2](https://github.com/hass-agent/HASS.Agent)). The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
+When Start on boot is enabled in Settings, the app adds itself to the current-user Run key and opens immediately. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
 
 ## License
 

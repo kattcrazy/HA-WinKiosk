@@ -392,6 +392,32 @@
                                            Style="{StaticResource SettingsSectionHeading}"
                                            Margin="0,0,0,10"/>
                                 <TextBlock Text="Taps" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Single tap" Style="{StaticResource SettingsItemLabel}"/>
+                                <ComboBox x:Name="GestureSingleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
+                                    <ComboBoxItem Content="Disabled" Tag="disabled"/>
+                                    <ComboBoxItem Content="Reload" Tag="reload"/>
+                                    <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                    <ComboBoxItem Content="Settings" Tag="settings"/>
+                                    <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                    <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
+                                </ComboBox>
+                                <StackPanel x:Name="GestureSingleTapLocationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock Text="Tap location" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="GestureSingleTapLocationCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="Top left" Tag="top-left"/>
+                                        <ComboBoxItem Content="Top right" Tag="top-right"/>
+                                        <ComboBoxItem Content="Bottom right" Tag="bottom-right"/>
+                                        <ComboBoxItem Content="Bottom left" Tag="bottom-left"/>
+                                        <ComboBoxItem Content="Anywhere" Tag="anywhere"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="GestureSingleTapMqttTopicPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                    <TextBlock x:Name="GestureSingleTapMqttTopicHeadingText" Text="Single tap MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="GestureSingleTapMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="GestureSingleTapMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="GestureSingleTapMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
+                                </StackPanel>
+
                                 <TextBlock Text="Double tap" Style="{StaticResource SettingsItemLabel}"/>
                                 <ComboBox x:Name="GestureDoubleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
                                     <ComboBoxItem Content="Disabled" Tag="disabled"/>
