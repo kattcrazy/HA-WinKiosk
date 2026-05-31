@@ -293,7 +293,7 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
-The app will always open upon boot, first using Task Scheduler then falling back to being a Startup app if that fails. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
+When **Start on boot** is enabled in Settings, the app adds itself to the current-user Run key (same approach as [HASS Agent 2](https://github.com/hass-agent/HASS.Agent)). The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
 
 ## License
 

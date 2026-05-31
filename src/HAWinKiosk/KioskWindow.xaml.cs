@@ -61,6 +61,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
 
+        if (_settings.AutoStart.Enabled)
+            AutoStartManager.SetEnabled(true);
+
         if (_showSettingsFirst)
         {
             PopulateSettingsForm();

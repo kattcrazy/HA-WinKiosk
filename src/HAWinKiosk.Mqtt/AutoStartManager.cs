@@ -1,6 +1,5 @@
 using Microsoft.Win32;
 using System.Diagnostics;
-using System.Text;
 
 namespace HAWinKiosk.Mqtt;
 
@@ -8,7 +7,7 @@ public static class AutoStartManager
 {
     private const string KeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "HA-WinKiosk";
-    private const string TaskName = "HA-WinKiosk-AutoStart";
+    private const string LegacyTaskName = "HA-WinKiosk-AutoStart";
 
     public static bool IsEnabled
     {
@@ -16,9 +15,7 @@ public static class AutoStartManager
         {
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(KeyPath, false);
-                var value = key?.GetValue(ValueName) as string;
-                return !string.IsNullOrEmpty(value) || TaskExists();
+                return CheckLaunchOnUserLogin() || HasLegacyAutostart();
             }
             catch
             {
@@ -31,19 +28,15 @@ public static class AutoStartManager
     {
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(KeyPath, true) ?? Registry.CurrentUser.CreateSubKey(KeyPath, true);
-            if (key == null) return;
-            var exePath = Environment.ProcessPath ?? AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\') + "\\HAWinKiosk.exe";
-
             if (enabled)
             {
-                EnsureScheduledTask(exePath);
-                key.SetValue(ValueName, BuildFallbackRunValue(exePath));
+                DeleteLegacyScheduledTask();
+                EnableLaunchOnUserLogin();
             }
             else
             {
-                DeleteScheduledTask();
-                key.DeleteValue(ValueName, false);
+                DisableLaunchOnUserLogin();
+                DeleteLegacyScheduledTask();
             }
         }
         catch
@@ -52,12 +45,54 @@ public static class AutoStartManager
         }
     }
 
-    private static bool TaskExists()
+    private static string GetExecutablePath()
+    {
+        return Environment.ProcessPath ?? AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\') + "\\HAWinKiosk.exe";
+    }
+
+    private static bool CheckLaunchOnUserLogin()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(KeyPath, false);
+        var value = key?.GetValue(ValueName) as string;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+
+        return value.Contains(GetExecutablePath(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasLegacyAutostart()
+    {
+        return LegacyTaskExists() || HasLegacyRunEntry();
+    }
+
+    private static bool HasLegacyRunEntry()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(KeyPath, false);
+        var value = key?.GetValue(ValueName) as string;
+        return !string.IsNullOrEmpty(value)
+               && value.Contains("powershell.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnableLaunchOnUserLogin()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(KeyPath, true)
+                        ?? Registry.CurrentUser.CreateSubKey(KeyPath, true);
+        if (key == null) return;
+
+        key.SetValue(ValueName, $"\"{GetExecutablePath()}\"", RegistryValueKind.String);
+    }
+
+    private static void DisableLaunchOnUserLogin()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(KeyPath, true);
+        key?.DeleteValue(ValueName, false);
+    }
+
+    private static bool LegacyTaskExists()
     {
         var psi = new ProcessStartInfo
         {
             FileName = "schtasks.exe",
-            Arguments = $"/Query /TN \"{TaskName}\"",
+            Arguments = $"/Query /TN \"{LegacyTaskName}\"",
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -67,36 +102,18 @@ public static class AutoStartManager
         return p.ExitCode == 0;
     }
 
-    private static void EnsureScheduledTask(string exePath)
+    private static void DeleteLegacyScheduledTask()
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "schtasks.exe",
-            Arguments = $"/Create /TN \"{TaskName}\" /SC ONLOGON /TR \"\\\"{exePath}\\\"\" /RL LIMITED /IT /F",
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        using var p = Process.Start(psi);
-        p?.WaitForExit(5000);
-    }
+        if (!LegacyTaskExists()) return;
 
-    private static void DeleteScheduledTask()
-    {
         var psi = new ProcessStartInfo
         {
             FileName = "schtasks.exe",
-            Arguments = $"/Delete /TN \"{TaskName}\" /F",
+            Arguments = $"/Delete /TN \"{LegacyTaskName}\" /F",
             UseShellExecute = false,
             CreateNoWindow = true
         };
         using var p = Process.Start(psi);
         p?.WaitForExit(3000);
-    }
-
-    private static string BuildFallbackRunValue(string exePath)
-    {
-        var script = $"$p = '{exePath.Replace("'", "''")}'; Start-Sleep -Seconds 45; try {{ Get-Process -Name 'HAWinKiosk' -ErrorAction Stop | Out-Null }} catch {{ Start-Process -FilePath $p | Out-Null }}";
-        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
-        return $"powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}";
     }
 }
