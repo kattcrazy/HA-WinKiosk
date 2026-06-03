@@ -20,6 +20,7 @@ public partial class App : System.Windows.Application
         }
 
         var appSettings = SettingsManager.Load();
+        ThemePalette.ApplyAppWide(UiThemeHelper.ResolveEffectiveDark(appSettings.Kiosk.UiTheme));
         var showSettingsFirst = !SettingsManager.SettingsExists || string.IsNullOrWhiteSpace(appSettings.Kiosk.Url?.Trim());
 
         var kiosk = new KioskWindow(showSettingsFirst);

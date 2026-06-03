@@ -13,18 +13,7 @@
         Closing="Window_Closing"
         SizeChanged="Window_SizeChanged">
     <Window.Resources>
-        <SolidColorBrush x:Key="Theme.Kiosk.Bg" Color="#F0F3F6"/>
-        <SolidColorBrush x:Key="Theme.Kiosk.SettingsButtonBg" Color="#16B9F0"/>
-        <SolidColorBrush x:Key="Theme.Settings.PanelBg" Color="#E8ECF0"/>
-        <SolidColorBrush x:Key="Theme.Settings.CardBg" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="Theme.Settings.CardBorder" Color="#D8DDE3"/>
-        <SolidColorBrush x:Key="Theme.Settings.HeaderBg" Color="#F4F6F9"/>
-        <SolidColorBrush x:Key="Theme.Settings.HeaderBorder" Color="#E0E4EA"/>
-        <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="Theme.Settings.FgMuted" Color="#444444"/>
-        <SolidColorBrush x:Key="Theme.Settings.FgSub" Color="#333333"/>
-        <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="Theme.Settings.InputBorder" Color="#CCCCCC"/>
+        <!-- Colours applied at runtime from ThemePalette.cs -->
         <!-- Page title: dialog chrome only -->
         <Style x:Key="SettingsPageHeading" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
@@ -78,7 +67,7 @@
                 <TextBlock FontFamily="Segoe MDL2 Assets"
                            Text="&#xE713;"
                            FontSize="18"
-                           Foreground="White"
+                           Foreground="{DynamicResource Theme.Accent.Fg}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Center"/>
             </Button>

@@ -9,26 +9,32 @@
         </Style>
         <!-- Slight rounding: 6px -->
         <CornerRadius x:Key="UiCornerRadius">6</CornerRadius>
-        <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="Theme.Settings.FgMuted" Color="#444444"/>
-        <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="Theme.Settings.InputBorder" Color="#CCCCCC"/>
-        <SolidColorBrush x:Key="Theme.Button.SecondaryBg" Color="#F6F8FB"/>
-        <SolidColorBrush x:Key="Theme.Button.SecondaryFg" Color="#1F2937"/>
-        <SolidColorBrush x:Key="Theme.Button.SecondaryBorder" Color="#C8D2DE"/>
+        <!-- Light-mode fallbacks; runtime palette from ThemePalette.cs -->
+        <SolidColorBrush x:Key="Theme.Accent" Color="#5993F6"/>
+        <SolidColorBrush x:Key="Theme.Accent.Light" Color="#87BBFF"/>
+        <SolidColorBrush x:Key="Theme.Accent.Pale" Color="#C1DEFF"/>
+        <SolidColorBrush x:Key="Theme.Accent.Fg" Color="#F2F4F9"/>
+        <SolidColorBrush x:Key="Theme.Settings.Fg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Settings.FgMuted" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Settings.InputBg" Color="#F2F4F9"/>
+        <SolidColorBrush x:Key="Theme.Settings.InputBorder" Color="#D0D8E4"/>
+        <SolidColorBrush x:Key="Theme.Settings.InputFg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Button.SecondaryBg" Color="#F2F4F9"/>
+        <SolidColorBrush x:Key="Theme.Button.SecondaryFg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.Button.SecondaryBorder" Color="#D0D8E4"/>
         <SolidColorBrush x:Key="Theme.Toggle.TrackOff" Color="#D0D8E4"/>
-        <SolidColorBrush x:Key="Theme.Toggle.ThumbOff" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="Theme.Toggle.TrackOn" Color="#16B9F0"/>
-        <SolidColorBrush x:Key="Theme.Toggle.ThumbOn" Color="#B9E9FF"/>
-        <SolidColorBrush x:Key="Theme.Toggle.DisabledTrack" Color="#B8C2D0"/>
-        <SolidColorBrush x:Key="Theme.Toggle.DisabledThumb" Color="#E5E8EE"/>
+        <SolidColorBrush x:Key="Theme.Toggle.ThumbOff" Color="#F2F4F9"/>
+        <SolidColorBrush x:Key="Theme.Toggle.TrackOn" Color="#5993F6"/>
+        <SolidColorBrush x:Key="Theme.Toggle.ThumbOn" Color="#87BBFF"/>
+        <SolidColorBrush x:Key="Theme.Toggle.DisabledTrack" Color="#D0D8E4"/>
+        <SolidColorBrush x:Key="Theme.Toggle.DisabledThumb" Color="#C1DEFF"/>
 
         <!-- Settings (gear) — Segoe MDL2 Assets, not emoji -->
         <Style x:Key="SettingsButton" TargetType="Button">
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="40"/>
-            <Setter Property="Background" Value="#16B9F0"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource Theme.Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Accent.Fg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -50,9 +56,9 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Background" Value="{DynamicResource Theme.Settings.InputBg}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Theme.Settings.InputBorder}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -82,7 +88,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,0"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
@@ -91,7 +97,7 @@
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
                         <Setter Property="Background" Value="{DynamicResource Theme.Settings.InputBg}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
                         <Setter Property="Padding" Value="10,8"/>
                     </Style>
                 </Setter.Value>
@@ -181,10 +187,10 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Background" Value="{DynamicResource Theme.Settings.InputBg}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Theme.Settings.InputBorder}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.Fg}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Theme.Settings.InputFg}"/>
             <Setter Property="PasswordChar" Value="*"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -206,8 +212,8 @@
         </Style>
 
         <Style x:Key="PrimaryActionButton" TargetType="Button">
-            <Setter Property="Background" Value="#16B9F0"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource Theme.Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Accent.Fg}"/>
             <Setter Property="Padding" Value="22,14"/>
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="FontSize" Value="14"/>
@@ -252,11 +258,7 @@
                                     VerticalAlignment="Center"
                                     HorizontalAlignment="Left"
                                     Margin="3,0,0,0"
-                                    Background="{DynamicResource Theme.Toggle.ThumbOff}">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.22" Direction="270"/>
-                                </Border.Effect>
-                            </Border>
+                                    Background="{DynamicResource Theme.Toggle.ThumbOff}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">

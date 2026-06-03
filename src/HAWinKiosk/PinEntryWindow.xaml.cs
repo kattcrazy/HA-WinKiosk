@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace HAWinKiosk;
 
@@ -34,38 +33,7 @@ public partial class PinEntryWindow : Window
     private void ApplyPinTheme(string? uiThemeMode)
     {
         var dark = UiThemeHelper.ResolveEffectiveDark(uiThemeMode);
-        var r = Resources;
-
-        static SolidColorBrush B(byte r, byte g, byte b) => new(System.Windows.Media.Color.FromRgb(r, g, b));
-
-        if (dark)
-        {
-            r["Theme.Pin.CardBg"] = B(0x25, 0x25, 0x26);
-            r["Theme.Pin.CardBorder"] = B(0x3F, 0x3F, 0x46);
-            r["Theme.Pin.Fg"] = B(0xE8, 0xE8, 0xE8);
-            r["Theme.Pin.FgMuted"] = B(0xB0, 0xB0, 0xB0);
-            r["Theme.Settings.InputBg"] = B(0x30, 0x30, 0x30);
-            r["Theme.Settings.InputBorder"] = B(0x50, 0x50, 0x50);
-            r["Theme.Settings.Fg"] = B(0xE8, 0xE8, 0xE8);
-            r["Theme.Settings.FgMuted"] = B(0xB0, 0xB0, 0xB0);
-            r["Theme.Button.SecondaryBg"] = B(0x3A, 0x3A, 0x3D);
-            r["Theme.Button.SecondaryFg"] = B(0xE0, 0xE0, 0xE0);
-            r["Theme.Button.SecondaryBorder"] = B(0x5A, 0x5A, 0x60);
-        }
-        else
-        {
-            r["Theme.Pin.CardBg"] = B(0xF4, 0xF6, 0xF9);
-            r["Theme.Pin.CardBorder"] = B(0xD0, 0xD8, 0xE0);
-            r["Theme.Pin.Fg"] = B(0x1A, 0x1A, 0x1A);
-            r["Theme.Pin.FgMuted"] = B(0x55, 0x55, 0x55);
-            r["Theme.Settings.InputBg"] = B(0xFF, 0xFF, 0xFF);
-            r["Theme.Settings.InputBorder"] = B(0xCC, 0xCC, 0xCC);
-            r["Theme.Settings.Fg"] = B(0x1A, 0x1A, 0x1A);
-            r["Theme.Settings.FgMuted"] = B(0x44, 0x44, 0x44);
-            r["Theme.Button.SecondaryBg"] = B(0xF6, 0xF8, 0xFB);
-            r["Theme.Button.SecondaryFg"] = B(0x1F, 0x29, 0x37);
-            r["Theme.Button.SecondaryBorder"] = B(0xC8, 0xD2, 0xDE);
-        }
+        ThemePalette.Apply(Resources, dark);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)

@@ -46,8 +46,11 @@ public static class WebViewBridge
             swipeHoldMs = (int)Math.Max(100, g.SwipeHoldMs),
             twoFingerSwipeHoldMs = (int)Math.Max(100, g.TwoFingerSwipeHoldMs),
             zoomDirection = (g.ZoomDirection ?? "any").ToLowerInvariant(),
-            // Matches kiosk chrome: white tick in light mode, near-black tick + cyan glow in dark mode (see theme mockups).
-            gestureTickDark = UiThemeHelper.ResolveEffectiveDark(kiosk.UiTheme)
+            // Matches kiosk chrome: light-text tick in light mode, dark-text tick + accent glow in dark mode.
+            gestureTickDark = UiThemeHelper.ResolveEffectiveDark(kiosk.UiTheme),
+            gestureTickLightStroke = ThemePalette.GestureTickLightStroke,
+            gestureTickDarkStroke = ThemePalette.GestureTickDarkStroke,
+            gestureGlowGradient = ThemePalette.GestureGlowGradient
         };
 
         var json = JsonSerializer.Serialize(dto);
@@ -125,7 +128,7 @@ public static class WebViewBridge
     glow.style.height = '100%';
     glow.style.borderRadius = '50%';
     glow.style.pointerEvents = 'none';
-    glow.style.background = 'radial-gradient(circle closest-side, rgba(22,185,240,0.58) 0%, rgba(22,185,240,0.28) 38%, rgba(22,185,240,0.09) 58%, transparent 76%)';
+    glow.style.background = cfg.gestureGlowGradient;
 
     const svgNs = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNs, 'svg');
@@ -137,7 +140,7 @@ public static class WebViewBridge
     svg.style.filter = cfg.gestureTickDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))';
     const path = document.createElementNS(svgNs, 'path');
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', cfg.gestureTickDark ? '#141414' : '#ffffff');
+    path.setAttribute('stroke', cfg.gestureTickDark ? cfg.gestureTickDarkStroke : cfg.gestureTickLightStroke);
     path.setAttribute('stroke-width', '3');
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');

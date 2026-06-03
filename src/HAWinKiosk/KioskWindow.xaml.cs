@@ -583,62 +583,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void ApplySettingsUiTheme()
     {
         var dark = UiThemeHelper.ResolveEffectiveDark(GetEffectiveUiThemeMode());
-        var r = Resources;
-
-        void SetBrush(string key, System.Windows.Media.Color c)
-        {
-            r[key] = new SolidColorBrush(c);
-        }
-
-        if (dark)
-        {
-            SetBrush("Theme.Kiosk.Bg", System.Windows.Media.Color.FromRgb(0x21, 0x21, 0x21));
-            SetBrush("Theme.Kiosk.SettingsButtonBg", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Settings.PanelBg", System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E));
-            SetBrush("Theme.Settings.CardBg", System.Windows.Media.Color.FromRgb(0x25, 0x25, 0x26));
-            SetBrush("Theme.Settings.CardBorder", System.Windows.Media.Color.FromRgb(0x3F, 0x3F, 0x46));
-            SetBrush("Theme.Settings.HeaderBg", System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
-            SetBrush("Theme.Settings.HeaderBorder", System.Windows.Media.Color.FromRgb(0x3F, 0x3F, 0x46));
-            SetBrush("Theme.Settings.Fg", System.Windows.Media.Color.FromRgb(0xE8, 0xE8, 0xE8));
-            SetBrush("Theme.Settings.FgMuted", System.Windows.Media.Color.FromRgb(0xB0, 0xB0, 0xB0));
-            SetBrush("Theme.Settings.FgSub", System.Windows.Media.Color.FromRgb(0xCC, 0xCC, 0xCC));
-            SetBrush("Theme.Settings.InputBg", System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
-            SetBrush("Theme.Settings.InputBorder", System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
-            SetBrush("Theme.Button.SecondaryBg", System.Windows.Media.Color.FromRgb(0x3A, 0x3A, 0x3D));
-            SetBrush("Theme.Button.SecondaryFg", System.Windows.Media.Color.FromRgb(0xE0, 0xE0, 0xE0));
-            SetBrush("Theme.Button.SecondaryBorder", System.Windows.Media.Color.FromRgb(0x5A, 0x5A, 0x60));
-            SetBrush("Theme.Toggle.TrackOff", System.Windows.Media.Color.FromRgb(0x4A, 0x4A, 0x4E));
-            SetBrush("Theme.Toggle.ThumbOff", System.Windows.Media.Color.FromRgb(0xD5, 0xD5, 0xD8));
-            SetBrush("Theme.Toggle.TrackOn", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
-            SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0x3C, 0x3C, 0x40));
-            SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0x84, 0x84, 0x88));
-        }
-        else
-        {
-            SetBrush("Theme.Kiosk.Bg", System.Windows.Media.Color.FromRgb(0xF0, 0xF3, 0xF6));
-            SetBrush("Theme.Kiosk.SettingsButtonBg", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Settings.PanelBg", System.Windows.Media.Color.FromRgb(0xE8, 0xEC, 0xF0));
-            SetBrush("Theme.Settings.CardBg", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Settings.CardBorder", System.Windows.Media.Color.FromRgb(0xD8, 0xDD, 0xE3));
-            SetBrush("Theme.Settings.HeaderBg", System.Windows.Media.Color.FromRgb(0xF4, 0xF6, 0xF9));
-            SetBrush("Theme.Settings.HeaderBorder", System.Windows.Media.Color.FromRgb(0xE0, 0xE4, 0xEA));
-            SetBrush("Theme.Settings.Fg", System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x1A));
-            SetBrush("Theme.Settings.FgMuted", System.Windows.Media.Color.FromRgb(0x44, 0x44, 0x44));
-            SetBrush("Theme.Settings.FgSub", System.Windows.Media.Color.FromRgb(0x33, 0x33, 0x33));
-            SetBrush("Theme.Settings.InputBg", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Settings.InputBorder", System.Windows.Media.Color.FromRgb(0xCC, 0xCC, 0xCC));
-            SetBrush("Theme.Button.SecondaryBg", System.Windows.Media.Color.FromRgb(0xF6, 0xF8, 0xFB));
-            SetBrush("Theme.Button.SecondaryFg", System.Windows.Media.Color.FromRgb(0x1F, 0x29, 0x37));
-            SetBrush("Theme.Button.SecondaryBorder", System.Windows.Media.Color.FromRgb(0xC8, 0xD2, 0xDE));
-            SetBrush("Theme.Toggle.TrackOff", System.Windows.Media.Color.FromRgb(0xD0, 0xD8, 0xE4));
-            SetBrush("Theme.Toggle.ThumbOff", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrush("Theme.Toggle.TrackOn", System.Windows.Media.Color.FromRgb(0x16, 0xB9, 0xF0));
-            SetBrush("Theme.Toggle.ThumbOn", System.Windows.Media.Color.FromRgb(0xB9, 0xE9, 0xFF));
-            SetBrush("Theme.Toggle.DisabledTrack", System.Windows.Media.Color.FromRgb(0xB8, 0xC2, 0xD0));
-            SetBrush("Theme.Toggle.DisabledThumb", System.Windows.Media.Color.FromRgb(0xE5, 0xE8, 0xEE));
-        }
-
+        ThemePalette.Apply(Resources, dark);
+        ThemePalette.ApplyAppWide(dark);
         ApplyWindowIconForTheme(dark);
     }
 
