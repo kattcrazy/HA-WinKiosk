@@ -28,60 +28,8 @@ Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed f
 
 While I previously attempted to add native openwakeword and wyoming services support with releases [v3.9.3-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.9.3-beta) to [v3.10.9-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.10.9-beta) I have discovered a wonderful intergration that does this just as well, if not better, with a lot less work. 
 
-Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea.
+Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea. Mic access, input device, output device, and volume can be changed from the config section of settings.
 
-Mic access, input device, output device, and volume can be changed from the config section of settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css. I have prewritten some css styles below if you wish to use them.
-
-<details>
-  <summary>Styles</summary>
-
-```
-/* --- GLOBAL BAR STYLING --- */
-#voice-satellite-ui .vs-activity-bar {
-  height: 4px !important;
-  border-radius: 4px !important;
-  transition: all 0.3s ease !important;
-}
-
-/* --- LIGHT THEME --- */
-#voice-satellite-ui.vs-light {
-  --vs-text-user-color: #000000;
-  --vs-text-assistant-color: #29b6f6;
-}
-
-#voice-satellite-ui.vs-light .vs-text-user {
-  color: var(--vs-text-user-color) !important;
-}
-
-#voice-satellite-ui.vs-light .vs-text-assistant {
-  color: var(--vs-text-assistant-color) !important;
-}
-
-#voice-satellite-ui.vs-light .vs-activity-bar {
-  background: #ffffff !important;
-  box-shadow: 0 0 15px 4px rgba(79, 195, 247, 0.8) !important;
-}
-
-/* --- DARK THEME --- */
-#voice-satellite-ui.vs-dark {
-  --vs-text-user-color: #ffffff;
-  --vs-text-assistant-color: #03a9f4;
-}
-
-  color: var(--vs-text-user-color) !important;
-}
-
-#voice-satellite-ui.vs-dark .vs-text-assistant {
-  color: var(--vs-text-assistant-color) !important;
-}
-
-#voice-satellite-ui.vs-dark .vs-activity-bar {
-  background: #222222 !important;
-  box-shadow: 0 0 20px 6px rgba(3, 169, 244, 0.7) !important;
-}
-
-```
-</details>
 
 ## MQTT and Home Assistant
 
