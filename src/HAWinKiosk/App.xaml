@@ -28,8 +28,10 @@
         <SolidColorBrush x:Key="Theme.Toggle.ThumbOn" Color="#87BBFF"/>
         <SolidColorBrush x:Key="Theme.Toggle.DisabledTrack" Color="#D0D8E4"/>
         <SolidColorBrush x:Key="Theme.Toggle.DisabledThumb" Color="#C1DEFF"/>
+        <SolidColorBrush x:Key="Theme.SecretInput.EyeMuted" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.SecretInput.EyeActive" Color="#5993F6"/>
 
-        <!-- Settings (gear) — Segoe MDL2 Assets, not emoji -->
+        <!-- Settings (gear) - Segoe MDL2 Assets, not emoji -->
         <Style x:Key="SettingsButton" TargetType="Button">
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="40"/>

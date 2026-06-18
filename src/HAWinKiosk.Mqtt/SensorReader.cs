@@ -28,6 +28,18 @@ public static class SensorReader
         }
     }
 
+    public static bool HasSystemBattery()
+    {
+        try
+        {
+            return SystemInformation.PowerStatus.BatteryChargeStatus != BatteryChargeStatus.NoSystemBattery;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static string? BatteryPercentOrUnavailable()
     {
         try

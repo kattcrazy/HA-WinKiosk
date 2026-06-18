@@ -35,6 +35,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private bool _isClosing;
     private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
     private bool _audioUiPopulating;
+    private string? _gestureDocumentScriptId;
+    private bool _mainNavigationSucceeded = true;
 
     public KioskWindow(bool showSettingsFirst = false)
     {
@@ -60,6 +62,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ApplySettingsUiTheme();
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
+        ConfigureGestureFallbackOverlay();
 
         if (_settings.AutoStart.Enabled)
             AutoStartManager.SetEnabled(true);
@@ -201,7 +204,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void MqttCmdWindowsUpdateToggle_Changed(object sender, RoutedEventArgs e)
     {
-        UpdateWindowsUpdateOptionsVisibility();
+        UpdateWindowsUpdateNoteVisibility();
     }
 
     private void EnableMicToggle_Changed(object sender, RoutedEventArgs e)
@@ -212,6 +215,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void DeviceNameBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateGestureTopicPrefixPreviews();
+        UpdateNavigateTopicPreview();
     }
 
     private void UpdateGestureTopicPrefixPreviews()
@@ -308,10 +312,19 @@ public partial class KioskWindow : Window, IKioskHostActions
             : Visibility.Collapsed;
     }
 
-    private void UpdateWindowsUpdateOptionsVisibility()
+    private void UpdateBatterySensorVisibility()
     {
-        if (MqttCmdWindowsUpdateOptionsPanel == null || MqttCmdWindowsUpdateToggle == null) return;
-        MqttCmdWindowsUpdateOptionsPanel.Visibility = MqttCmdWindowsUpdateToggle.IsChecked == true
+        if (MqttSensorBatteryPanel == null || MqttSensorBatteryToggle == null) return;
+        var hasBattery = SensorReader.HasSystemBattery();
+        MqttSensorBatteryPanel.Visibility = hasBattery ? Visibility.Visible : Visibility.Collapsed;
+        if (!hasBattery)
+            MqttSensorBatteryToggle.IsChecked = false;
+    }
+
+    private void UpdateWindowsUpdateNoteVisibility()
+    {
+        if (MqttCmdWindowsUpdateNotePanel == null || MqttCmdWindowsUpdateToggle == null) return;
+        MqttCmdWindowsUpdateNotePanel.Visibility = MqttCmdWindowsUpdateToggle.IsChecked == true
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -336,8 +349,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttPasswordBox.Text = _settings.Mqtt.Password ?? "";
         DeviceNameBox.Text = _settings.Mqtt.DeviceName ?? "";
         AutoStartToggle.IsChecked = _settings.AutoStart.Enabled;
+        WindowsUpdateRespectActiveHoursToggle.IsChecked = _settings.Kiosk.WindowsUpdateRespectActiveHours;
         PinProtectionToggle.IsChecked = !_settings.Kiosk.PinProtectionDisabled;
-        SettingsPinBox.Password = _settings.Kiosk.Pin ?? "";
+        SettingsPinBox.Text = _settings.Kiosk.Pin ?? "";
         PinHintBox.Text = _settings.Kiosk.PinHint ?? "";
         PinResetQuestionBox.Text = _settings.Kiosk.PinResetQuestion ?? "";
         PinResetAnswerBox.Text = _settings.Kiosk.PinResetAnswer ?? "";
@@ -378,6 +392,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         GestureQuintTapMqttTopicBox.Text = _settings.Kiosk.Gestures.QuintupleTapMqttTopic ?? "";
 
         DefaultBrightnessSlider.Value = Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100);
+        AllowZeroBrightnessToggle.IsChecked = _settings.ScreenBrightness.AllowZeroBrightness;
+        ApplyBrightnessSliderMinimum();
         DefaultBrightnessValueText.Text = $"{(int)Math.Round(DefaultBrightnessSlider.Value)}";
 
         _audioUiPopulating = true;
@@ -397,6 +413,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        UpdateBatterySensorVisibility();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
@@ -412,9 +429,11 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdOpenSettingsToggle.IsChecked = cmds.Contains("opensettings");
         MqttCmdCloseSettingsToggle.IsChecked = cmds.Contains("closesettings");
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
-        MqttCmdWindowsUpdateRespectActiveHoursToggle.IsChecked = _settings.Commands.WindowsUpdateRespectActiveHours;
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
         MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
+        MqttCmdNavigateToggle.IsChecked = cmds.Contains("navigate");
+        UpdateNavigateOptionsVisibility();
+        UpdateNavigateTopicPreview();
         EnableMicToggle.IsChecked = _settings.Kiosk.EnableMic;
 
         InputDeviceCombo.Items.Clear();
@@ -434,12 +453,52 @@ public partial class KioskWindow : Window, IKioskHostActions
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
         UpdateGestureOptionsVisibility();
         UpdatePowerShellCommandVisibility();
-        UpdateWindowsUpdateOptionsVisibility();
+        UpdateWindowsUpdateNoteVisibility();
         UpdateMicInputVisibility();
         UpdateExitButtonVisibility();
 
         UpdatePinProtectedFieldsVisibility();
         ApplySettingsUiTheme();
+    }
+
+    private void ApplyBrightnessSliderMinimum()
+    {
+        var allowZero = AllowZeroBrightnessToggle.IsChecked == true;
+        DefaultBrightnessSlider.Minimum = allowZero ? 0 : 1;
+        if (!allowZero && DefaultBrightnessSlider.Value < 1)
+            DefaultBrightnessSlider.Value = 1;
+    }
+
+    private void AllowZeroBrightnessToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        ApplyBrightnessSliderMinimum();
+    }
+
+    private void MqttCmdNavigateToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateNavigateOptionsVisibility();
+        UpdateNavigateTopicPreview();
+    }
+
+    private void UpdateNavigateOptionsVisibility()
+    {
+        if (MqttCmdNavigateOptionsPanel == null || MqttCmdNavigateToggle == null) return;
+        MqttCmdNavigateOptionsPanel.Visibility = MqttCmdNavigateToggle.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void UpdateNavigateTopicPreview()
+    {
+        if (MqttNavigateTopicPreviewText == null || DeviceNameBox == null) return;
+        var prefix = string.IsNullOrWhiteSpace(_settings.Mqtt.DiscoveryPrefix)
+            ? "homeassistant"
+            : _settings.Mqtt.DiscoveryPrefix.Trim();
+        var rawDevice = string.IsNullOrWhiteSpace(DeviceNameBox.Text)
+            ? (_settings.Mqtt.DeviceName ?? "living-room-kiosk")
+            : DeviceNameBox.Text;
+        var devId = MqttDiscovery.SanitizeId(rawDevice);
+        MqttNavigateTopicPreviewText.Text = $"{prefix}/command/{devId}/navigate/set";
     }
 
     private void PinProtectionToggle_Changed(object sender, RoutedEventArgs e)
@@ -599,7 +658,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
         catch
         {
-            // Missing design-time asset or load failure — keep default icon.
+            // Missing design-time asset or load failure - keep default icon.
         }
     }
 
@@ -655,6 +714,26 @@ public partial class KioskWindow : Window, IKioskHostActions
             _permissionRequestHookAttached = true;
             wv.PermissionRequested += OnPermissionRequested;
         }
+
+        await RegisterGestureDocumentCreatedScriptAsync(wv);
+    }
+
+    private void ConfigureGestureFallbackOverlay()
+    {
+        GestureFallbackOverlay.Configure(_settings.Kiosk.Gestures, key => HandleGestureTrigger(key));
+        GestureFallbackOverlay.SetFallbackActive(!_mainNavigationSucceeded);
+    }
+
+    private async Task RegisterGestureDocumentCreatedScriptAsync(CoreWebView2 wv)
+    {
+        if (!string.IsNullOrEmpty(_gestureDocumentScriptId))
+        {
+            try { wv.RemoveScriptToExecuteOnDocumentCreated(_gestureDocumentScriptId); } catch { /* ignore */ }
+            _gestureDocumentScriptId = null;
+        }
+
+        var script = WebViewBridge.BuildDocumentScript(_settings.Kiosk);
+        _gestureDocumentScriptId = await wv.AddScriptToExecuteOnDocumentCreatedAsync(script);
     }
 
     private void OnPermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
@@ -703,15 +782,19 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         frame.NavigationCompleted += async (_, navArgs) =>
         {
-            if (!navArgs.IsSuccess || frame.IsDestroyed() != 0)
+            if (frame.IsDestroyed() != 0)
                 return;
-            await TryInjectGestureScriptIntoFrameAsync(frame);
+            try { await TryInjectGestureScriptIntoFrameAsync(frame); } catch { /* ignore */ }
         };
     }
 
     private async void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (!e.IsSuccess || WebView.CoreWebView2 == null) return;
+        if (WebView.CoreWebView2 == null) return;
+
+        _mainNavigationSucceeded = e.IsSuccess;
+        ConfigureGestureFallbackOverlay();
+
         try
         {
             await TryInjectGestureScriptIntoMainAsync();
@@ -912,7 +995,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ShowSettings();
     }
 
-    /// <summary>MQTT opensettings command — no PIN gate (trusted broker).</summary>
+    /// <summary>MQTT opensettings command - no PIN gate (trusted broker).</summary>
     private void OpenSettingsFromMqtt()
     {
         _settings = SettingsManager.Load();
@@ -940,6 +1023,8 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         NavigateTo(_settings.Kiosk.Url);
 
+        ConfigureGestureFallbackOverlay();
+        await ReinjectScriptAsync();
         RestartMqttIfNeeded();
     }
 
@@ -985,6 +1070,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Mqtt.DeviceName = DeviceNameBox.Text?.Trim() ?? "living-room-kiosk";
         _settings.Mqtt.DiscoveryPrefix = string.IsNullOrWhiteSpace(disk.Mqtt.DiscoveryPrefix) ? "homeassistant" : disk.Mqtt.DiscoveryPrefix;
         _settings.AutoStart.Enabled = AutoStartToggle.IsChecked == true;
+        _settings.Kiosk.WindowsUpdateRespectActiveHours = WindowsUpdateRespectActiveHoursToggle.IsChecked == true;
         _settings.Kiosk.PinProtectionDisabled = PinProtectionToggle.IsChecked != true;
         if (_settings.Kiosk.PinProtectionDisabled)
         {
@@ -993,7 +1079,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
         else
         {
-            var pin = SettingsPinBox.Password ?? "";
+            var pin = SettingsPinBox.Text ?? "";
             _settings.Kiosk.Pin = string.IsNullOrEmpty(pin) ? null : pin;
             _settings.Kiosk.PinHint = string.IsNullOrWhiteSpace(PinHintBox.Text) ? null : PinHintBox.Text.Trim();
         }
@@ -1046,6 +1132,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.QuintupleTapMqttTopic = string.IsNullOrWhiteSpace(GestureQuintTapMqttTopicBox.Text) ? null : GestureQuintTapMqttTopicBox.Text.Trim();
 
         _settings.ScreenBrightness.DefaultPercent = Math.Clamp((int)Math.Round(DefaultBrightnessSlider.Value), 0, 100);
+        if (AllowZeroBrightnessToggle.IsChecked != true && _settings.ScreenBrightness.DefaultPercent < 1)
+            _settings.ScreenBrightness.DefaultPercent = 1;
+        _settings.ScreenBrightness.AllowZeroBrightness = AllowZeroBrightnessToggle.IsChecked == true;
         _settings.AudioOutput.VolumePercent = Math.Clamp((int)Math.Round(VolumePercentSlider.Value), 0, 100);
         if (PlaybackDeviceCombo.SelectedItem is ComboBoxItem playItem && playItem.Tag is string devTag)
             _settings.AudioOutput.PlaybackDeviceId = devTag;
@@ -1053,7 +1142,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             _settings.AudioOutput.PlaybackDeviceId = "";
 
         _settings.Sensors.Enabled = new List<string>();
-        if (MqttSensorBatteryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("battery");
+        if (SensorReader.HasSystemBattery() && MqttSensorBatteryToggle.IsChecked == true)
+            _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 
@@ -1069,7 +1159,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdCloseSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("closesettings");
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
-        _settings.Commands.WindowsUpdateRespectActiveHours = MqttCmdWindowsUpdateRespectActiveHoursToggle.IsChecked == true;
+        if (MqttCmdNavigateToggle.IsChecked == true) _settings.Commands.Enabled.Add("navigate");
         _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
         _settings.Kiosk.EnableMic = EnableMicToggle.IsChecked == true;
 
@@ -1280,11 +1370,30 @@ public partial class KioskWindow : Window, IKioskHostActions
         });
     }
 
+    async Task IKioskHostActions.NavigateHaPathAsync(string path, CancellationToken cancellationToken)
+    {
+        await Dispatcher.InvokeAsync(() => NavigateHaPathUiAsync(path, cancellationToken)).Task.Unwrap();
+    }
+
+    private async Task NavigateHaPathUiAsync(string path, CancellationToken cancellationToken)
+    {
+        if (WebView.CoreWebView2 == null)
+            await EnsureWebView2();
+        await HaNavigation.NavigateHaPathAsync(
+            WebView.CoreWebView2,
+            _settings.Kiosk.Url ?? "",
+            path,
+            NavigateTo,
+            cancellationToken);
+    }
+
     private async Task ReinjectScriptAsync()
     {
         try
         {
             if (WebView.CoreWebView2 == null) return;
+            ConfigureGestureFallbackOverlay();
+            await RegisterGestureDocumentCreatedScriptAsync(WebView.CoreWebView2);
             await TryInjectGestureScriptIntoMainAsync();
             CoreWebView2Frame[] snapshot;
             lock (_gestureFramesLock)

@@ -10,4 +10,6 @@ public interface IKioskHostActions
 
     /// <summary>Called after MQTT persisted remote changes to <c>settings.yaml</c> (reload UI state / reinject WebView script).</summary>
     void NotifySettingsChangedFromMqtt();
+
+    Task NavigateHaPathAsync(string path, CancellationToken cancellationToken = default);
 }

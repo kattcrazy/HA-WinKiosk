@@ -9,7 +9,7 @@ using MQTTnet.Protocol;
 namespace HAWinKiosk.Mqtt;
 
 /// <summary>
-/// MQTT connect, discovery, command subscription, and sensor publish loop. For HASS.Agent–style discovery
+/// MQTT connect, discovery, command subscription, and sensor publish loop. For HASS.Agent-style discovery
 /// and command routing, compare with <c>HASS-AGENT-2-REFERENCE/…/Mqtt/IMqttManager.cs</c> and related Home Assistant models
 /// (not a port; our topic layout follows the HA WinKiosk plan).
 /// </summary>
@@ -20,11 +20,13 @@ public class MqttClientService : IDisposable
     [
         "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate",
-        "powershellcommand", "monitorbrightness"
+        "powershellcommand", "monitorbrightness", "navigate", "updatesensors"
     ];
 
     /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
     private static readonly string[] AllKnownSensorSlugs = ["battery", "last_active", "updates_pending"];
+
+    private const int StandardSensorUpdateIntervalSeconds = 30;
 
     private static readonly Dictionary<string, string> CommandDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -259,7 +261,7 @@ public class MqttClientService : IDisposable
         {
             _sensorLoopTask = Task.Run(async () =>
             {
-                var interval = TimeSpan.FromSeconds(Math.Max(5, _settings.Sensors.UpdateIntervalSeconds));
+                var interval = TimeSpan.FromSeconds(StandardSensorUpdateIntervalSeconds);
                 while (!token.IsCancellationRequested)
                 {
                     try
@@ -325,7 +327,7 @@ public class MqttClientService : IDisposable
         var list = new List<(string Topic, string Payload)>
         {
             MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "monitor_brightness", "Monitor brightness",
-                0, 100, 1, "%")
+                _settings.ScreenBrightness.AllowZeroBrightness ? 0 : 1, 100, 1, "%")
         };
 
         foreach (var (topic, payload) in list)
@@ -336,7 +338,16 @@ public class MqttClientService : IDisposable
     {
         if (_client == null || !_client.IsConnected) return;
 
-        await PublishNumberStateAsync("monitor_brightness", Math.Clamp(_settings.ScreenBrightness.DefaultPercent, 0, 100).ToString(CultureInfo.InvariantCulture), ct);
+        await PublishNumberStateAsync("monitor_brightness",
+            ClampBrightnessPercent(_settings.ScreenBrightness.DefaultPercent).ToString(CultureInfo.InvariantCulture), ct);
+    }
+
+    private int ClampBrightnessPercent(int pct)
+    {
+        pct = Math.Clamp(pct, 0, 100);
+        if (!_settings.ScreenBrightness.AllowZeroBrightness && pct < 1)
+            return 1;
+        return pct;
     }
 
     private async Task PublishNumberStateAsync(string slug, string value, CancellationToken ct)
@@ -372,7 +383,7 @@ public class MqttClientService : IDisposable
             case "brightness_default": // legacy MQTT slug before rename
                 if (int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pct))
                 {
-                    pct = Math.Clamp(pct, 0, 100);
+                    pct = ClampBrightnessPercent(pct);
                     _settings.ScreenBrightness.DefaultPercent = pct;
                     try
                     {
@@ -400,8 +411,8 @@ public class MqttClientService : IDisposable
 
         foreach (var slug in _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()))
         {
-            // Brightness is controlled via a number entity only (not duplicate buttons).
-            if (slug is "monitorbrightness")
+            // Brightness is a number entity; navigate is mqtt.publish-only (no button entity).
+            if (slug is "monitorbrightness" or "navigate")
                 continue;
             if (!CommandDisplayNames.TryGetValue(slug, out var title))
                 title = slug;
@@ -415,11 +426,20 @@ public class MqttClientService : IDisposable
             {
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
-                "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Updates pending", null, null),
+                "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Windows updates pending", null, null),
                 _ => (null, null)!
             };
             if (t == null) continue;
             await _client.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(t).WithPayload(p).WithRetainFlag().Build(), ct);
+        }
+
+        if (_settings.Sensors.Enabled.Count > 0)
+        {
+            var (updateTopic, updatePayload) = MqttDiscovery.GenericButton(
+                _prefix, _deviceName, _availabilityTopic, _devId, "updatesensors", "Update sensors");
+            await _client.PublishAsync(
+                new MqttApplicationMessageBuilder().WithTopic(updateTopic).WithPayload(updatePayload).WithRetainFlag().Build(),
+                ct);
         }
 
         await PublishPersistedSettingsDiscoveryAsync(ct);
@@ -438,14 +458,23 @@ public class MqttClientService : IDisposable
         if (_client == null || !_client.IsConnected) return;
 
         var enabledCmds = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        var enabledSensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+
         foreach (var slug in AllKnownCommandSlugs)
         {
-            if (enabledCmds.Contains(slug)) continue;
+            if (slug == "updatesensors")
+            {
+                if (enabledSensors.Count > 0) continue;
+            }
+            else if (enabledCmds.Contains(slug))
+            {
+                continue;
+            }
+
             var topic = $"{_prefix}/button/{_devId}_{slug}/config";
             await PublishEmptyRetainedConfigAsync(topic, ct);
         }
 
-        var enabledSensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         foreach (var slug in AllKnownSensorSlugs)
         {
             if (enabledSensors.Contains(slug)) continue;
@@ -492,6 +521,13 @@ public class MqttClientService : IDisposable
                 return;
             }
 
+            if (slug == "updatesensors")
+            {
+                if (_settings.Sensors.Enabled.Count > 0)
+                    await PublishSensorStatesAsync(CancellationToken.None, lastActiveOnly: false);
+                return;
+            }
+
             var enabled = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
             if (!enabled.Contains(slug))
                 return;
@@ -530,10 +566,14 @@ public class MqttClientService : IDisposable
                     _host?.CloseSettings();
                     break;
                 case "windowsupdate":
-                    WindowsUpdateCommand.Execute(_settings.Commands.WindowsUpdateRespectActiveHours);
+                    WindowsUpdateCommand.Execute(_settings.Kiosk.WindowsUpdateRespectActiveHours);
                     break;
                 case "powershellcommand":
                     PowerShellCommand.Execute(_settings.Commands.PowerShellCommand ?? "");
+                    break;
+                case "navigate":
+                    if (_host != null && !string.IsNullOrWhiteSpace(payload))
+                        await _host.NavigateHaPathAsync(payload.Trim(), CancellationToken.None);
                     break;
             }
         }

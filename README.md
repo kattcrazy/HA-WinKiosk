@@ -1,11 +1,11 @@
 # <img src="light_logo.png" alt="HA WinKiosk logo" width="36" /> HA WinKiosk <img src="light_logo.png" alt="HA WinKiosk logo" width="36" />
-Home Assistant Windows Kiosk – An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
+Home Assistant Windows Kiosk - An open-source Windows webpage kiosk designed for integration with Home Assistant. Prevents access to the typical Windows UI without pin access and publishes MQTT commands and sensors to Home Assistant. Configurable gestures for reload, clear cache, send MQTT message, and more.
 
 ## Quick Start
 
 1. Download the .exe file from the latest release and once downloaded double click/open to install. It will automatically install .NET 8 if needed.
 2. On first run, Settings will open. Enter your kiosk webpage URL, MQTT host, port, username, password, and other details as needed.
-3. Click Save & Back to Kiosk – the fullscreen kiosk will load your HA dashboard or chosen URL.
+3. Click Save & Back to Kiosk - the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
 **I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
@@ -30,66 +30,13 @@ While I previously attempted to add native openwakeword and wyoming services sup
 
 Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea.
 
-Mic access, input device, output device, and volume can be changed from the config section of settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css. I have prewritten some css styles below if you wish to use them.
-
-<details>
-  <summary>Styles</summary>
-
-```
-/* --- GLOBAL BAR STYLING --- */
-#voice-satellite-ui .vs-activity-bar {
-  height: 4px !important;
-  border-radius: 4px !important;
-  transition: all 0.3s ease !important;
-}
-
-/* --- LIGHT THEME --- */
-#voice-satellite-ui.vs-light {
-  --vs-text-user-color: #000000;
-  --vs-text-assistant-color: #29b6f6;
-}
-
-#voice-satellite-ui.vs-light .vs-text-user {
-  color: var(--vs-text-user-color) !important;
-}
-
-#voice-satellite-ui.vs-light .vs-text-assistant {
-  color: var(--vs-text-assistant-color) !important;
-}
-
-#voice-satellite-ui.vs-light .vs-activity-bar {
-  background: #ffffff !important;
-  box-shadow: 0 0 15px 4px rgba(79, 195, 247, 0.8) !important;
-}
-
-/* --- DARK THEME --- */
-#voice-satellite-ui.vs-dark {
-  --vs-text-user-color: #ffffff;
-  --vs-text-assistant-color: #03a9f4;
-}
-
-  color: var(--vs-text-user-color) !important;
-}
-
-#voice-satellite-ui.vs-dark .vs-text-assistant {
-  color: var(--vs-text-assistant-color) !important;
-}
-
-#voice-satellite-ui.vs-dark .vs-activity-bar {
-  background: #222222 !important;
-  box-shadow: 0 0 20px 6px rgba(3, 169, 244, 0.7) !important;
-}
-
-```
-</details>
+Mic access, input device, output device, and volume can be changed from the config section of HA WinKiosk's settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css.
 
 ## MQTT and Home Assistant
 
-With MQTT configured, the app publishes MQTT payloads that show up in Integrations > MQTT in Home Assistant. In the app Settings, under MQTT, turn Sensors and Commands on or off for which buttons and sensors are discovered.
+With MQTT configured, the app publishes MQTT payloads that show up in Integrations > MQTT in Home Assistant. In the app Settings, under MQTT, you can choose which sensors and commands are exposed.
 
-Entity IDs in HA include your device name (sanitized). Names below match the name field in discovery.
-
-### MQTT entities
+### MQTT entities & services
 
 | Name in HA | Type | Description |
 | --- | --- | --- |
@@ -102,16 +49,26 @@ Entity IDs in HA include your device name (sanitized). Names below match the nam
 | Clear kiosk cache | Button | Clear kiosk cache (passwords & settings kept), then reload kiosk |
 | Open settings | Button | Open this app’s Settings screen (no PIN) |
 | Close settings | Button | Close Settings and return to the kiosk |
-| Run Windows updates | Button | Starts a Windows Update scan/download/install run; app schedules restart if Windows Update reports reboot required |
+| Run Windows updates | Button | Starts a Windows Update scan/download/install run. If  `Respect active hours` is on, it will wait till inactive hours before restarting. If it's off, it will restart within 30 seconds. |
 | PowerShell command | Button | Executes configured PowerShell command text from settings |
-| Battery level | Sensor | Remaining battery % (`unavailable` on desktops without a battery) |
+| Update sensors | Button | Immediately publish all enabled sensor values (entity is auto-created when any sensor is enabled) |
+| Battery level | Sensor | Remaining battery % (not available on PCs without a battery) |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
-| Updates pending | Number | Count of available Windows updates |
-| Monitor brightness | Number | Brightness % (0–100). Entity ID suffix: `{device}_monitor_brightness`. |
+| Windows updates pending | Number | Count of available Windows updates |
+| Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
+
+When the command Navigate is enabled in Settings, the kiosk listens to  `{discoveryPrefix}/command/{device}/navigate/set`. Call it from Home Assistant with the `mqtt.publish` service to navigate between HA pages.
+
+```yaml
+service: mqtt.publish
+data:
+  topic: "homeassistant/command/kiosk/navigate/set"
+  payload: "/lovelace/default_view"
+```
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI. Older settings layouts are read once and migrated to the new layout the next time settings are saved.
+Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI.
 
 Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
@@ -121,91 +78,65 @@ Below is a key of what all the options are, and below that is an example `settin
 
 #### Config
 
-| UI Name | Values | Notes | Published to HA via MQTT? |
-| --- | --- | --- | --- |
-| Kiosk URL | URL | Kiosk page URL | No |
-| Ignore HTTPS cert warnings | `true`/`false` | Auto-allow invalid/self-signed TLS certs for the kiosk URL | No |
-| Do Not Disturb | `true`/`false` | Suppress toast notifications while the kiosk is running | No |
-| Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases | No |
-| Show settings button | `true`/`false` | Show/hide gear button | No |
-| Theme | `auto` \| `light` \| `dark` | UI theme mode | No |
-| Brightness (%) | `0..100` | Screen brightness. | Yes (`number.{device}_monitor_brightness`) |
-| Start when Windows starts | `true`/`false` | Launch app at sign-in. | No |
-| Playback device | string (MMDevice ID) | Empty keeps Windows default playback device. | No |
-| Input device | string (MMDevice ID) | Empty uses Windows default capture device. | No |
-| Volume (%) | `0..100` | Master volume for the playback device. | No |
-| Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers. | No |
-| PIN hint | string | Hint shown on PIN prompt | No |
-| Verification question | string | Forgot-PIN verification question | No |
-| PIN reset answer | string | Forgot-PIN verification answer | No |
-| PIN protection | `true`/`false` | `false` disables PIN gate | No |
+| UI Name | Values | Notes |
+| --- | --- | --- |
+| Kiosk URL | URL | Kiosk page URL |
+| Ignore HTTPS cert warnings | `true`/`false` | Auto-allow invalid/self-signed TLS certs for the kiosk URL |
+| Do Not Disturb | `true`/`false` | Suppress toast notifications while the kiosk is running |
+| Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases |
+| Show settings button | `true`/`false` | Show/hide gear button |
+| Theme | `auto`/`light`/`dark` | UI theme mode |
+| Brightness (%) | `0..100` | Screen brightness |
+| Allow 0% brightness | `true`/`false` | When `false` (default), local slider and HA brightness entity minimum is 1% |
+| Start when Windows starts | `true`/`false` | Launch app at sign-in |
+| Respect active hours | `true`/`false` | When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds |
+| Playback device | string (MMDevice ID) | Empty keeps Windows default playback device |
+| Input device | string (MMDevice ID) | Empty uses Windows default capture device |
+| Volume (%) | `0..100` | Master volume for the playback device |
+| Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers |
+| PIN hint | string | Hint shown on PIN prompt |
+| Verification question | string | Forgot-PIN verification question |
+| PIN reset answer | string | Forgot-PIN verification answer |
+| PIN protection | `true`/`false` | `false` disables PIN gate |
 
 #### Gestures
 
-| UI Name | Values | Notes | Published to HA via MQTT? |
-| --- | --- | --- | --- |
-| Single tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for single tap | Indirect (when MQTT message) |
-| Single tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Single-tap screen region | No |
-| Single tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Double tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for double tap | Indirect (when MQTT message) |
-| Double tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Double-tap screen region | No |
-| Double tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Triple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for triple tap | Indirect (when MQTT message) |
-| Triple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Triple-tap screen region | No |
-| Triple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Quadruple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for quadruple tap | Indirect (when MQTT message) |
-| Quadruple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Quadruple-tap screen region | No |
-| Quadruple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Quintuple tap action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for quintuple tap | Indirect (when MQTT message) |
-| Quintuple tap location | `Top left` \| `Top right` \| `Bottom right` \| `Bottom left` \| `Anywhere` | Quintuple-tap screen region | No |
-| Quintuple tap MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe | Indirect (when MQTT message) |
-| Swipe direction | `Down` \| `Left` \| `Right` | Swipe direction filter | No |
-| Swipe MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for swipe-and-hold | Indirect (when MQTT message) |
-| Swipe and hold direction | `Down` \| `Left` \| `Right` | Swipe-and-hold direction filter | No |
-| Swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for swipe-and-hold | No |
-| Swipe and hold MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Two-finger swipe action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
-| Two-finger swipe direction | `Down` \| `Left` \| `Right` | Touch devices only | No |
-| Two-finger swipe MQTT topic | string | Touch devices only | Yes |
-| Two-finger swipe and hold action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Touch devices only | Indirect (when MQTT message) |
-| Two-finger swipe and hold direction | `Down` \| `Left` \| `Right` | Touch devices only | No |
-| Two-finger swipe and hold threshold (milliseconds) | integer (ms) | Hold threshold for two-finger swipe-and-hold | No |
-| Two-finger swipe and hold MQTT topic | string | Touch devices only | Yes |
-| Pinch action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for pinch-in gesture | Indirect (when MQTT message) |
-| Pinch MQTT topic | string | Topic suffix when action is MQTT message | Yes |
-| Zoom action | `Disabled` \| `Reload` \| `Clear cache and reload` \| `Settings` \| `MQTT message` | Action for zoom gesture | Indirect (when MQTT message) |
-| Zoom direction | `Any` \| `In` \| `Out` | Zoom gesture direction filter | No |
-| Zoom MQTT topic | string | Topic suffix when action is MQTT message | Yes |
+Each enabled gesture has an action dropdown with the following possible values:
+
+```Disabled, Reload, Clear cache and reload, Settings, MQTT message```
+
+When action is `MQTT message`, make sure to set an MQTT topic suffix for that gesture.
+
+##### Options
+
+| Gesture | Options |
+| --- | --- |
+| Single tap | Location: `Top left`/`Top right`/`Bottom right`/`Bottom left`/`Anywhere` |
+| Double tap | Location: same |
+| Triple tap | Location: same |
+| Quadruple tap | Location: same |
+| Quintuple tap | Location: same |
+| Swipe | Direction: `Down`/`Left`/`Right` |
+| Swipe and hold | Direction: `Down`/`Left`/`Right`<br>Hold threshold (ms): integer |
+| Two-finger swipe (touch devices only) | Direction: `Down`/`Left`/`Right` |
+| Two-finger swipe and hold (touch devices only) | Direction: `Down`/`Left`/`Right`<br>Hold threshold (ms): integer |
+| Pinch | - |
+| Zoom | Direction: `Any`/`In`/`Out` |
 
 #### MQTT
 
-| UI Name | Values | Notes | Published to HA via MQTT? |
-| --- | --- | --- | --- |
-| MQTT IP | hostname/IP | Broker host | No |
-| MQTT port | integer | Broker port | No |
-| MQTT username | string | Broker username | No |
-| MQTT password | string | Broker password | No |
-| Device name | string | Base ID in MQTT entities/topics | No |
-| Discovery prefix | string | MQTT discovery prefix for Home Assistant (default `homeassistant`) | No |
-| Sensor: Battery level | `On`/`Off` | Publishes battery percentage | Yes |
-| Sensor: Last Active | `On`/`Off` | Publishes seconds since last input (1s cadence) | Yes |
-| Sensor: Updates pending | `On`/`Off` | Publishes Windows update count | Yes |
-| Command: Shutdown | `On`/`Off` | Exposes Shutdown MQTT button | Yes |
-| Command: Restart | `On`/`Off` | Exposes Restart MQTT button | Yes |
-| Command: System sleep | `On`/`Off` | Exposes Sleep MQTT button | Yes |
-| Command: Monitor sleep | `On`/`Off` | Exposes Monitor sleep MQTT button | Yes |
-| Command: Monitor wake | `On`/`Off` | Exposes Monitor wake MQTT button | Yes |
-| Command: Refresh kiosk | `On`/`Off` | Exposes Refresh MQTT button | Yes |
-| Command: Clear kiosk cache | `On`/`Off` | Exposes Clear cache MQTT button | Yes |
-| Command: Open settings | `On`/`Off` | Exposes Open settings MQTT button | Yes |
-| Command: Close settings | `On`/`Off` | Exposes Close settings MQTT button | Yes |
-| Command: Run Windows updates | `On`/`Off` | Exposes Windows updates MQTT button | Yes |
-| Respect active hours | `On`/`Off` | Toggle under Run Windows updates. When on, reboot (if required) is deferred to outside active hours; when off, reboot is scheduled in 30 seconds. | No |
-| Command: PowerShell command | `On`/`Off` | Exposes custom PowerShell MQTT button | Yes |
-| PowerShell command text | string | Command text for powershellcommand MQTT command | Yes |
-| (YAML only) `mqtt.sensors.updateIntervalSeconds` | integer ≥ 5 | How often `battery` and `updates_pending` refresh. `last_active` still updates every 1 second when enabled. | No |
+Enable or disable each sensor or command in this section of settings. They are listed under [MQTT entities & services](#mqtt-entities--services).
+
+| UI Name | Values | Notes |
+| --- | --- | --- |
+| MQTT IP | hostname/IP | Broker host |
+| MQTT port | integer | Broker port |
+| MQTT username | string | Broker username |
+| MQTT password | string | Broker password |
+| Device name | string | Base ID in MQTT entities/topics |
+| Discovery prefix | string | MQTT discovery prefix for Home Assistant (default `homeassistant`) |
+| PowerShell command text | string | Command text for the PowerShell command button |
+
 
 ### Example `settings.yaml`
 
@@ -226,7 +157,9 @@ config:
   inputDeviceId: ""
   volumePercent: 100
   brightnessPercent: 100
+  allowZeroBrightness: false
   autoStartEnabled: true
+  windowsUpdateRespectActiveHours: true
 
 gestures:
   singleTapAction: disabled
@@ -276,7 +209,6 @@ mqtt:
       - battery
       - last_active
       - updates_pending
-    updateIntervalSeconds: 30
   commands:
     enabled:
       - shutdown
@@ -289,7 +221,7 @@ mqtt:
       - opensettings
       - closesettings
       - windowsupdate
-    windowsUpdateRespectActiveHours: true
+      - navigate
     powerShellCommand: ""
 ```
 
@@ -307,7 +239,9 @@ This project uses the [GNU General Public License v3.0](https://www.gnu.org/lice
 
 ## Credits
 
-[HASS.Agent 2.0](https://github.com/hass-agent/HASS.Agent) (hass-agent, forked from LAB02-Research) was heavily leaned on for implementation of sensors and commands, and in the case of monitor wake/sleep, directly mirrored. Go check out this amazing program if you're just looking for sensors and commands without a kiosk!
+[HASS.Agent 2.0](https://github.com/hass-agent/HASS.Agent) (hass-agent, forked from LAB02-Research) was heavily leaned on for implementation of sensors and commands, and in the case of monitor wake/sleep, directly mirrored. Check out this program if you're just looking for sensors and commands without a kiosk!
+
+[Browser Mod 2](https://github.com/thomasloven/hass-browser_mod) was referenced and inspiration for the navigation function.
 
 ## About
 This is my first Windows app (super excited that I finally made one). I use it for my own setup and it's been really helpful. Please report an issue if something doesn't work, I'll try my best to fix it.

@@ -8,18 +8,6 @@ namespace HAWinKiosk.Mqtt;
 
 public static class SettingsManager
 {
-    // =============================================================================================
-    // settings.yaml FORMAT (v2) — introduced with flattened `config`, top-level `gestures`, mqtt nesting.
-    //
-    // RELEASE PLAN (manual):
-    // - First ship this as a prerelease / beta so early adopters migrate disk format.
-    // - First stable release that includes v2 save: still KEEP the legacy v1 reader below (users may
-    //   restore old files or sync from backup).
-    // - After one additional stable release with v2-only on disk for typical users, DELETE the entire
-    //   #region "Legacy settings.yaml v1" block and only accept v2 (or fail closed with defaults).
-    //   Bump README when removing. Search: Legacy settings.yaml v1
-    // =============================================================================================
-
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
         "battery", "last_active", "updates_pending"
@@ -45,62 +33,23 @@ public static class SettingsManager
             return new AppSettings();
 
         AppSettings s;
-        if (LooksLikeSettingsYamlV2(yaml))
-        {
-            try
-            {
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                    .IgnoreUnmatchedProperties()
-                    .Build();
-                var v2 = deserializer.Deserialize<SettingsFileV2>(yaml);
-                s = v2 != null ? SettingsYamlConversion.ToAppSettings(v2) : new AppSettings();
-            }
-            catch
-            {
-                s = TryLoadLegacyAppSettings(yaml);
-            }
-        }
-        else
-            s = TryLoadLegacyAppSettings(yaml);
-
-        NormalizeAppSettings(s);
-        return s;
-    }
-
-    private static bool LooksLikeSettingsYamlV2(string yaml)
-    {
-        foreach (var raw in yaml.Replace("\r\n", "\n").Split('\n'))
-        {
-            var t = raw.Trim();
-            if (t.Length == 0) continue;
-            if (t.StartsWith('#')) continue;
-            if (t == "---") continue;
-            return t.StartsWith("config:", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return false;
-    }
-
-    #region Legacy settings.yaml v1 (remove after stable+1 — see file header)
-
-    private static AppSettings TryLoadLegacyAppSettings(string yaml)
-    {
         try
         {
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()
                 .Build();
-            return deserializer.Deserialize<AppSettings>(yaml) ?? new AppSettings();
+            var file = deserializer.Deserialize<SettingsFileV2>(yaml);
+            s = file != null ? SettingsYamlConversion.ToAppSettings(file) : new AppSettings();
         }
         catch
         {
-            return new AppSettings();
+            s = new AppSettings();
         }
-    }
 
-    #endregion
+        NormalizeAppSettings(s);
+        return s;
+    }
 
     private static void NormalizeAppSettings(AppSettings s)
     {
@@ -110,6 +59,13 @@ public static class SettingsManager
             .Where(x => AllowedSensorIds.Contains(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        if (!SensorReader.HasSystemBattery())
+        {
+            s.Sensors.Enabled = s.Sensors.Enabled
+                .Where(x => !x.Equals("battery", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
 
         s.Commands.Enabled = s.Commands.Enabled
             .Select(x => x.Trim())
@@ -143,12 +99,13 @@ public static class SettingsManager
         s.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(s.Kiosk.PinResetAnswer) ? null : s.Kiosk.PinResetAnswer.Trim();
         s.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(s.Commands.PowerShellCommand) ? null : s.Commands.PowerShellCommand.Trim();
 
+        if (!s.ScreenBrightness.AllowZeroBrightness && s.ScreenBrightness.DefaultPercent < 1)
+            s.ScreenBrightness.DefaultPercent = 1;
+
         s.Mqtt.DeviceName = MqttDiscovery.NormalizeDeviceDisplayName(s.Mqtt.DeviceName);
         s.Mqtt.DiscoveryPrefix = string.IsNullOrWhiteSpace(s.Mqtt.DiscoveryPrefix)
             ? "homeassistant"
             : s.Mqtt.DiscoveryPrefix.Trim();
-
-        // Legacy voice settings are intentionally ignored.
     }
 
     private static string NormalizeGestureAction(string? raw, string fallback)
@@ -178,11 +135,11 @@ public static class SettingsManager
     public static void Save(AppSettings settings)
     {
         Directory.CreateDirectory(AppDataDir);
-        var v2 = SettingsYamlConversion.FromAppSettings(settings);
+        var file = SettingsYamlConversion.FromAppSettings(settings);
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
-        var yaml = serializer.Serialize(v2);
+        var yaml = serializer.Serialize(file);
         File.WriteAllText(SettingsPath, yaml);
     }
 

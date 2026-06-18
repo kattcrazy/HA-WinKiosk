@@ -77,6 +77,10 @@ public class KioskConfig
     [YamlMember(Alias = "betaUpdates")]
     public bool BetaUpdates { get; set; }
 
+    /// <summary>When true, Windows Update reboot (if required) is deferred to outside active hours; when false, reboot is scheduled in 30 seconds.</summary>
+    [YamlMember(Alias = "windowsUpdateRespectActiveHours")]
+    public bool WindowsUpdateRespectActiveHours { get; set; } = true;
+
     /// <summary>Windows MMDevice ID for capture; empty = system default input.</summary>
     [YamlMember(Alias = "inputDeviceId")]
     public string InputDeviceId { get; set; } = "";
@@ -250,9 +254,6 @@ public class SensorsConfig
         "battery", "last_active", "updates_pending"
     ];
 
-    /// <summary>Interval for all enabled sensors except <c>last_active</c> (minimum 5 seconds). Idle time (<c>last_active</c>) always publishes every 1 second when enabled.</summary>
-    [YamlMember(Alias = "updateIntervalSeconds")]
-    public int UpdateIntervalSeconds { get; set; } = 30;
 }
 
 public class CommandsConfig
@@ -266,20 +267,21 @@ public class CommandsConfig
 
     [YamlMember(Alias = "powerShellCommand")]
     public string? PowerShellCommand { get; set; }
-
-    [YamlMember(Alias = "windowsUpdateRespectActiveHours")]
-    public bool WindowsUpdateRespectActiveHours { get; set; } = true;
 }
 
 public class ScreenBrightnessConfig
 {
     [YamlMember(Alias = "defaultPercent")]
     public int DefaultPercent { get; set; } = 100;
+
+    /// <summary>When false (default), brightness slider and HA MQTT number entity minimum is 1%.</summary>
+    [YamlMember(Alias = "allowZeroBrightness")]
+    public bool AllowZeroBrightness { get; set; }
 }
 
 public class AudioOutputConfig
 {
-    /// <summary>Master volume 0–100 for the default playback device (after optional device switch).</summary>
+    /// <summary>Master volume 0-100 for the default playback device (after optional device switch).</summary>
     [YamlMember(Alias = "volumePercent")]
     public int VolumePercent { get; set; } = 100;
 

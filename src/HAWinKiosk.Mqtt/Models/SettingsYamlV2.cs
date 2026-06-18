@@ -3,7 +3,7 @@ using YamlDotNet.Serialization;
 namespace HAWinKiosk.Mqtt.Models;
 
 /// <summary>
-/// Root shape for <c>settings.yaml</c> v2 (<c>config</c>, <c>gestures</c>, nested <c>mqtt</c>).
+/// Root shape for <c>settings.yaml</c> (<c>config</c>, <c>gestures</c>, nested <c>mqtt</c>).
 /// Runtime code still uses <see cref="AppSettings"/>; this type is load/save only.
 /// </summary>
 public sealed class SettingsFileV2
@@ -72,6 +72,12 @@ public sealed class ConfigSectionV2
 
     [YamlMember(Alias = "autoStartEnabled")]
     public bool AutoStartEnabled { get; set; }
+
+    [YamlMember(Alias = "allowZeroBrightness")]
+    public bool AllowZeroBrightness { get; set; }
+
+    [YamlMember(Alias = "windowsUpdateRespectActiveHours")]
+    public bool WindowsUpdateRespectActiveHours { get; set; } = true;
 }
 
 /// <summary>
@@ -122,11 +128,13 @@ public static class SettingsYamlConversion
         s.Kiosk.ShowSettingsButton = c.ShowSettingsButton;
         s.Kiosk.UiTheme = c.UiTheme;
         s.Kiosk.BetaUpdates = c.BetaUpdates;
+        s.Kiosk.WindowsUpdateRespectActiveHours = c.WindowsUpdateRespectActiveHours;
         s.Kiosk.Gestures = v.Gestures ?? new GesturesConfig();
 
         s.AudioOutput.PlaybackDeviceId = c.PlaybackDeviceId ?? "";
         s.AudioOutput.VolumePercent = c.VolumePercent;
         s.ScreenBrightness.DefaultPercent = c.BrightnessPercent;
+        s.ScreenBrightness.AllowZeroBrightness = c.AllowZeroBrightness;
         s.AutoStart.Enabled = c.AutoStartEnabled;
 
         var m = v.Mqtt ?? new MqttSectionV2();
@@ -162,11 +170,13 @@ public static class SettingsYamlConversion
                 ShowSettingsButton = s.Kiosk.ShowSettingsButton,
                 UiTheme = s.Kiosk.UiTheme,
                 BetaUpdates = s.Kiosk.BetaUpdates,
+                WindowsUpdateRespectActiveHours = s.Kiosk.WindowsUpdateRespectActiveHours,
                 PlaybackDeviceId = s.AudioOutput.PlaybackDeviceId,
                 InputDeviceId = s.Kiosk.InputDeviceId ?? "",
                 EnableMic = s.Kiosk.EnableMic,
                 VolumePercent = s.AudioOutput.VolumePercent,
                 BrightnessPercent = s.ScreenBrightness.DefaultPercent,
+                AllowZeroBrightness = s.ScreenBrightness.AllowZeroBrightness,
                 AutoStartEnabled = s.AutoStart.Enabled
             },
             Gestures = s.Kiosk.Gestures,

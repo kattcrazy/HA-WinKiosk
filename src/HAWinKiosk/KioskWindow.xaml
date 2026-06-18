@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:local="clr-namespace:HAWinKiosk"
         Title="HA WinKiosk"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -50,10 +51,93 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,0,12,0"/>
         </Style>
+        <!-- Hint text under toggles / fields -->
+        <Style x:Key="SettingsHintText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.FgSub}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="SettingsSliderDecreaseRepeatButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Height="6"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource Theme.Accent}"
+                                CornerRadius="3,0,0,3"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsSliderRepeatButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Rectangle Fill="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsSliderThumb" TargetType="Thumb">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="{DynamicResource Theme.Toggle.ThumbOn}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsSlider" TargetType="Slider">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <Border x:Name="TrackBackground"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    Background="{DynamicResource Theme.Toggle.TrackOff}"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource SettingsSliderDecreaseRepeatButton}"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource SettingsSliderRepeatButton}"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource SettingsSliderThumb}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="TrackBackground" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid x:Name="KioskPanel" Background="{DynamicResource Theme.Kiosk.Bg}">
             <wv2:WebView2 x:Name="WebView"/>
+            <local:KioskGestureFallbackOverlay x:Name="GestureFallbackOverlay"
+                                               Panel.ZIndex="500"/>
         </Grid>
 
         <Popup x:Name="SettingsButtonPopup"
@@ -234,6 +318,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Slider x:Name="DefaultBrightnessSlider"
                                             Grid.Column="0"
+                                            Style="{StaticResource SettingsSlider}"
                                             Minimum="0"
                                             Maximum="100"
                                             TickFrequency="1"
@@ -249,6 +334,21 @@
                                                Style="{StaticResource SettingsItemLabel}"
                                                Text="100"/>
                                 </Grid>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Allow 0% brightness"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="AllowZeroBrightnessToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="AllowZeroBrightnessToggle_Changed"
+                                                  Unchecked="AllowZeroBrightnessToggle_Changed"/>
+                                </Grid>
 
                                 <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
                                 <Grid Margin="0,0,0,10">
@@ -258,6 +358,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Slider x:Name="VolumePercentSlider"
                                             Grid.Column="0"
+                                            Style="{StaticResource SettingsSlider}"
                                             Minimum="0"
                                             Maximum="100"
                                             TickFrequency="1"
@@ -302,7 +403,7 @@
                                               Style="{StaticResource SettingsComboBox}"/>
                                 </StackPanel>
 
-                                <Grid Margin="0,0,0,20">
+                                <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -315,6 +416,23 @@
                                                   Style="{StaticResource SettingsToggleSwitch}"
                                                   VerticalAlignment="Center"/>
                                 </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Respect active hours"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="WindowsUpdateRespectActiveHoursToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds."
+                                           Style="{StaticResource SettingsHintText}"
+                                           Margin="0,0,0,20"/>
 
                                 <TextBlock Text="Pin" Style="{StaticResource SettingsSectionHeading}" Margin="0,16,0,10"/>
                                 <Grid Margin="0,0,0,12">
@@ -354,9 +472,8 @@
 
                                 <StackPanel x:Name="PinProtectedFieldsPanel" Visibility="Visible">
                                     <TextBlock Text="Settings PIN" Style="{StaticResource SettingsItemLabel}"/>
-                                    <PasswordBox x:Name="SettingsPinBox"
-                                                 Style="{StaticResource RoundedPasswordBox}"
-                                                 Margin="0,0,0,10"/>
+                                    <local:SecretInputControl x:Name="SettingsPinBox"
+                                                              Margin="0,0,0,10"/>
 
                                     <TextBlock Text="PIN hint (optional)" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="PinHintBox"
@@ -370,9 +487,8 @@
                                              Style="{StaticResource RoundedTextBox}"
                                              Margin="0,0,0,10"/>
                                     <TextBlock Text="PIN reset answer" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBox x:Name="PinResetAnswerBox"
-                                             Style="{StaticResource RoundedTextBox}"
-                                             Margin="0,0,0,10"/>
+                                    <local:SecretInputControl x:Name="PinResetAnswerBox"
+                                                              Margin="0,0,0,10"/>
                                 </StackPanel>
                             </StackPanel>
 
@@ -670,10 +786,10 @@
                                 <TextBlock Text="MQTT username" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="MqttUsernameBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT password" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="MqttPasswordBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,12"/>
+                                <local:SecretInputControl x:Name="MqttPasswordBox" Margin="0,0,0,12"/>
 
                                 <TextBlock Text="Sensors" Style="{StaticResource SettingsSubSectionHeading}"/>
-                                <Grid Margin="0,0,0,4">
+                                <Grid x:Name="MqttSensorBatteryPanel" Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -694,7 +810,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Updates pending" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <TextBlock Grid.Column="0" Text="Windows updates pending" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttSensorUpdatesPendingToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
 
@@ -779,15 +895,9 @@
                                     <TextBlock Grid.Column="0" Text="Run Windows updates" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdWindowsUpdateToggle_Changed" Unchecked="MqttCmdWindowsUpdateToggle_Changed"/>
                                 </Grid>
-                                <StackPanel x:Name="MqttCmdWindowsUpdateOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
-                                    <Grid Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Respect active hours" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                        <ToggleButton x:Name="MqttCmdWindowsUpdateRespectActiveHoursToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
-                                    </Grid>
+                                <StackPanel x:Name="MqttCmdWindowsUpdateNotePanel" Margin="16,0,0,8" Visibility="Collapsed">
+                                    <TextBlock Text="If a reboot is required, timing follows Config -> Respect active hours."
+                                               Style="{StaticResource SettingsHintText}"/>
                                 </StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -800,6 +910,32 @@
                                 <StackPanel x:Name="MqttCmdPowerShellCommandPanel" Margin="16,0,0,4" Visibility="Collapsed">
                                     <TextBlock Text="PowerShell command text" Style="{StaticResource SettingsItemLabel}"/>
                                     <TextBox x:Name="MqttCmdPowerShellTextBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                </StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Navigate" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdNavigateToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="MqttCmdNavigateToggle_Changed"
+                                                  Unchecked="MqttCmdNavigateToggle_Changed"/>
+                                </Grid>
+                                <StackPanel x:Name="MqttCmdNavigateOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                    <TextBlock Text="MQTT topic (mqtt.publish payload = HA path)"
+                                               Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBlock x:Name="MqttNavigateTopicPreviewText"
+                                               Style="{StaticResource SettingsItemLabel}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,10"/>
+                                    <TextBlock Text="Call from Home Assistant using the mqtt.publish service; no entity is created."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource Theme.Settings.FgMuted}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,10"/>
                                 </StackPanel>
                             </StackPanel>
 

@@ -417,8 +417,8 @@ public static class WebViewBridge
     e.preventDefault();
   }
 
-  // passive: true — do not block scrolling / default page behavior (we never call preventDefault).
-  // capture: true — still see events during capture phase alongside normal interaction.
+  // passive: true - do not block scrolling / default page behavior (we never call preventDefault).
+  // capture: true - still see events during capture phase alongside normal interaction.
   const ptrOpts = { passive: true, capture: true };
   const activeOpts = { passive: false, capture: true };
   blockZoomAndBrowserSwipe();

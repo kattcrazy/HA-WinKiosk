@@ -1,6 +1,7 @@
 <Window x:Class="HAWinKiosk.PinEntryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:HAWinKiosk"
         Title="Enter PIN"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -17,6 +18,8 @@
         <SolidColorBrush x:Key="Theme.Pin.CardBorder" Color="#D0D8E0"/>
         <SolidColorBrush x:Key="Theme.Pin.Fg" Color="#1A1A1A"/>
         <SolidColorBrush x:Key="Theme.Pin.FgMuted" Color="#555555"/>
+        <SolidColorBrush x:Key="Theme.SecretInput.EyeMuted" Color="#555555"/>
+        <SolidColorBrush x:Key="Theme.SecretInput.EyeActive" Color="#5993F6"/>
     </Window.Resources>
     <!-- Single rounded border as visual root avoids a stray line under borderless windows. -->
     <Border CornerRadius="8"
@@ -38,11 +41,9 @@
                        FontSize="12"
                        Margin="0,0,0,12"
                        Visibility="Collapsed"/>
-            <PasswordBox x:Name="PinBox"
-                         Style="{StaticResource RoundedPasswordBox}"
-                         Margin="0,0,0,8"
-                         PasswordChanged="PinBox_PasswordChanged"
-                         KeyDown="PinBox_KeyDown"/>
+            <local:SecretInputControl x:Name="PinBox"
+                                      Margin="0,0,0,8"
+                                      TextChanged="PinBox_TextChanged"/>
             <TextBlock x:Name="ErrorBlock"
                        Text="Incorrect PIN"
                        Foreground="#B71C1C"
@@ -65,9 +66,8 @@
                            Foreground="{DynamicResource Theme.Pin.FgMuted}"
                            FontSize="12"
                            Margin="0,0,0,6"/>
-                <TextBox x:Name="ResetAnswerBox"
-                         Style="{StaticResource RoundedTextBox}"
-                         Margin="0,0,0,8"/>
+                <local:SecretInputControl x:Name="ResetAnswerBox"
+                                          Margin="0,0,0,8"/>
                 <Button Content="Submit reset answer"
                         Style="{StaticResource SecondaryActionButton}"
                         Padding="12,8"

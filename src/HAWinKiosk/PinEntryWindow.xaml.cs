@@ -9,12 +9,13 @@ public partial class PinEntryWindow : Window
     private readonly string _expectedResetAnswer;
     private readonly bool _canResetPin;
 
-    public string Pin => PinBox.Password;
+    public string Pin => PinBox.Text;
     public bool PinResetRequested { get; private set; }
 
     public PinEntryWindow(string? pinHint, string? expectedPin, string? resetQuestion, string? resetAnswer, string? uiThemeMode = null)
     {
         InitializeComponent();
+        PinBox.InputKeyDown += PinBox_KeyDown;
         _expectedPin = expectedPin ?? "";
         _expectedResetAnswer = resetAnswer?.Trim() ?? "";
         _canResetPin = !string.IsNullOrWhiteSpace(resetQuestion) && !string.IsNullOrWhiteSpace(_expectedResetAnswer);
@@ -41,7 +42,7 @@ public partial class PinEntryWindow : Window
         PinBox.Focus();
     }
 
-    private void PinBox_PasswordChanged(object sender, RoutedEventArgs e)
+    private void PinBox_TextChanged(object? sender, EventArgs e)
     {
         ErrorBlock.Visibility = Visibility.Collapsed;
         ErrorWithResetBlock.Visibility = Visibility.Collapsed;
@@ -73,7 +74,7 @@ public partial class PinEntryWindow : Window
 
     private void TrySubmit()
     {
-        if (PinBox.Password != _expectedPin)
+        if (PinBox.Text != _expectedPin)
         {
             ErrorBlock.Visibility = _canResetPin ? Visibility.Collapsed : Visibility.Visible;
             ErrorWithResetBlock.Visibility = _canResetPin ? Visibility.Visible : Visibility.Collapsed;

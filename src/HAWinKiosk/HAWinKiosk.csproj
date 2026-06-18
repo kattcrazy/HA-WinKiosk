@@ -6,7 +6,7 @@
     <UseAppHost Condition="'$(BundleAsExe)' == 'true'">true</UseAppHost>
     <UseAppHost Condition="'$(BundleAsExe)' != 'true'">false</UseAppHost>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Version>3.13.1</Version>
+    <Version>3.16.6</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>

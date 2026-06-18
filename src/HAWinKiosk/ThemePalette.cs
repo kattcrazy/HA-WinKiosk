@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace HAWinKiosk;
 
-/// <summary>App UI colours — light swatches are canonical; dark surfaces are derived from them.</summary>
+/// <summary>App UI colours - light swatches are canonical; dark surfaces are derived from them.</summary>
 public static class ThemePalette
 {
     // Accents
@@ -37,8 +37,8 @@ public static class ThemePalette
         static SolidColorBrush B(System.Windows.Media.Color c) => new(c);
         void Set(string key, System.Windows.Media.Color color) => resources[key] = B(color);
 
-        // Light: panel → card → input uses shade 2 → shade 1 → lightest surface (#F2F4F9).
-        // Dark: panel → card → input uses darkest surface (#171B21) then steps upward toward #F2F4F9.
+        // Light: panel -> card -> input uses shade 2 -> shade 1 -> lightest surface (#F2F4F9).
+        // Dark: panel -> card -> input uses darkest surface (#171B21) then steps upward toward #F2F4F9.
         var (darkPanel, darkSurface, darkInput) = BuildDarkSurfaces();
 
         var panel = dark ? darkPanel : LightShade2;
@@ -85,6 +85,8 @@ public static class ThemePalette
         Set("Theme.Pin.CardBorder", border);
         Set("Theme.Pin.Fg", fg);
         Set("Theme.Pin.FgMuted", fgMuted);
+        Set("Theme.SecretInput.EyeMuted", fgMuted);
+        Set("Theme.SecretInput.EyeActive", Accent);
     }
 
     public static void ApplyAppWide(bool dark) => Apply(System.Windows.Application.Current.Resources, dark);

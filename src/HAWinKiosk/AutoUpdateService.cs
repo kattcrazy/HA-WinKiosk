@@ -53,7 +53,7 @@ public static class AutoUpdateService
             var installerPath = Path.Combine(tempDir, latest.AssetName);
             await DownloadFileAsync(latest.DownloadUrl, installerPath);
 
-            reportStatus($"{label} — starting installer. The app will close and restart.");
+            reportStatus($"{label} - starting installer. The app will close and restart.");
 
             var psi = new ProcessStartInfo
             {

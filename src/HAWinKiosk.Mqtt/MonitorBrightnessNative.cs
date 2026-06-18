@@ -31,7 +31,7 @@ internal static class MonitorBrightnessNative
     [DllImport("dxva2.dll", SetLastError = true)]
     internal static extern bool SetMonitorBrightness(IntPtr hPhysicalMonitor, uint brightness);
 
-    /// <summary>Sets brightness 0–100 on the primary physical monitor via Dxva2.</summary>
+    /// <summary>Sets brightness 0-100 on the primary physical monitor via Dxva2.</summary>
     internal static bool TrySetPrimaryBrightness(int percent)
     {
         percent = Math.Clamp(percent, 0, 100);
