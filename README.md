@@ -28,9 +28,7 @@ Home Assistant Windows Kiosk - An open-source Windows webpage kiosk designed for
 
 While I previously attempted to add native openwakeword and wyoming services support with releases [v3.9.3-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.9.3-beta) to [v3.10.9-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.10.9-beta) I have discovered a wonderful intergration that does this just as well, if not better, with a lot less work. 
 
-Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea.
-
-Mic access, input device, output device, and volume can be changed from the config section of HA WinKiosk's settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css.
+Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea. Mic access, input device, output device, and volume can be changed from the config section of HA WinKiosk's settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css.
 
 ## MQTT and Home Assistant
 
