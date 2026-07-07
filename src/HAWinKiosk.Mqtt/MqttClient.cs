@@ -24,7 +24,10 @@ public class MqttClientService : IDisposable
     ];
 
     /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
-    private static readonly string[] AllKnownSensorSlugs = ["battery", "last_active", "updates_pending"];
+    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "last_active", "updates_pending"];
+
+    /// <summary>All binary sensor slugs that may have a retained <c>homeassistant/binary_sensor/.../config</c> topic.</summary>
+    private static readonly string[] AllKnownBinarySensorSlugs = ["monitor_on"];
 
     private const int StandardSensorUpdateIntervalSeconds = 30;
 
@@ -304,10 +307,15 @@ public class MqttClientService : IDisposable
             }
 
             var objectId = $"{_devId}_{key}";
-            var topic = MqttDiscovery.SensorStateTopic(_prefix, objectId);
+            var topic = key == "monitor_on"
+                ? MqttDiscovery.BinarySensorStateTopic(_prefix, objectId)
+                : MqttDiscovery.SensorStateTopic(_prefix, objectId);
             var state = key switch
             {
                 "battery" => SensorReader.BatteryPercentOrUnavailable(),
+                "cpu" => SensorReader.CpuLoadPercent(),
+                "memory" => SensorReader.MemoryUsagePercent(),
+                "monitor_on" => SensorReader.MonitorOnOrOff(),
                 "last_active" => SensorReader.LastActiveSeconds(),
                 "updates_pending" => SensorReader.UpdatesPendingCount(),
                 _ => null
@@ -422,9 +430,21 @@ public class MqttClientService : IDisposable
 
         foreach (var slug in _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()))
         {
+            if (slug == "monitor_on")
+            {
+                var (binaryTopic, binaryPayload) = MqttDiscovery.BinarySensor(
+                    _prefix, _deviceName, _availabilityTopic, _devId, slug, "Monitor state");
+                await _client.PublishAsync(
+                    new MqttApplicationMessageBuilder().WithTopic(binaryTopic).WithPayload(binaryPayload).WithRetainFlag().Build(),
+                    ct);
+                continue;
+            }
+
             var (t, p) = slug switch
             {
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
+                "cpu" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "CPU usage", "%", null),
+                "memory" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Memory usage", "%", null),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
                 "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Windows updates pending", null, null),
                 _ => (null, null)!
@@ -479,6 +499,13 @@ public class MqttClientService : IDisposable
         {
             if (enabledSensors.Contains(slug)) continue;
             var topic = $"{_prefix}/sensor/{_devId}_{slug}/config";
+            await PublishEmptyRetainedConfigAsync(topic, ct);
+        }
+
+        foreach (var slug in AllKnownBinarySensorSlugs)
+        {
+            if (enabledSensors.Contains(slug)) continue;
+            var topic = $"{_prefix}/binary_sensor/{_devId}_{slug}/config";
             await PublishEmptyRetainedConfigAsync(topic, ct);
         }
 

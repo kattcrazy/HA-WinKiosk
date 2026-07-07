@@ -53,6 +53,9 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Battery level | Sensor | Remaining battery % (not available on PCs without a battery) |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
 | Windows updates pending | Number | Count of available Windows updates |
+| CPU usage | Sensor | Processor load % |
+| Memory usage | Sensor | Physical memory used % |
+| Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
 When the command Navigate is enabled in Settings, the kiosk listens to  `{discoveryPrefix}/command/{device}/navigate/set`. Call it from Home Assistant with the `mqtt.publish` service to navigate between HA pages.
@@ -205,6 +208,9 @@ mqtt:
   sensors:
     enabled:
       - battery
+      - cpu
+      - memory
+      - monitor_on
       - last_active
       - updates_pending
   commands:

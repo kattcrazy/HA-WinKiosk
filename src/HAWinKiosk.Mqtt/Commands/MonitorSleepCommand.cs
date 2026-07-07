@@ -15,5 +15,6 @@ public static class MonitorSleepCommand
             NativeMethods.WM_SYSCOMMAND,
             (IntPtr)NativeMethods.SC_MONITORPOWER,
             (IntPtr)2);
+        MonitorPowerTracker.SetOn(false);
     }
 }

@@ -10,7 +10,7 @@ public static class SettingsManager
 {
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "battery", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "monitor_on", "last_active", "updates_pending"
     };
 
     private static readonly string AppDataDir = Path.Combine(

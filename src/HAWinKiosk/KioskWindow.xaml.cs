@@ -415,6 +415,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         UpdateBatterySensorVisibility();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
+        MqttSensorCpuToggle.IsChecked = sensors.Contains("cpu");
+        MqttSensorMemoryToggle.IsChecked = sensors.Contains("memory");
+        MqttSensorMonitorOnToggle.IsChecked = sensors.Contains("monitor_on");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
 
@@ -1144,6 +1147,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Sensors.Enabled = new List<string>();
         if (SensorReader.HasSystemBattery() && MqttSensorBatteryToggle.IsChecked == true)
             _settings.Sensors.Enabled.Add("battery");
+        if (MqttSensorCpuToggle.IsChecked == true) _settings.Sensors.Enabled.Add("cpu");
+        if (MqttSensorMemoryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("memory");
+        if (MqttSensorMonitorOnToggle.IsChecked == true) _settings.Sensors.Enabled.Add("monitor_on");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 

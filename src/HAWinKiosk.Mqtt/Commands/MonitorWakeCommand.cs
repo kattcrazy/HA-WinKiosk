@@ -12,5 +12,6 @@ public static class MonitorWakeCommand
     {
         NativeMethods.keybd_event(NativeMethods.VK_Shift, 0, 0, IntPtr.Zero);
         NativeMethods.keybd_event(NativeMethods.VK_Shift, 0, NativeMethods.KEYEVENTF_KEYUP, IntPtr.Zero);
+        MonitorPowerTracker.SetOn(true);
     }
 }

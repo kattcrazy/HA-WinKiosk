@@ -251,7 +251,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "monitor_on", "last_active", "updates_pending"
     ];
 
 }

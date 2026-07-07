@@ -13,6 +13,8 @@ public static partial class MqttDiscovery
 
     public static string SensorStateTopic(string prefix, string objectId) => $"{prefix}/sensor/{objectId}/state";
 
+    public static string BinarySensorStateTopic(string prefix, string objectId) => $"{prefix}/binary_sensor/{objectId}/state";
+
     public static (string Topic, string Payload) GenericButton(
         string prefix,
         string deviceName,
@@ -82,6 +84,42 @@ public static partial class MqttDiscovery
         }, JsonDiscovery);
 
         var topic = $"{prefix}/sensor/{objectId}/config";
+        return (topic, payload);
+    }
+
+    public static (string Topic, string Payload) BinarySensor(
+        string prefix,
+        string deviceName,
+        string availabilityTopic,
+        string devId,
+        string slug,
+        string displayName)
+    {
+        var objectId = $"{devId}_{slug}";
+        var uniqueId = $"ha_winkiosk_{devId}_{Environment.MachineName}_{slug}";
+        var stateTopic = BinarySensorStateTopic(prefix, objectId);
+        var deviceIdentifiers = $"ha_winkiosk_{devId}_{Environment.MachineName}";
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            name = displayName,
+            unique_id = uniqueId,
+            state_topic = stateTopic,
+            availability_topic = availabilityTopic,
+            payload_available = "online",
+            payload_not_available = "offline",
+            payload_on = "on",
+            payload_off = "off",
+            device = new
+            {
+                identifiers = new[] { deviceIdentifiers },
+                name = deviceName,
+                model = "HA WinKiosk",
+                manufacturer = "HA WinKiosk"
+            }
+        }, JsonDiscovery);
+
+        var topic = $"{prefix}/binary_sensor/{objectId}/config";
         return (topic, payload);
     }
 
