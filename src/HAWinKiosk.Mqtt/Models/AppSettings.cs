@@ -48,15 +48,18 @@ public class KioskConfig
     public bool IgnoreCertificateErrors { get; set; }
 
     [YamlMember(Alias = "pin")]
+    /// <summary>Runtime only; persisted in <c>pin-secrets.json</c>, not <c>settings.yaml</c>.</summary>
     public string? Pin { get; set; }
 
     [YamlMember(Alias = "pinHint")]
     public string? PinHint { get; set; }
 
     [YamlMember(Alias = "pinResetQuestion")]
+    /// <summary>Runtime only; persisted in <c>pin-secrets.json</c>, not <c>settings.yaml</c>.</summary>
     public string? PinResetQuestion { get; set; }
 
     [YamlMember(Alias = "pinResetAnswer")]
+    /// <summary>Runtime only; persisted in <c>pin-secrets.json</c>, not <c>settings.yaml</c>.</summary>
     public string? PinResetAnswer { get; set; }
 
     /// <summary>When true, PIN UI is off and no PIN is required to open Settings (YAML default false = pin protection on).</summary>
@@ -251,7 +254,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "cpu", "memory", "current_url", "release_info", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
     ];
 
 }
@@ -261,7 +264,7 @@ public class CommandsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "shutdown", "restart", "sleep", "monitor",
+        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
     ];
 

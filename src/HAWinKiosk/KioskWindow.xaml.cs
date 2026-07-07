@@ -43,6 +43,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         InitializeComponent();
         _showSettingsFirst = showSettingsFirst;
         SettingsButtonPopup.PlacementTarget = this;
+        BreakingChangesBannerPopup.PlacementTarget = this;
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
         {
@@ -76,6 +77,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             ShowKiosk();
             await EnsureWebView2();
+            UpdateBreakingChangesBanner();
             NavigateTo(_settings.Kiosk.Url);
             StartMqttIfConfigured();
         }
@@ -417,8 +419,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
         MqttSensorCpuToggle.IsChecked = sensors.Contains("cpu");
         MqttSensorMemoryToggle.IsChecked = sensors.Contains("memory");
+        MqttSensorMonitorOnToggle.IsChecked = sensors.Contains("monitor_on");
         MqttSensorCurrentUrlToggle.IsChecked = sensors.Contains("current_url");
-        MqttSensorReleaseInfoToggle.IsChecked = sensors.Contains("release_info");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
 
@@ -426,7 +428,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdShutdownToggle.IsChecked = cmds.Contains("shutdown");
         MqttCmdRestartToggle.IsChecked = cmds.Contains("restart");
         MqttCmdSleepToggle.IsChecked = cmds.Contains("sleep");
-        MqttCmdMonitorToggle.IsChecked = cmds.Contains("monitor");
+        MqttCmdMonSleepToggle.IsChecked = cmds.Contains("monitorsleep");
+        MqttCmdMonWakeToggle.IsChecked = cmds.Contains("monitorwake");
         MqttCmdRefreshToggle.IsChecked = cmds.Contains("refresh");
         MqttCmdClearCacheToggle.IsChecked = cmds.Contains("clearcache");
         MqttCmdOpenSettingsToggle.IsChecked = cmds.Contains("opensettings");
@@ -434,7 +437,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
         MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
-        MqttCmdNavigateToggle.IsChecked = cmds.Contains("navigate");
+        MqttCmdNavigateToggle.IsChecked = cmds.Contains("nav") || cmds.Contains("navigate");
         UpdateNavigateOptionsVisibility();
         UpdateNavigateTopicPreview();
         EnableMicToggle.IsChecked = _settings.Kiosk.EnableMic;
@@ -501,7 +504,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             ? (_settings.Mqtt.DeviceName ?? "living-room-kiosk")
             : DeviceNameBox.Text;
         var devId = MqttDiscovery.SanitizeId(rawDevice);
-        MqttNavigateTopicPreviewText.Text = $"{prefix}/command/{devId}/navigate/set";
+        MqttNavigateTopicPreviewText.Text = MqttDiscovery.NavigateTopic(prefix, devId);
     }
 
     private void PinProtectionToggle_Changed(object sender, RoutedEventArgs e)
@@ -520,6 +523,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         WebView.Visibility = Visibility.Collapsed;
         SettingsButtonPopup.IsOpen = false;
+        if (BreakingChangesBannerPopup != null)
+            BreakingChangesBannerPopup.IsOpen = false;
         SettingsPanel.Visibility = Visibility.Visible;
         UpdateExitButtonVisibility();
     }
@@ -529,6 +534,52 @@ public partial class KioskWindow : Window, IKioskHostActions
         SettingsPanel.Visibility = Visibility.Collapsed;
         WebView.Visibility = Visibility.Visible;
         UpdateSettingsButtonVisibility();
+        UpdateBreakingChangesBanner();
+    }
+
+    private void UpdateBreakingChangesBanner()
+    {
+        if (BreakingChangesBannerPopup == null || BreakingChangesBanner == null)
+            return;
+
+        if (!ReleaseInfo.HasBreakingChanges)
+        {
+            BreakingChangesBannerPopup.IsOpen = false;
+            return;
+        }
+
+        var version = ReleaseInfo.GetVersionLabel();
+        if (!BreakingChangesNoticeStore.ShouldShow(version))
+        {
+            BreakingChangesBannerPopup.IsOpen = false;
+            return;
+        }
+
+        BreakingChangesNoticeStore.RecordFirstShown(version);
+        BreakingChangesBannerPopup.IsOpen = true;
+        _ = Dispatcher.BeginInvoke(new Action(PositionBreakingChangesBannerPopup), DispatcherPriority.Loaded);
+    }
+
+    private void PositionBreakingChangesBannerPopup()
+    {
+        if (BreakingChangesBannerPopup is not { IsOpen: true } || BreakingChangesBanner == null)
+            return;
+
+        const double margin = 16;
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+            return;
+
+        BreakingChangesBanner.Measure(new System.Windows.Size(Math.Max(0, ActualWidth - margin * 2), double.PositiveInfinity));
+        var size = BreakingChangesBanner.DesiredSize;
+        BreakingChangesBannerPopup.HorizontalOffset = Math.Max(margin, (ActualWidth - size.Width) / 2);
+        BreakingChangesBannerPopup.VerticalOffset = Math.Max(0, ActualHeight - size.Height - margin);
+    }
+
+    private void BreakingChangesBannerDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        BreakingChangesNoticeStore.Dismiss(ReleaseInfo.GetVersionLabel());
+        if (BreakingChangesBannerPopup != null)
+            BreakingChangesBannerPopup.IsOpen = false;
     }
 
     private static bool IsLikelyShellMode()
@@ -648,6 +699,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         ThemePalette.Apply(Resources, dark);
         ThemePalette.ApplyAppWide(dark);
         ApplyWindowIconForTheme(dark);
+        if (BreakingChangesBannerPopup?.IsOpen == true)
+            _ = Dispatcher.BeginInvoke(new Action(PositionBreakingChangesBannerPopup), DispatcherPriority.Loaded);
     }
 
     private void ApplyWindowIconForTheme(bool dark)
@@ -678,6 +731,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (SettingsButtonPopup.IsOpen)
             PositionSettingsButtonPopup();
+        if (BreakingChangesBannerPopup.IsOpen)
+            PositionBreakingChangesBannerPopup();
     }
 
     private async Task EnsureWebView2()
@@ -1149,8 +1204,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorCpuToggle.IsChecked == true) _settings.Sensors.Enabled.Add("cpu");
         if (MqttSensorMemoryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("memory");
+        if (MqttSensorMonitorOnToggle.IsChecked == true) _settings.Sensors.Enabled.Add("monitor_on");
         if (MqttSensorCurrentUrlToggle.IsChecked == true) _settings.Sensors.Enabled.Add("current_url");
-        if (MqttSensorReleaseInfoToggle.IsChecked == true) _settings.Sensors.Enabled.Add("release_info");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 
@@ -1158,14 +1213,15 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdShutdownToggle.IsChecked == true) _settings.Commands.Enabled.Add("shutdown");
         if (MqttCmdRestartToggle.IsChecked == true) _settings.Commands.Enabled.Add("restart");
         if (MqttCmdSleepToggle.IsChecked == true) _settings.Commands.Enabled.Add("sleep");
-        if (MqttCmdMonitorToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitor");
+        if (MqttCmdMonSleepToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitorsleep");
+        if (MqttCmdMonWakeToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitorwake");
         if (MqttCmdRefreshToggle.IsChecked == true) _settings.Commands.Enabled.Add("refresh");
         if (MqttCmdClearCacheToggle.IsChecked == true) _settings.Commands.Enabled.Add("clearcache");
         if (MqttCmdOpenSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("opensettings");
         if (MqttCmdCloseSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("closesettings");
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
-        if (MqttCmdNavigateToggle.IsChecked == true) _settings.Commands.Enabled.Add("navigate");
+        if (MqttCmdNavigateToggle.IsChecked == true) _settings.Commands.Enabled.Add("nav");
         _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
         _settings.Kiosk.EnableMic = EnableMicToggle.IsChecked == true;
 

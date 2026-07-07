@@ -18,22 +18,25 @@ public class MqttClientService : IDisposable
     /// <summary>All command slugs that may have a retained <c>homeassistant/button/.../config</c> topic.</summary>
     private static readonly string[] AllKnownCommandSlugs =
     [
-        "shutdown", "restart", "sleep", "monitor",
+        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate",
-        "powershellcommand", "monitorbrightness", "navigate", "updatesensors"
+        "powershellcommand", "monitorbrightness", "nav", "updatesensors"
     ];
 
-    /// <summary>Retired button commands — retained discovery is always cleared on connect.</summary>
-    private static readonly string[] LegacyButtonSlugs = ["monitorsleep", "monitorwake"];
+    private const string NavigateCommandSlug = "nav";
+    private const string LegacyNavigateCommandSlug = "navigate";
 
-    /// <summary>All switch slugs that may have a retained <c>homeassistant/switch/.../config</c> topic.</summary>
-    private static readonly string[] AllKnownSwitchSlugs = ["monitor"];
+    /// <summary>Retired switch — retained discovery is always cleared on connect.</summary>
+    private static readonly string[] LegacySwitchSlugs = ["monitor"];
 
     /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
-    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "current_url", "release_info", "last_active", "updates_pending"];
+    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "current_url", "last_active", "updates_pending"];
 
-    /// <summary>Retired binary sensors — retained discovery is always cleared on connect.</summary>
-    private static readonly string[] LegacyBinarySensorSlugs = ["monitor_on"];
+    /// <summary>Always published; not user-configurable in settings.</summary>
+    private const string AlwaysEnabledSensorSlug = "release_info";
+
+    /// <summary>All binary sensor slugs that may have a retained <c>homeassistant/binary_sensor/.../config</c> topic.</summary>
+    private static readonly string[] AllKnownBinarySensorSlugs = ["monitor_on"];
 
     private const int StandardSensorUpdateIntervalSeconds = 30;
 
@@ -42,6 +45,8 @@ public class MqttClientService : IDisposable
         ["shutdown"] = "Shutdown",
         ["restart"] = "Restart",
         ["sleep"] = "System sleep",
+        ["monitorsleep"] = "Monitor sleep",
+        ["monitorwake"] = "Monitor wake",
         ["refresh"] = "Refresh kiosk",
         ["clearcache"] = "Clear kiosk cache",
         ["opensettings"] = "Open settings",
@@ -175,6 +180,12 @@ public class MqttClientService : IDisposable
 
         var filter = $"{_prefix}/command/{_devId}/+/set";
         await _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(filter).Build(), ct);
+        if (IsNavigateCommandEnabled())
+        {
+            await _client.SubscribeAsync(
+                new MqttTopicFilterBuilder().WithTopic(MqttDiscovery.NavigateTopic(_prefix, _devId)).Build(),
+                ct);
+        }
         if (!_messageHandlerAttached)
         {
             _client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
@@ -230,7 +241,7 @@ public class MqttClientService : IDisposable
         _sensorCts = new CancellationTokenSource();
         var token = _sensorCts.Token;
 
-        var enabled = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        var enabled = EnabledSensorSlugs();
         var hasLastActive = enabled.Contains("last_active");
         var hasOther = enabled.Any(k => k != "last_active");
 
@@ -298,7 +309,7 @@ public class MqttClientService : IDisposable
     {
         if (_client == null || !_client.IsConnected) return;
 
-        var enabled = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        var enabled = EnabledSensorSlugs();
         foreach (var key in enabled)
         {
             if (lastActiveOnly)
@@ -311,13 +322,16 @@ public class MqttClientService : IDisposable
             }
 
             var objectId = $"{_devId}_{key}";
-            var topic = MqttDiscovery.SensorStateTopic(_prefix, objectId);
+            var topic = key == "monitor_on"
+                ? MqttDiscovery.BinarySensorStateTopic(_prefix, objectId)
+                : MqttDiscovery.SensorStateTopic(_prefix, objectId);
             var state = key switch
             {
                 "battery" => SensorReader.BatteryPercentOrUnavailable(),
                 "cpu" => SensorReader.CpuLoadPercent(),
                 "memory" => SensorReader.MemoryUsagePercent(),
                 "current_url" => _host?.GetCurrentUrl(),
+                "monitor_on" => SensorReader.MonitorOnOrOff(),
                 "release_info" => ReleaseInfo.GetSensorValue(),
                 "last_active" => SensorReader.LastActiveSeconds(),
                 "updates_pending" => SensorReader.UpdatesPendingCount(),
@@ -422,19 +436,8 @@ public class MqttClientService : IDisposable
 
         foreach (var slug in _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()))
         {
-            if (slug == "monitor")
-            {
-                var (switchTopic, switchPayload) = MqttDiscovery.MqttSwitch(
-                    _prefix, _deviceName, _availabilityTopic, _devId, slug, "Monitor");
-                await _client.PublishAsync(
-                    new MqttApplicationMessageBuilder().WithTopic(switchTopic).WithPayload(switchPayload).WithRetainFlag().Build(),
-                    ct);
-                await PublishMonitorSwitchStateAsync(ct);
-                continue;
-            }
-
             // Brightness is a number entity; navigate is mqtt.publish-only (no button entity).
-            if (slug is "monitorbrightness" or "navigate")
+            if (slug is "monitorbrightness" or "nav" or "navigate")
                 continue;
             if (!CommandDisplayNames.TryGetValue(slug, out var title))
                 title = slug;
@@ -442,8 +445,18 @@ public class MqttClientService : IDisposable
             await _client.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(t).WithPayload(p).WithRetainFlag().Build(), ct);
         }
 
-        foreach (var slug in _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()))
+        foreach (var slug in EnabledSensorSlugs())
         {
+            if (slug == "monitor_on")
+            {
+                var (binaryTopic, binaryPayload) = MqttDiscovery.BinarySensor(
+                    _prefix, _deviceName, _availabilityTopic, _devId, slug, "Monitor state");
+                await _client.PublishAsync(
+                    new MqttApplicationMessageBuilder().WithTopic(binaryTopic).WithPayload(binaryPayload).WithRetainFlag().Build(),
+                    ct);
+                continue;
+            }
+
             var (t, p) = slug switch
             {
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
@@ -459,14 +472,11 @@ public class MqttClientService : IDisposable
             await _client.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(t).WithPayload(p).WithRetainFlag().Build(), ct);
         }
 
-        if (_settings.Sensors.Enabled.Count > 0)
-        {
-            var (updateTopic, updatePayload) = MqttDiscovery.GenericButton(
-                _prefix, _deviceName, _availabilityTopic, _devId, "updatesensors", "Update sensors");
-            await _client.PublishAsync(
-                new MqttApplicationMessageBuilder().WithTopic(updateTopic).WithPayload(updatePayload).WithRetainFlag().Build(),
-                ct);
-        }
+        var (updateTopic, updatePayload) = MqttDiscovery.GenericButton(
+            _prefix, _deviceName, _availabilityTopic, _devId, "updatesensors", "Update sensors");
+        await _client.PublishAsync(
+            new MqttApplicationMessageBuilder().WithTopic(updateTopic).WithPayload(updatePayload).WithRetainFlag().Build(),
+            ct);
 
         await PublishPersistedSettingsDiscoveryAsync(ct);
 
@@ -484,18 +494,15 @@ public class MqttClientService : IDisposable
         if (_client == null || !_client.IsConnected) return;
 
         var enabledCmds = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
-        var enabledSensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        var enabledSensors = EnabledSensorSlugs();
 
         foreach (var slug in AllKnownCommandSlugs)
         {
             if (slug == "updatesensors")
-            {
-                if (enabledSensors.Count > 0) continue;
-            }
-            else if (enabledCmds.Contains(slug))
-            {
                 continue;
-            }
+
+            if (enabledCmds.Contains(slug))
+                continue;
 
             var topic = $"{_prefix}/button/{_devId}_{slug}/config";
             await PublishEmptyRetainedConfigAsync(topic, ct);
@@ -508,22 +515,16 @@ public class MqttClientService : IDisposable
             await PublishEmptyRetainedConfigAsync(topic, ct);
         }
 
-        foreach (var slug in AllKnownSwitchSlugs)
+        foreach (var slug in AllKnownBinarySensorSlugs)
         {
-            if (enabledCmds.Contains(slug)) continue;
-            var topic = $"{_prefix}/switch/{_devId}_{slug}/config";
-            await PublishEmptyRetainedConfigAsync(topic, ct);
-        }
-
-        foreach (var slug in LegacyButtonSlugs)
-        {
-            var topic = $"{_prefix}/button/{_devId}_{slug}/config";
-            await PublishEmptyRetainedConfigAsync(topic, ct);
-        }
-
-        foreach (var slug in LegacyBinarySensorSlugs)
-        {
+            if (enabledSensors.Contains(slug)) continue;
             var topic = $"{_prefix}/binary_sensor/{_devId}_{slug}/config";
+            await PublishEmptyRetainedConfigAsync(topic, ct);
+        }
+
+        foreach (var slug in LegacySwitchSlugs)
+        {
+            var topic = $"{_prefix}/switch/{_devId}_{slug}/config";
             await PublishEmptyRetainedConfigAsync(topic, ct);
         }
 
@@ -533,18 +534,53 @@ public class MqttClientService : IDisposable
         await PublishEmptyRetainedConfigAsync($"{_prefix}/number/{_devId}_brightness_default/config", ct);
     }
 
-    private async Task PublishMonitorSwitchStateAsync(CancellationToken ct)
+    private static string NormalizeNavigatePayload(string payload)
     {
-        if (_client == null || !_client.IsConnected) return;
+        var trimmed = payload.Trim();
+        if (trimmed.Length >= 2
+            && ((trimmed.StartsWith('"') && trimmed.EndsWith('"'))
+                || (trimmed.StartsWith('\'') && trimmed.EndsWith('\''))))
+        {
+            trimmed = trimmed[1..^1].Trim();
+        }
 
-        var topic = MqttDiscovery.SwitchStateTopic(_prefix, $"{_devId}_monitor");
-        await _client.PublishAsync(
-            new MqttApplicationMessageBuilder()
-                .WithTopic(topic)
-                .WithPayload(MonitorPowerTracker.GetSwitchState())
-                .WithRetainFlag()
-                .Build(),
-            ct);
+        return trimmed;
+    }
+
+    private HashSet<string> EnabledSensorSlugs()
+    {
+        var enabled = _settings.Sensors.Enabled
+            .Select(s => s.ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        enabled.Add(AlwaysEnabledSensorSlug);
+        return enabled;
+    }
+
+    private static bool IsCommandSlugEnabled(string slug, HashSet<string> enabled)
+    {
+        if (enabled.Contains(slug))
+            return true;
+
+        return slug is NavigateCommandSlug or LegacyNavigateCommandSlug
+            && (enabled.Contains(NavigateCommandSlug) || enabled.Contains(LegacyNavigateCommandSlug));
+    }
+
+    private bool IsNavigateCommandEnabled()
+    {
+        var enabled = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        return enabled.Contains(NavigateCommandSlug) || enabled.Contains(LegacyNavigateCommandSlug);
+    }
+
+    private async Task TryHandleNavigateAsync(string payload, CancellationToken ct)
+    {
+        if (_host == null || !IsNavigateCommandEnabled())
+            return;
+
+        var path = NormalizeNavigatePayload(payload);
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        await _host.NavigateHaPathAsync(path, ct);
     }
 
     private async Task PublishEmptyRetainedConfigAsync(string topic, CancellationToken ct)
@@ -564,15 +600,23 @@ public class MqttClientService : IDisposable
         try
         {
             var topic = e.ApplicationMessage.Topic ?? "";
+            var payload = e.ApplicationMessage.PayloadSegment.Count > 0
+                ? Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment)
+                : "";
+
+            _settings = SettingsManager.Load();
+
+            if (string.Equals(topic.TrimEnd('/'), MqttDiscovery.NavigateTopic(_prefix, _devId), StringComparison.OrdinalIgnoreCase))
+            {
+                await TryHandleNavigateAsync(payload, CancellationToken.None);
+                return;
+            }
+
             var parts = topic.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2 || parts[^1] != "set")
                 return;
 
             var slug = parts[^2].ToLowerInvariant();
-
-            var payload = e.ApplicationMessage.PayloadSegment.Count > 0
-                ? Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment)
-                : "";
 
             if (PersistedSettingsSlugs.Contains(slug))
             {
@@ -580,36 +624,14 @@ public class MqttClientService : IDisposable
                 return;
             }
 
-            if (slug == "monitor")
-            {
-                var enabledCmds = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
-                if (!enabledCmds.Contains(slug))
-                    return;
-
-                var command = payload.Trim().ToUpperInvariant();
-                if (command is "ON" or "1")
-                {
-                    MonitorWakeCommand.Execute();
-                    await PublishMonitorSwitchStateAsync(CancellationToken.None);
-                }
-                else if (command is "OFF" or "0")
-                {
-                    MonitorSleepCommand.Execute();
-                    await PublishMonitorSwitchStateAsync(CancellationToken.None);
-                }
-
-                return;
-            }
-
             if (slug == "updatesensors")
             {
-                if (_settings.Sensors.Enabled.Count > 0)
-                    await PublishSensorStatesAsync(CancellationToken.None, lastActiveOnly: false);
+                await PublishSensorStatesAsync(CancellationToken.None, lastActiveOnly: false);
                 return;
             }
 
             var enabled = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
-            if (!enabled.Contains(slug))
+            if (!IsCommandSlugEnabled(slug, enabled))
                 return;
 
             switch (slug)
@@ -622,6 +644,12 @@ public class MqttClientService : IDisposable
                     break;
                 case "sleep":
                     SystemSleepCommand.Execute();
+                    break;
+                case "monitorsleep":
+                    MonitorSleepCommand.Execute();
+                    break;
+                case "monitorwake":
+                    MonitorWakeCommand.Execute();
                     break;
                 case "refresh":
                     _host?.ReloadWebView();
@@ -645,9 +673,9 @@ public class MqttClientService : IDisposable
                 case "powershellcommand":
                     PowerShellCommand.Execute(_settings.Commands.PowerShellCommand ?? "");
                     break;
+                case "nav":
                 case "navigate":
-                    if (_host != null && !string.IsNullOrWhiteSpace(payload))
-                        await _host.NavigateHaPathAsync(payload.Trim(), CancellationToken.None);
+                    await TryHandleNavigateAsync(payload, CancellationToken.None);
                     break;
             }
         }

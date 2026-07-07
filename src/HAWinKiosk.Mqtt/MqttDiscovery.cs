@@ -88,4 +88,7 @@ public static partial class MqttDiscovery
         var devId = SanitizeId(deviceName);
         return $"{prefix}/command/{devId}/availability";
     }
+
+    /// <summary>Short MQTT topic for in-app navigation (payload = HA path).</summary>
+    public static string NavigateTopic(string prefix, string devId) => $"{prefix}/{devId}/nav";
 }

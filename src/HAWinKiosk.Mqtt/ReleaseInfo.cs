@@ -10,13 +10,20 @@ namespace HAWinKiosk.Mqtt;
 public static class ReleaseInfo
 {
     // UPDATE THIS BEFORE EACH RELEASE. Use "None" when there are no breaking changes.
-    public const string BreakingChanges =
-        "Monitor Sleep and Wake commands have been migrated to a single toggle.";
+    public const string BreakingChanges = "None";
+
+    public static bool HasBreakingChanges =>
+        !string.IsNullOrWhiteSpace(BreakingChanges)
+        && !BreakingChanges.Equals("None", StringComparison.OrdinalIgnoreCase);
+
+    public static string GetVersionLabel()
+    {
+        var version = Assembly.GetEntryAssembly()?.GetName().Version;
+        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "unknown";
+    }
 
     public static string GetSensorValue()
     {
-        var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        var label = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "unknown";
-        return $"Version: {label} - Breaking Changes: {BreakingChanges}";
+        return $"Version: {GetVersionLabel()} - Breaking Changes: {BreakingChanges}";
     }
 }

@@ -30,15 +30,18 @@ public sealed class ConfigSectionV2
     public bool DoNotDisturb { get; set; } = true;
 
     [YamlMember(Alias = "pin")]
+    /// <summary>Legacy YAML import only; saved to <c>pin-secrets.json</c> instead.</summary>
     public string? Pin { get; set; }
 
     [YamlMember(Alias = "pinHint")]
     public string? PinHint { get; set; }
 
     [YamlMember(Alias = "pinResetQuestion")]
+    /// <summary>Legacy YAML import only; saved to <c>pin-secrets.json</c> instead.</summary>
     public string? PinResetQuestion { get; set; }
 
     [YamlMember(Alias = "pinResetAnswer")]
+    /// <summary>Legacy YAML import only; saved to <c>pin-secrets.json</c> instead.</summary>
     public string? PinResetAnswer { get; set; }
 
     [YamlMember(Alias = "pinProtectionDisabled")]
@@ -162,10 +165,7 @@ public static class SettingsYamlConversion
                 Url = s.Kiosk.Url,
                 IgnoreCertificateErrors = s.Kiosk.IgnoreCertificateErrors,
                 DoNotDisturb = s.Kiosk.DoNotDisturbEnabled,
-                Pin = s.Kiosk.Pin,
                 PinHint = s.Kiosk.PinHint,
-                PinResetQuestion = s.Kiosk.PinResetQuestion,
-                PinResetAnswer = s.Kiosk.PinResetAnswer,
                 PinProtectionDisabled = s.Kiosk.PinProtectionDisabled,
                 ShowSettingsButton = s.Kiosk.ShowSettingsButton,
                 UiTheme = s.Kiosk.UiTheme,

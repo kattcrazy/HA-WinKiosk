@@ -41,7 +41,8 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Shutdown | Button | Shut down Windows |
 | Restart | Button | Restart Windows |
 | System sleep | Button | Suspend the PC (S3 sleep) |
-| Monitor | Switch | Turn the display on or off |
+| Monitor sleep | Button | Turn the display off |
+| Monitor wake | Button | Turn the display on |
 | Refresh kiosk | Button | Reload the page in the kiosk |
 | Clear kiosk cache | Button | Clear kiosk cache (passwords & settings kept), then reload kiosk |
 | Open settings | Button | Open this app’s Settings screen (no PIN) |
@@ -54,22 +55,30 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Windows updates pending | Number | Count of available Windows updates |
 | CPU usage | Sensor | Processor load % |
 | Memory usage | Sensor | Physical memory used % |
+| Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
 | Current URL | Sensor | WebView address currently shown in the kiosk |
-| Release info | Sensor | App version and breaking changes for this release |
+| Release info | Sensor | App version and breaking changes (always published) |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
-When the command Navigate is enabled in Settings, the kiosk listens to  `{discoveryPrefix}/command/{device}/navigate/set`. Call it from Home Assistant with the `mqtt.publish` service to navigate between HA pages.
+When the command Navigate is enabled in Settings, the kiosk listens on `{discoveryPrefix}/{device}/nav` (payload = HA path). The legacy topic `{discoveryPrefix}/command/{device}/navigate/set` still works.
 
 ```yaml
 service: mqtt.publish
 data:
-  topic: "homeassistant/command/kiosk/navigate/set"
+  topic: "homeassistant/kiosk/nav"
   payload: "/lovelace/default_view"
 ```
 
 ## Settings
 
-Settings are stored at `%APPDATA%\HA-WinKiosk\settings.yaml`. Settings can be edited either in YAML or in the UI.
+Settings are stored under `%APPDATA%\HA-WinKiosk\`:
+
+| File | Contents |
+| --- | --- |
+| `settings.yaml` | Kiosk URL, gestures, MQTT, PIN hint, and most other options |
+| `pin-secrets.json` | Settings PIN, verification question, and reset answer (base64-encoded; not editable in YAML) |
+
+Settings can be edited in the UI or by editing `settings.yaml`. PIN-related secrets are set in the UI only and are written to `pin-secrets.json` automatically. On upgrade, any legacy PIN fields in `settings.yaml` are migrated into that file and removed from the YAML.
 
 Below is a key of what all the options are, and below that is an example `settings.yaml`.
 
@@ -94,10 +103,10 @@ Below is a key of what all the options are, and below that is an example `settin
 | Playback device | string (MMDevice ID) | Empty keeps Windows default playback device |
 | Input device | string (MMDevice ID) | Empty uses Windows default capture device |
 | Volume (%) | `0..100` | Master volume for the playback device |
-| Settings PIN | string | PIN required when PIN protection is enabled. Doesn't have to be numbers |
+| Settings PIN | string | PIN required when PIN protection is enabled. UI only; stored in `pin-secrets.json` |
 | PIN hint | string | Hint shown on PIN prompt |
-| Verification question | string | Forgot-PIN verification question |
-| PIN reset answer | string | Forgot-PIN verification answer |
+| Verification question | string | Forgot-PIN verification question. UI only; stored in `pin-secrets.json` |
+| PIN reset answer | string | Forgot-PIN verification answer. UI only; stored in `pin-secrets.json` |
 | PIN protection | `true`/`false` | `false` disables PIN gate |
 
 #### Gestures
@@ -146,10 +155,7 @@ config:
   url: "http://homeassistant.local:8123"
   ignoreCertificateErrors: false
   doNotDisturb: true
-  pin: ""
   pinHint: ""
-  pinResetQuestion: ""
-  pinResetAnswer: ""
   pinProtectionDisabled: false
   showSettingsButton: true
   uiTheme: auto
@@ -210,8 +216,8 @@ mqtt:
       - battery
       - cpu
       - memory
+      - monitor_on
       - current_url
-      - release_info
       - last_active
       - updates_pending
   commands:
@@ -219,13 +225,14 @@ mqtt:
       - shutdown
       - restart
       - sleep
-      - monitor
+      - monitorsleep
+      - monitorwake
       - refresh
       - clearcache
       - opensettings
       - closesettings
       - windowsupdate
-      - navigate
+      - nav
     powerShellCommand: ""
 ```
 

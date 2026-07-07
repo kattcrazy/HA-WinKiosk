@@ -53,6 +53,9 @@ public static class ThemePalette
         var disabledTrack = dark ? darkPanel : LightShade2;
         var disabledThumb = AccentPale;
         var thumbOff = dark ? darkInput : SurfaceLightest;
+        var breakingChangesBg = dark ? Lerp(darkSurface, Accent, 0.22) : AccentPale;
+        var breakingChangesFg = dark ? SurfaceLightest : SurfaceDarkest;
+        var breakingChangesIcon = dark ? AccentMedium : Accent;
 
         Set("Theme.Accent", Accent);
         Set("Theme.Accent.Light", AccentMedium);
@@ -87,6 +90,10 @@ public static class ThemePalette
         Set("Theme.Pin.FgMuted", fgMuted);
         Set("Theme.SecretInput.EyeMuted", fgMuted);
         Set("Theme.SecretInput.EyeActive", Accent);
+        Set("Theme.BreakingChanges.Bg", breakingChangesBg);
+        Set("Theme.BreakingChanges.Border", Accent);
+        Set("Theme.BreakingChanges.Fg", breakingChangesFg);
+        Set("Theme.BreakingChanges.Icon", breakingChangesIcon);
     }
 
     public static void ApplyAppWide(bool dark) => Apply(System.Windows.Application.Current.Resources, dark);

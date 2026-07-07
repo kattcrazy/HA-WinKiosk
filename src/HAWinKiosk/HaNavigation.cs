@@ -25,9 +25,15 @@ public static class HaNavigation
 
         var haPath = trimmed.StartsWith('/') ? trimmed : "/" + trimmed;
         var escaped = System.Text.Json.JsonSerializer.Serialize(haPath);
+        // Match Home Assistant frontend navigate(): pushState then location-changed with bubbles/composed/detail.
         var script =
-            "(function(){try{var path=" + escaped + ";history.pushState(null,\"\",path);"
-            + "window.dispatchEvent(new CustomEvent(\"location-changed\"));return true;}catch(e){return false;}})()";
+            "(function(){try{var path=" + escaped + ";"
+            + "history.pushState(null,\"\",path);"
+            + "var ev=new Event(\"location-changed\",{bubbles:true,composed:true});"
+            + "ev.detail={replace:false};"
+            + "window.dispatchEvent(ev);"
+            + "return window.location.pathname===path||window.location.pathname===path.replace(/\\/$/,'');"
+            + "}catch(e){return false;}})()";
 
         try
         {
@@ -47,12 +53,28 @@ public static class HaNavigation
 
     internal static string BuildFullUrl(string kioskBaseUrl, string haPath)
     {
-        if (Uri.TryCreate(kioskBaseUrl, UriKind.Absolute, out var baseUri))
+        if (!Uri.TryCreate(kioskBaseUrl, UriKind.Absolute, out var baseUri))
+            return haPath;
+
+        var relative = haPath.StartsWith('/') ? haPath : "/" + haPath;
+        return Uri.TryCreate(baseUri, relative, out var combined)
+            ? combined.ToString()
+            : haPath;
+    }
+
+    internal static string NormalizeNavigatePayload(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+            return "";
+
+        var trimmed = payload.Trim();
+        if (trimmed.Length >= 2
+            && ((trimmed.StartsWith('"') && trimmed.EndsWith('"'))
+                || (trimmed.StartsWith('\'') && trimmed.EndsWith('\''))))
         {
-            var builder = new UriBuilder(baseUri.Scheme, baseUri.Host, baseUri.Port, haPath);
-            return builder.Uri.ToString();
+            trimmed = trimmed[1..^1].Trim();
         }
 
-        return haPath;
+        return trimmed;
     }
 }

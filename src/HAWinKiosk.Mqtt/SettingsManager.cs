@@ -10,7 +10,7 @@ public static class SettingsManager
 {
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "battery", "cpu", "memory", "current_url", "release_info", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
     };
 
     private static readonly string AppDataDir = Path.Combine(
@@ -19,6 +19,7 @@ public static class SettingsManager
 
     private static readonly string SettingsPath = Path.Combine(AppDataDir, "settings.yaml");
 
+    /// <summary>Main settings file (PIN secrets are in <see cref="PinSecretsStore"/>).</summary>
     public static string SettingsFilePath => SettingsPath;
 
     public static bool SettingsExists => File.Exists(SettingsPath);
@@ -48,6 +49,8 @@ public static class SettingsManager
         }
 
         NormalizeAppSettings(s);
+        if (PinSecretsStore.ApplyTo(s.Kiosk))
+            Save(s);
         return s;
     }
 
@@ -57,6 +60,7 @@ public static class SettingsManager
             .Select(x => x.Trim())
             .Where(x => x.Length > 0)
             .Where(x => AllowedSensorIds.Contains(x))
+            .Where(x => !x.Equals("release_info", StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -73,16 +77,24 @@ public static class SettingsManager
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (s.Commands.Enabled.Any(x =>
-                x.Equals("monitorsleep", StringComparison.OrdinalIgnoreCase)
-                || x.Equals("monitorwake", StringComparison.OrdinalIgnoreCase)))
+        if (s.Commands.Enabled.Any(x => x.Equals("navigate", StringComparison.OrdinalIgnoreCase)))
         {
             s.Commands.Enabled = s.Commands.Enabled
-                .Where(x => !x.Equals("monitorsleep", StringComparison.OrdinalIgnoreCase)
-                            && !x.Equals("monitorwake", StringComparison.OrdinalIgnoreCase))
+                .Where(x => !x.Equals("navigate", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            if (!s.Commands.Enabled.Any(x => x.Equals("monitor", StringComparison.OrdinalIgnoreCase)))
-                s.Commands.Enabled.Add("monitor");
+            if (!s.Commands.Enabled.Any(x => x.Equals("nav", StringComparison.OrdinalIgnoreCase)))
+                s.Commands.Enabled.Add("nav");
+        }
+
+        if (s.Commands.Enabled.Any(x => x.Equals("monitor", StringComparison.OrdinalIgnoreCase)))
+        {
+            s.Commands.Enabled = s.Commands.Enabled
+                .Where(x => !x.Equals("monitor", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (!s.Commands.Enabled.Any(x => x.Equals("monitorsleep", StringComparison.OrdinalIgnoreCase)))
+                s.Commands.Enabled.Add("monitorsleep");
+            if (!s.Commands.Enabled.Any(x => x.Equals("monitorwake", StringComparison.OrdinalIgnoreCase)))
+                s.Commands.Enabled.Add("monitorwake");
         }
 
         var g = s.Kiosk.Gestures;
@@ -147,6 +159,7 @@ public static class SettingsManager
     public static void Save(AppSettings settings)
     {
         Directory.CreateDirectory(AppDataDir);
+        PinSecretsStore.Persist(settings.Kiosk);
         var file = SettingsYamlConversion.FromAppSettings(settings);
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)

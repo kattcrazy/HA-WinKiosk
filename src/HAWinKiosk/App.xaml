@@ -30,6 +30,10 @@
         <SolidColorBrush x:Key="Theme.Toggle.DisabledThumb" Color="#C1DEFF"/>
         <SolidColorBrush x:Key="Theme.SecretInput.EyeMuted" Color="#171B21"/>
         <SolidColorBrush x:Key="Theme.SecretInput.EyeActive" Color="#5993F6"/>
+        <SolidColorBrush x:Key="Theme.BreakingChanges.Bg" Color="#C1DEFF"/>
+        <SolidColorBrush x:Key="Theme.BreakingChanges.Border" Color="#5993F6"/>
+        <SolidColorBrush x:Key="Theme.BreakingChanges.Fg" Color="#171B21"/>
+        <SolidColorBrush x:Key="Theme.BreakingChanges.Icon" Color="#5993F6"/>
 
         <!-- Settings (gear) - Segoe MDL2 Assets, not emoji -->
         <Style x:Key="SettingsButton" TargetType="Button">

@@ -135,10 +135,76 @@
     </Window.Resources>
     <Grid>
         <Grid x:Name="KioskPanel" Background="{DynamicResource Theme.Kiosk.Bg}">
-            <wv2:WebView2 x:Name="WebView"/>
-            <local:KioskGestureFallbackOverlay x:Name="GestureFallbackOverlay"
-                                               Panel.ZIndex="500"/>
+            <Grid>
+                <wv2:WebView2 x:Name="WebView"/>
+                <local:KioskGestureFallbackOverlay x:Name="GestureFallbackOverlay"
+                                                   Panel.ZIndex="500"/>
+            </Grid>
         </Grid>
+
+        <Popup x:Name="BreakingChangesBannerPopup"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="None"
+               Placement="AbsolutePoint">
+            <Border x:Name="BreakingChangesBanner"
+                    HorizontalAlignment="Center"
+                    Background="{DynamicResource Theme.BreakingChanges.Bg}"
+                    BorderBrush="{DynamicResource Theme.BreakingChanges.Border}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="14,10,6,10">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE7BA;"
+                               FontSize="18"
+                               Foreground="{DynamicResource Theme.BreakingChanges.Icon}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="1"
+                               Text="The current version of HA WinKiosk includes breaking changes. Make sure to check the releases page for any changes required."
+                               FontSize="12"
+                               Foreground="{DynamicResource Theme.BreakingChanges.Fg}"
+                               TextWrapping="Wrap"
+                               MaxWidth="420"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0"/>
+                    <Button Grid.Column="2"
+                            Width="32"
+                            Height="32"
+                            MinWidth="32"
+                            MinHeight="32"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Cursor="Hand"
+                            ToolTip="Dismiss"
+                            Click="BreakingChangesBannerDismiss_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="Transparent" Padding="4">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                                               Text="&#xE711;"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource Theme.BreakingChanges.Icon}"
+                                               Opacity="0.85"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </Popup>
 
         <Popup x:Name="SettingsButtonPopup"
                StaysOpen="True"
@@ -834,16 +900,16 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Current URL" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="MqttSensorCurrentUrlToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="0" Text="Monitor state" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorMonitorOnToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Release info" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="MqttSensorReleaseInfoToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="0" Text="Current URL" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorCurrentUrlToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <TextBlock Text="Commands" Style="{StaticResource SettingsSubSectionHeading}"/>
@@ -876,8 +942,16 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Monitor" Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="MqttCmdMonitorToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="0" Text="Monitor sleep" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdMonSleepToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Monitor wake" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttCmdMonWakeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -949,13 +1023,23 @@
                                                   Unchecked="MqttCmdNavigateToggle_Changed"/>
                                 </Grid>
                                 <StackPanel x:Name="MqttCmdNavigateOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
-                                    <TextBlock Text="MQTT topic (mqtt.publish payload = HA path)"
-                                               Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBlock x:Name="MqttNavigateTopicPreviewText"
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               TextWrapping="Wrap"
-                                               Margin="0,0,0,10"/>
-                                    <TextBlock Text="Call from Home Assistant using the mqtt.publish service; no entity is created."
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="MQTT topic"
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   x:Name="MqttNavigateTopicPreviewText"
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="See HA WinKiosk github README for how to use Navigate from Home Assistant."
                                                FontSize="11"
                                                Foreground="{DynamicResource Theme.Settings.FgMuted}"
                                                TextWrapping="Wrap"
