@@ -417,8 +417,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
         MqttSensorCpuToggle.IsChecked = sensors.Contains("cpu");
         MqttSensorMemoryToggle.IsChecked = sensors.Contains("memory");
-        MqttSensorMonitorOnToggle.IsChecked = sensors.Contains("monitor_on");
         MqttSensorCurrentUrlToggle.IsChecked = sensors.Contains("current_url");
+        MqttSensorReleaseInfoToggle.IsChecked = sensors.Contains("release_info");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
 
@@ -426,8 +426,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdShutdownToggle.IsChecked = cmds.Contains("shutdown");
         MqttCmdRestartToggle.IsChecked = cmds.Contains("restart");
         MqttCmdSleepToggle.IsChecked = cmds.Contains("sleep");
-        MqttCmdMonSleepToggle.IsChecked = cmds.Contains("monitorsleep");
-        MqttCmdMonWakeToggle.IsChecked = cmds.Contains("monitorwake");
+        MqttCmdMonitorToggle.IsChecked = cmds.Contains("monitor");
         MqttCmdRefreshToggle.IsChecked = cmds.Contains("refresh");
         MqttCmdClearCacheToggle.IsChecked = cmds.Contains("clearcache");
         MqttCmdOpenSettingsToggle.IsChecked = cmds.Contains("opensettings");
@@ -1150,8 +1149,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorCpuToggle.IsChecked == true) _settings.Sensors.Enabled.Add("cpu");
         if (MqttSensorMemoryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("memory");
-        if (MqttSensorMonitorOnToggle.IsChecked == true) _settings.Sensors.Enabled.Add("monitor_on");
         if (MqttSensorCurrentUrlToggle.IsChecked == true) _settings.Sensors.Enabled.Add("current_url");
+        if (MqttSensorReleaseInfoToggle.IsChecked == true) _settings.Sensors.Enabled.Add("release_info");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 
@@ -1159,8 +1158,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdShutdownToggle.IsChecked == true) _settings.Commands.Enabled.Add("shutdown");
         if (MqttCmdRestartToggle.IsChecked == true) _settings.Commands.Enabled.Add("restart");
         if (MqttCmdSleepToggle.IsChecked == true) _settings.Commands.Enabled.Add("sleep");
-        if (MqttCmdMonSleepToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitorsleep");
-        if (MqttCmdMonWakeToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitorwake");
+        if (MqttCmdMonitorToggle.IsChecked == true) _settings.Commands.Enabled.Add("monitor");
         if (MqttCmdRefreshToggle.IsChecked == true) _settings.Commands.Enabled.Add("refresh");
         if (MqttCmdClearCacheToggle.IsChecked == true) _settings.Commands.Enabled.Add("clearcache");
         if (MqttCmdOpenSettingsToggle.IsChecked == true) _settings.Commands.Enabled.Add("opensettings");

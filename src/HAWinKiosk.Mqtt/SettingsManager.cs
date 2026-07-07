@@ -10,7 +10,7 @@ public static class SettingsManager
 {
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "current_url", "release_info", "last_active", "updates_pending"
     };
 
     private static readonly string AppDataDir = Path.Combine(
@@ -72,6 +72,18 @@ public static class SettingsManager
             .Where(x => x.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        if (s.Commands.Enabled.Any(x =>
+                x.Equals("monitorsleep", StringComparison.OrdinalIgnoreCase)
+                || x.Equals("monitorwake", StringComparison.OrdinalIgnoreCase)))
+        {
+            s.Commands.Enabled = s.Commands.Enabled
+                .Where(x => !x.Equals("monitorsleep", StringComparison.OrdinalIgnoreCase)
+                            && !x.Equals("monitorwake", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (!s.Commands.Enabled.Any(x => x.Equals("monitor", StringComparison.OrdinalIgnoreCase)))
+                s.Commands.Enabled.Add("monitor");
+        }
 
         var g = s.Kiosk.Gestures;
         g.DoubleTapAction = NormalizeGestureAction(g.DoubleTapAction, "disabled");

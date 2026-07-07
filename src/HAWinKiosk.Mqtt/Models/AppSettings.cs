@@ -251,7 +251,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "current_url", "release_info", "last_active", "updates_pending"
     ];
 
 }
@@ -261,7 +261,7 @@ public class CommandsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "shutdown", "restart", "sleep", "monitorsleep", "monitorwake",
+        "shutdown", "restart", "sleep", "monitor",
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
     ];
 

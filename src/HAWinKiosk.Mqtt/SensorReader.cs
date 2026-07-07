@@ -142,8 +142,6 @@ public static class SensorReader
         return (idleMs / 1000).ToString();
     }
 
-    public static string MonitorOnOrOff() => MonitorPowerTracker.GetState();
-
     public static string? UpdatesPendingCount()
     {
         try

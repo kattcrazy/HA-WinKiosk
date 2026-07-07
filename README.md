@@ -41,8 +41,7 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Shutdown | Button | Shut down Windows |
 | Restart | Button | Restart Windows |
 | System sleep | Button | Suspend the PC (S3 sleep) |
-| Monitor sleep | Button | Turn the display off |
-| Monitor wake | Button | Turn the display on |
+| Monitor | Switch | Turn the display on or off |
 | Refresh kiosk | Button | Reload the page in the kiosk |
 | Clear kiosk cache | Button | Clear kiosk cache (passwords & settings kept), then reload kiosk |
 | Open settings | Button | Open this app’s Settings screen (no PIN) |
@@ -55,8 +54,8 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Windows updates pending | Number | Count of available Windows updates |
 | CPU usage | Sensor | Processor load % |
 | Memory usage | Sensor | Physical memory used % |
-| Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
 | Current URL | Sensor | WebView address currently shown in the kiosk |
+| Release info | Sensor | App version and breaking changes for this release |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
 When the command Navigate is enabled in Settings, the kiosk listens to  `{discoveryPrefix}/command/{device}/navigate/set`. Call it from Home Assistant with the `mqtt.publish` service to navigate between HA pages.
@@ -211,8 +210,8 @@ mqtt:
       - battery
       - cpu
       - memory
-      - monitor_on
       - current_url
+      - release_info
       - last_active
       - updates_pending
   commands:
@@ -220,8 +219,7 @@ mqtt:
       - shutdown
       - restart
       - sleep
-      - monitorsleep
-      - monitorwake
+      - monitor
       - refresh
       - clearcache
       - opensettings

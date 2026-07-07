@@ -49,6 +49,48 @@ public static partial class MqttDiscovery
         return (topic, payload);
     }
 
+    public static string SwitchStateTopic(string prefix, string objectId) => $"{prefix}/switch/{objectId}/state";
+
+    public static (string Topic, string Payload) MqttSwitch(
+        string prefix,
+        string deviceName,
+        string availabilityTopic,
+        string devId,
+        string slug,
+        string displayName)
+    {
+        var objectId = $"{devId}_{slug}";
+        var uniqueId = $"ha_winkiosk_{devId}_{Environment.MachineName}_{slug}";
+        var commandTopic = $"{prefix}/command/{devId}/{slug}/set";
+        var stateTopic = SwitchStateTopic(prefix, objectId);
+        var deviceIdentifiers = $"ha_winkiosk_{devId}_{Environment.MachineName}";
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            name = displayName,
+            unique_id = uniqueId,
+            command_topic = commandTopic,
+            state_topic = stateTopic,
+            payload_on = "ON",
+            payload_off = "OFF",
+            state_on = "ON",
+            state_off = "OFF",
+            availability_topic = availabilityTopic,
+            payload_available = "online",
+            payload_not_available = "offline",
+            device = new
+            {
+                identifiers = new[] { deviceIdentifiers },
+                name = deviceName,
+                model = "HA WinKiosk",
+                manufacturer = "HA WinKiosk"
+            }
+        }, JsonDiscovery);
+
+        var topic = $"{prefix}/switch/{objectId}/config";
+        return (topic, payload);
+    }
+
     public static (string Topic, string Payload) NumericSensor(
         string prefix,
         string deviceName,
