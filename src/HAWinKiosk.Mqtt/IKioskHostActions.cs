@@ -12,4 +12,7 @@ public interface IKioskHostActions
     void NotifySettingsChangedFromMqtt();
 
     Task NavigateHaPathAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>Current WebView URL, or null if not available.</summary>
+    string? GetCurrentUrl();
 }

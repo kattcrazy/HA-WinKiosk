@@ -56,6 +56,7 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | CPU usage | Sensor | Processor load % |
 | Memory usage | Sensor | Physical memory used % |
 | Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
+| Current URL | Sensor | WebView address currently shown in the kiosk |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
 When the command Navigate is enabled in Settings, the kiosk listens to  `{discoveryPrefix}/command/{device}/navigate/set`. Call it from Home Assistant with the `mqtt.publish` service to navigate between HA pages.
@@ -211,6 +212,7 @@ mqtt:
       - cpu
       - memory
       - monitor_on
+      - current_url
       - last_active
       - updates_pending
   commands:

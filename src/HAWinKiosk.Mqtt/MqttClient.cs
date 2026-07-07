@@ -24,7 +24,7 @@ public class MqttClientService : IDisposable
     ];
 
     /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
-    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "last_active", "updates_pending"];
+    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "current_url", "last_active", "updates_pending"];
 
     /// <summary>All binary sensor slugs that may have a retained <c>homeassistant/binary_sensor/.../config</c> topic.</summary>
     private static readonly string[] AllKnownBinarySensorSlugs = ["monitor_on"];
@@ -315,6 +315,7 @@ public class MqttClientService : IDisposable
                 "battery" => SensorReader.BatteryPercentOrUnavailable(),
                 "cpu" => SensorReader.CpuLoadPercent(),
                 "memory" => SensorReader.MemoryUsagePercent(),
+                "current_url" => _host?.GetCurrentUrl(),
                 "monitor_on" => SensorReader.MonitorOnOrOff(),
                 "last_active" => SensorReader.LastActiveSeconds(),
                 "updates_pending" => SensorReader.UpdatesPendingCount(),
@@ -445,6 +446,7 @@ public class MqttClientService : IDisposable
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
                 "cpu" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "CPU usage", "%", null),
                 "memory" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Memory usage", "%", null),
+                "current_url" => MqttDiscovery.StringSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Current URL"),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
                 "updates_pending" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Windows updates pending", null, null),
                 _ => (null, null)!

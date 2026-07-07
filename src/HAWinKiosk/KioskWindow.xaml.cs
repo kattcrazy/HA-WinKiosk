@@ -418,6 +418,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttSensorCpuToggle.IsChecked = sensors.Contains("cpu");
         MqttSensorMemoryToggle.IsChecked = sensors.Contains("memory");
         MqttSensorMonitorOnToggle.IsChecked = sensors.Contains("monitor_on");
+        MqttSensorCurrentUrlToggle.IsChecked = sensors.Contains("current_url");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
         MqttSensorUpdatesPendingToggle.IsChecked = sensors.Contains("updates_pending");
 
@@ -1150,6 +1151,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttSensorCpuToggle.IsChecked == true) _settings.Sensors.Enabled.Add("cpu");
         if (MqttSensorMemoryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("memory");
         if (MqttSensorMonitorOnToggle.IsChecked == true) _settings.Sensors.Enabled.Add("monitor_on");
+        if (MqttSensorCurrentUrlToggle.IsChecked == true) _settings.Sensors.Enabled.Add("current_url");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
         if (MqttSensorUpdatesPendingToggle.IsChecked == true) _settings.Sensors.Enabled.Add("updates_pending");
 
@@ -1379,6 +1381,15 @@ public partial class KioskWindow : Window, IKioskHostActions
     async Task IKioskHostActions.NavigateHaPathAsync(string path, CancellationToken cancellationToken)
     {
         await Dispatcher.InvokeAsync(() => NavigateHaPathUiAsync(path, cancellationToken)).Task.Unwrap();
+    }
+
+    string? IKioskHostActions.GetCurrentUrl()
+    {
+        if (!Dispatcher.CheckAccess())
+            return Dispatcher.Invoke(((IKioskHostActions)this).GetCurrentUrl);
+
+        var url = WebView.CoreWebView2?.Source;
+        return string.IsNullOrWhiteSpace(url) ? null : url;
     }
 
     private async Task NavigateHaPathUiAsync(string path, CancellationToken cancellationToken)
