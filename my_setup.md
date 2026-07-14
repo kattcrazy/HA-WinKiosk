@@ -114,7 +114,6 @@ actions:
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 700 milliseconds, presses the enter key to bypass the lockscreen, then repeats the last 2 steps to ensure it worked.
 
 ## 4. Longterm management
-Make sure the user you want to autologin has a password set as it won't work without one. 
 
 #### Updates
 In Home Assistant, you'll see 'Run windows updates' as a MQTT button (if you've set up MQTT).
