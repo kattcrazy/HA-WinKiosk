@@ -1,0 +1,28 @@
+<UserControl x:Class="HAWinKiosk.Settings.SettingsSliderRow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Margin="0,0,0,10">
+    <StackPanel>
+        <TextBlock x:Name="LabelText" Style="{DynamicResource SettingsItemLabel}"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Slider x:Name="ValueSlider"
+                    Grid.Column="0"
+                    Style="{DynamicResource SettingsSlider}"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"/>
+            <TextBlock x:Name="ValueLabel"
+                       Grid.Column="1"
+                       Width="40"
+                       TextAlignment="Right"
+                       VerticalAlignment="Center"
+                       Style="{DynamicResource SettingsItemLabel}"
+                       Text="0"/>
+        </Grid>
+    </StackPanel>
+</UserControl>

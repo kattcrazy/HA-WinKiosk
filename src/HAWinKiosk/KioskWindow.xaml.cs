@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -11,8 +12,10 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using HAWinKiosk.Camera;
 using HAWinKiosk.Mqtt;
 using HAWinKiosk.Mqtt.Models;
+using HAWinKiosk.Settings;
 using Microsoft.Web.WebView2.Core;
 
 namespace HAWinKiosk;
@@ -20,6 +23,7 @@ namespace HAWinKiosk;
 public partial class KioskWindow : Window, IKioskHostActions
 {
     private MqttClientService? _mqtt;
+    private readonly CameraStreamCoordinator _cameraStream = new();
     private AppSettings _settings = new();
     private bool _webHooksAttached;
     private bool _serverCertErrorHookAttached;
@@ -43,6 +47,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         InitializeComponent();
         _showSettingsFirst = showSettingsFirst;
         SettingsButtonPopup.PlacementTarget = this;
+        CustomButtonPopup.PlacementTarget = this;
         BreakingChangesBannerPopup.PlacementTarget = this;
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
@@ -78,8 +83,9 @@ public partial class KioskWindow : Window, IKioskHostActions
             ShowKiosk();
             await EnsureWebView2();
             UpdateBreakingChangesBanner();
+            // Camera/MJPEG must listen before Navigate when the kiosk URL is the local stream.
+            await StartMqttIfConfiguredAsync();
             NavigateTo(_settings.Kiosk.Url);
-            StartMqttIfConfigured();
         }
     }
 
@@ -202,6 +208,26 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void MqttCmdPowerShellToggle_Changed(object sender, RoutedEventArgs e)
     {
         UpdatePowerShellCommandVisibility();
+        if (MqttCmdPowerShellToggle.IsChecked == true
+            && MqttCmdPowerShellRowsPanel != null
+            && MqttCmdPowerShellRowsPanel.Children.Count == 0)
+            RebuildPowerShellRows([new PowerShellCommandItem()]);
+    }
+
+    private void CustomButtonEnabledToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateCustomButtonOptionsVisibility();
+    }
+
+    private void CustomButtonAction_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateCustomButtonOptionsVisibility();
+    }
+
+    private void CustomButtonIconBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (CustomButtonIconPreview != null)
+            MdiIconHelper.ApplyTo(CustomButtonIconPreview, CustomButtonIconBox.Text);
     }
 
     private void MqttCmdWindowsUpdateToggle_Changed(object sender, RoutedEventArgs e)
@@ -218,6 +244,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         UpdateGestureTopicPrefixPreviews();
         UpdateNavigateTopicPreview();
+        UpdateCustomButtonOptionsVisibility();
     }
 
     private void UpdateGestureTopicPrefixPreviews()
@@ -314,6 +341,163 @@ public partial class KioskWindow : Window, IKioskHostActions
             : Visibility.Collapsed;
     }
 
+    private void UpdateCustomButtonOptionsVisibility()
+    {
+        if (CustomButtonOptionsPanel == null || CustomButtonEnabledToggle == null) return;
+        var enabled = CustomButtonEnabledToggle.IsChecked == true;
+        CustomButtonOptionsPanel.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        if (!enabled || CustomButtonMqttTopicPanel == null || CustomButtonActionCombo == null)
+            return;
+
+        CustomButtonMqttTopicPanel.Visibility = IsMqttOrPublishGestureAction(CustomButtonActionCombo)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ApplyMqttGesturePanelMode(
+            CustomButtonActionCombo,
+            CustomButtonMqttTopicHeadingText,
+            CustomButtonMqttPrefixText,
+            CustomButtonMqttTopicBox,
+            CustomButtonMqttReconnectHelpText,
+            "MQTT topic suffix",
+            "MQTT reconnect");
+
+        var prefix = string.IsNullOrWhiteSpace(_settings.Mqtt.DiscoveryPrefix) ? "homeassistant" : _settings.Mqtt.DiscoveryPrefix.Trim();
+        var rawDevice = string.IsNullOrWhiteSpace(DeviceNameBox?.Text) ? (_settings.Mqtt.DeviceName ?? "living-room-kiosk") : DeviceNameBox.Text;
+        var devId = MqttDiscovery.SanitizeId(rawDevice);
+        CustomButtonMqttPrefixText.Text = $"{prefix}/command/{devId}/gesture/";
+    }
+
+    private void RebuildPowerShellRows(IReadOnlyList<PowerShellCommandItem> items)
+    {
+        if (MqttCmdPowerShellRowsPanel == null) return;
+        MqttCmdPowerShellRowsPanel.Children.Clear();
+        if (items.Count == 0)
+            AddPowerShellRow(new PowerShellCommandItem());
+        else
+        {
+            foreach (var item in items)
+                AddPowerShellRow(item);
+        }
+        RefreshPowerShellRowChrome();
+    }
+
+    private void AddPowerShellRow(PowerShellCommandItem item)
+    {
+        if (MqttCmdPowerShellRowsPanel == null) return;
+
+        var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.35, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.65, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var nameBox = new System.Windows.Controls.TextBox
+        {
+            Text = string.IsNullOrWhiteSpace(item.Name) ? "Name" : item.Name,
+            Style = (Style)FindResource("RoundedTextBox"),
+            Margin = new Thickness(0, 0, 6, 0),
+            Tag = "ps-name"
+        };
+        Grid.SetColumn(nameBox, 0);
+
+        var cmdBox = new System.Windows.Controls.TextBox
+        {
+            Text = string.IsNullOrWhiteSpace(item.Command) ? "Command" : item.Command,
+            Style = (Style)FindResource("RoundedTextBox"),
+            Margin = new Thickness(0, 0, 6, 0),
+            Tag = "ps-command"
+        };
+        Grid.SetColumn(cmdBox, 1);
+
+        var deleteBtn = CreatePowerShellIconButton("\uE74D", "Remove");
+        deleteBtn.Tag = "ps-delete";
+        deleteBtn.Margin = new Thickness(0, 0, 6, 0);
+        deleteBtn.Click += (_, _) =>
+        {
+            MqttCmdPowerShellRowsPanel.Children.Remove(row);
+            if (MqttCmdPowerShellRowsPanel.Children.Count == 0)
+                AddPowerShellRow(new PowerShellCommandItem());
+            RefreshPowerShellRowChrome();
+        };
+        Grid.SetColumn(deleteBtn, 2);
+
+        var addBtn = CreatePowerShellIconButton("\uE710", "Add");
+        addBtn.Tag = "ps-add";
+        addBtn.Click += (_, _) =>
+        {
+            AddPowerShellRow(new PowerShellCommandItem());
+            RefreshPowerShellRowChrome();
+        };
+        Grid.SetColumn(addBtn, 3);
+
+        row.Children.Add(nameBox);
+        row.Children.Add(cmdBox);
+        row.Children.Add(deleteBtn);
+        row.Children.Add(addBtn);
+        MqttCmdPowerShellRowsPanel.Children.Add(row);
+    }
+
+    private System.Windows.Controls.Button CreatePowerShellIconButton(string glyph, string toolTip)
+    {
+        var btn = new System.Windows.Controls.Button
+        {
+            Width = 40,
+            Height = 40,
+            MinHeight = 40,
+            Padding = new Thickness(0),
+            Margin = new Thickness(0, 0, 0, 0),
+            Style = (Style)FindResource("SecondaryActionButton"),
+            ToolTip = toolTip,
+            Content = new TextBlock
+            {
+                FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+                Text = glyph,
+                FontSize = 16,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        };
+        return btn;
+    }
+
+    private void RefreshPowerShellRowChrome()
+    {
+        if (MqttCmdPowerShellRowsPanel == null) return;
+        var count = MqttCmdPowerShellRowsPanel.Children.Count;
+        for (var i = 0; i < count; i++)
+        {
+            if (MqttCmdPowerShellRowsPanel.Children[i] is not Grid row) continue;
+            var deleteBtn = row.Children.OfType<System.Windows.Controls.Button>()
+                .FirstOrDefault(b => b.Tag as string == "ps-delete");
+            var addBtn = row.Children.OfType<System.Windows.Controls.Button>()
+                .FirstOrDefault(b => b.Tag as string == "ps-add");
+            if (deleteBtn != null)
+                deleteBtn.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+            if (addBtn != null)
+                addBtn.Visibility = i == count - 1 ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private List<PowerShellCommandItem> ReadPowerShellRowsFromUi()
+    {
+        var list = new List<PowerShellCommandItem>();
+        if (MqttCmdPowerShellRowsPanel == null) return list;
+        foreach (var child in MqttCmdPowerShellRowsPanel.Children)
+        {
+            if (child is not Grid row) continue;
+            var nameBox = row.Children.OfType<System.Windows.Controls.TextBox>()
+                .FirstOrDefault(t => t.Tag as string == "ps-name");
+            var cmdBox = row.Children.OfType<System.Windows.Controls.TextBox>()
+                .FirstOrDefault(t => t.Tag as string == "ps-command");
+            list.Add(new PowerShellCommandItem
+            {
+                Name = (nameBox?.Text ?? "").Trim(),
+                Command = (cmdBox?.Text ?? "").Trim()
+            });
+        }
+        return list;
+    }
+
     private void UpdateBatterySensorVisibility()
     {
         if (MqttSensorBatteryPanel == null || MqttSensorBatteryToggle == null) return;
@@ -337,6 +521,165 @@ public partial class KioskWindow : Window, IKioskHostActions
         InputDevicePanel.Visibility = EnableMicToggle.IsChecked == true
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private bool _hasCameraDevice;
+
+    private void UpdateCameraSettingsVisibility()
+    {
+        var show = _hasCameraDevice ? Visibility.Visible : Visibility.Collapsed;
+        if (CameraDevicePanel != null)
+            CameraDevicePanel.Visibility = show;
+        if (CameraStreamPanel != null)
+            CameraStreamPanel.Visibility = show;
+
+        if (!_hasCameraDevice)
+        {
+            SelectComboByTag(CameraStreamModeSelect.ComboBox, "off");
+            UpdateCameraStreamOptionsVisibility();
+        }
+    }
+
+    private void CameraStreamModeSelect_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateCameraStreamOptionsVisibility();
+        UpdateCameraMjpegUrlPreview();
+    }
+
+    private void CameraMjpegPortBox_TextChanged(object? sender, EventArgs e)
+    {
+        UpdateCameraMjpegUrlPreview();
+    }
+
+    private void PopulateCameraStreamForm()
+    {
+        if (CameraStreamModeSelect == null) return;
+        if (!_hasCameraDevice)
+        {
+            SelectComboByTag(CameraStreamModeSelect.ComboBox, "off");
+            UpdateCameraStreamOptionsVisibility();
+            return;
+        }
+
+        var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
+        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "ha" or "mjpeg" ? mode : "off");
+        CameraFpsSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.Fps, 1, 15);
+        CameraMjpegPortBox.Text = Math.Clamp(_settings.Sensors.CameraStream.Port <= 0 ? 8081 : _settings.Sensors.CameraStream.Port, 1, 65535).ToString();
+        UpdateCameraStreamOptionsVisibility();
+        UpdateCameraMjpegUrlPreview();
+    }
+
+    private void UpdateCameraStreamOptionsVisibility()
+    {
+        if (CameraStreamOptionsPanel == null || CameraStreamModeSelect == null) return;
+        if (!_hasCameraDevice)
+        {
+            CameraStreamOptionsPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var mode = "off";
+        if (CameraStreamModeSelect.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+            mode = tag.Trim().ToLowerInvariant();
+
+        CameraStreamOptionsPanel.Visibility = mode is "ha" or "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
+        if (CameraMjpegOptionsPanel != null)
+            CameraMjpegOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void UpdateCameraMjpegUrlPreview()
+    {
+        if (CameraMjpegUrlText == null || CameraMjpegPortBox == null) return;
+        var port = 8081;
+        if (CameraMjpegPortBox.TryGetInt(out var p) && p is >= 1 and <= 65535)
+            port = p;
+        CameraMjpegUrlText.Text = $"http://{LocalLanIp.Detect()}:{port}";
+    }
+
+    private async Task PopulateCameraDevicesAsync()
+    {
+        if (CameraDeviceCombo == null) return;
+        var selectedId = _settings.Kiosk.CameraDeviceId ?? "";
+        CameraDeviceCombo.Items.Clear();
+        _hasCameraDevice = false;
+
+        try
+        {
+            var devices = await CameraCaptureService.ListDevicesAsync();
+            _hasCameraDevice = devices.Count > 0;
+            if (_hasCameraDevice)
+            {
+                CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = "Default camera", Tag = "" });
+                foreach (var (id, name) in devices)
+                    CameraDeviceCombo.Items.Add(new ComboBoxItem { Content = name, Tag = id });
+                SelectCameraDeviceCombo(selectedId);
+            }
+        }
+        catch
+        {
+            _hasCameraDevice = false;
+        }
+
+        UpdateCameraSettingsVisibility();
+        PopulateCameraStreamForm();
+    }
+
+    private void SelectCameraDeviceCombo(string? deviceId)
+    {
+        if (CameraDeviceCombo == null || CameraDeviceCombo.Items.Count == 0) return;
+        var want = deviceId ?? "";
+        foreach (var o in CameraDeviceCombo.Items)
+        {
+            if (o is ComboBoxItem ci && ci.Tag is string tag && tag == want)
+            {
+                CameraDeviceCombo.SelectedItem = ci;
+                return;
+            }
+        }
+
+        CameraDeviceCombo.SelectedIndex = 0;
+    }
+
+    private async Task ApplyCameraStreamAsync()
+    {
+        try
+        {
+            var hasCam = _hasCameraDevice;
+            if (!hasCam)
+            {
+                try
+                {
+                    var devices = await CameraCaptureService.ListDevicesAsync();
+                    hasCam = devices.Count > 0;
+                    _hasCameraDevice = hasCam;
+                }
+                catch
+                {
+                    hasCam = false;
+                }
+            }
+
+            if (!hasCam)
+                _settings.Sensors.CameraStream.Mode = "off";
+
+            await _cameraStream.ApplyAsync(_settings, _mqtt);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                var path = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HA-WinKiosk",
+                    "camera.log");
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+                System.IO.File.AppendAllText(path, $"{DateTime.Now:O} ApplyCameraStreamAsync: {ex}{Environment.NewLine}");
+            }
+            catch
+            {
+                // ignore
+            }
+        }
     }
 
     private void PopulateSettingsForm()
@@ -436,7 +779,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         MqttCmdCloseSettingsToggle.IsChecked = cmds.Contains("closesettings");
         MqttCmdWindowsUpdateToggle.IsChecked = cmds.Contains("windowsupdate");
         MqttCmdPowerShellToggle.IsChecked = cmds.Contains("powershellcommand");
-        MqttCmdPowerShellTextBox.Text = _settings.Commands.PowerShellCommand ?? "";
+        RebuildPowerShellRows(_settings.Commands.PowerShellCommands ?? []);
         MqttCmdNavigateToggle.IsChecked = cmds.Contains("nav") || cmds.Contains("navigate");
         UpdateNavigateOptionsVisibility();
         UpdateNavigateTopicPreview();
@@ -455,9 +798,19 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         SelectInputDeviceCombo(_settings.Kiosk.InputDeviceId);
+        _ = PopulateCameraDevicesAsync();
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
+        var custom = _settings.Kiosk.CustomButton ?? new CustomButtonConfig();
+        CustomButtonEnabledToggle.IsChecked = custom.Enabled;
+        CustomButtonIconBox.Text = string.IsNullOrWhiteSpace(custom.Icon) ? MdiIconHelper.DefaultMdiName : custom.Icon;
+        SelectComboByTag(CustomButtonActionCombo, string.IsNullOrWhiteSpace(custom.Action) || custom.Action.Equals("disabled", StringComparison.OrdinalIgnoreCase)
+            ? "reload"
+            : custom.Action);
+        CustomButtonMqttTopicBox.Text = custom.MqttTopic ?? "";
+        MdiIconHelper.ApplyTo(CustomButtonIconPreview, CustomButtonIconBox.Text);
         SelectComboByTag(ThemeModeCombo, UiThemeHelper.NormalizeUiTheme(_settings.Kiosk.UiTheme));
         UpdateGestureOptionsVisibility();
+        UpdateCustomButtonOptionsVisibility();
         UpdatePowerShellCommandVisibility();
         UpdateWindowsUpdateNoteVisibility();
         UpdateMicInputVisibility();
@@ -523,6 +876,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         WebView.Visibility = Visibility.Collapsed;
         SettingsButtonPopup.IsOpen = false;
+        CustomButtonPopup.IsOpen = false;
         if (BreakingChangesBannerPopup != null)
             BreakingChangesBannerPopup.IsOpen = false;
         SettingsPanel.Visibility = Visibility.Visible;
@@ -602,21 +956,57 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void UpdateSettingsButtonVisibility()
     {
-        if (!_settings.Kiosk.ShowSettingsButton)
+        var settingsOpen = SettingsPanel.Visibility == Visibility.Visible;
+        if (settingsOpen)
         {
             SettingsButtonPopup.IsOpen = false;
+            CustomButtonPopup.IsOpen = false;
             return;
         }
 
-        if (SettingsPanel.Visibility == Visibility.Visible)
-        {
-            SettingsButtonPopup.IsOpen = false;
-            return;
-        }
+        var showGear = _settings.Kiosk.ShowSettingsButton;
+        var showCustom = _settings.Kiosk.CustomButton?.Enabled == true;
 
-        SettingsButtonPopup.IsOpen = true;
-        PositionSettingsButtonPopup();
+        SettingsButtonPopup.IsOpen = showGear;
+        CustomButtonPopup.IsOpen = showCustom;
+
+        if (showCustom)
+            ApplyCustomButtonIcon();
+
+        PositionKioskChromeButtons();
     }
+
+    private void ApplyCustomButtonIcon()
+    {
+        if (CustomButtonIcon == null) return;
+        MdiIconHelper.ApplyTo(CustomButtonIcon, _settings.Kiosk.CustomButton?.Icon);
+    }
+
+    private void PositionKioskChromeButtons()
+    {
+        if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+        const double size = 40;
+        const double margin = 16;
+        const double gap = 8;
+        var top = margin;
+        var rightEdge = ActualWidth - margin;
+
+        if (SettingsButtonPopup.IsOpen)
+        {
+            SettingsButtonPopup.HorizontalOffset = rightEdge - size;
+            SettingsButtonPopup.VerticalOffset = top;
+            rightEdge -= size + gap;
+        }
+
+        if (CustomButtonPopup.IsOpen)
+        {
+            CustomButtonPopup.HorizontalOffset = rightEdge - size;
+            CustomButtonPopup.VerticalOffset = top;
+        }
+    }
+
+    private void PositionSettingsButtonPopup() => PositionKioskChromeButtons();
 
     private void ThemeModeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -718,19 +1108,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private void PositionSettingsButtonPopup()
-    {
-        const double margin = 16;
-        const double size = 40;
-        if (ActualWidth <= 0 || ActualHeight <= 0) return;
-        SettingsButtonPopup.HorizontalOffset = ActualWidth - size - margin;
-        SettingsButtonPopup.VerticalOffset = margin;
-    }
-
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (SettingsButtonPopup.IsOpen)
-            PositionSettingsButtonPopup();
+        PositionKioskChromeButtons();
         if (BreakingChangesBannerPopup.IsOpen)
             PositionBreakingChangesBannerPopup();
     }
@@ -949,8 +1329,18 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void HandleGestureTrigger(string gestureKey)
     {
-        var action = GestureActionFor(gestureKey);
-        switch (action)
+        DispatchKioskAction(GestureActionFor(gestureKey), GestureMqttTopicFor(gestureKey));
+    }
+
+    private void CustomButton_Click(object sender, RoutedEventArgs e)
+    {
+        var cb = _settings.Kiosk.CustomButton ?? new CustomButtonConfig();
+        DispatchKioskAction(cb.Action, cb.MqttTopic);
+    }
+
+    private void DispatchKioskAction(string? action, string? mqttTopic)
+    {
+        switch ((action ?? "disabled").Trim().ToLowerInvariant())
         {
             case "reload":
                 ((IKioskHostActions)this).ReloadWebView();
@@ -966,14 +1356,46 @@ public partial class KioskWindow : Window, IKioskHostActions
                 RequestOpenSettings();
                 break;
             case "mqtt":
-                var topic = GestureMqttTopicFor(gestureKey);
-                if (!string.IsNullOrWhiteSpace(topic) && _mqtt != null)
-                    _ = _mqtt.PublishGestureMessageAsync(topic);
+                if (!string.IsNullOrWhiteSpace(mqttTopic) && _mqtt != null)
+                    _ = _mqtt.PublishGestureMessageAsync(mqttTopic);
                 break;
             case "mqtt_publish":
                 if (_mqtt != null)
                     _ = _mqtt.ReconnectManuallyAsync();
                 break;
+            case "keyboard":
+                ShowTouchKeyboard();
+                break;
+        }
+    }
+
+    private static void ShowTouchKeyboard()
+    {
+        try
+        {
+            var tabTip = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+                "microsoft shared",
+                "ink",
+                "TabTip.exe");
+            if (File.Exists(tabTip))
+            {
+                Process.Start(new ProcessStartInfo(tabTip) { UseShellExecute = true });
+                return;
+            }
+        }
+        catch
+        {
+            // Fall through to osk.
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo("osk.exe") { UseShellExecute = true });
+        }
+        catch
+        {
+            // Best-effort only.
         }
     }
 
@@ -987,7 +1409,19 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (WebView.CoreWebView2 == null) return;
         var safeUrl = NormalizeNavigableUrl(url);
-        WebView.CoreWebView2.Navigate(safeUrl);
+        try
+        {
+            WebView.CoreWebView2.Navigate(safeUrl);
+        }
+        catch (ArgumentException)
+        {
+            // WebView2 rejects some URIs (e.g. raw MJPEG as a top-level document).
+            try { WebView.CoreWebView2.Navigate("about:blank"); } catch { /* ignore */ }
+        }
+        catch (Exception)
+        {
+            // Never let a bad navigation kill the kiosk process.
+        }
     }
 
     private static string NormalizeNavigableUrl(string? raw)
@@ -1006,9 +1440,13 @@ public partial class KioskWindow : Window, IKioskHostActions
         return "about:blank";
     }
 
-    private async void StartMqttIfConfigured()
+    private async Task StartMqttIfConfiguredAsync()
     {
-        if (string.IsNullOrWhiteSpace(_settings.Mqtt.Host)) return;
+        if (string.IsNullOrWhiteSpace(_settings.Mqtt.Host))
+        {
+            await ApplyCameraStreamAsync();
+            return;
+        }
 
         _mqtt = new MqttClientService();
         _mqtt.Error += (_, _) => { };
@@ -1021,6 +1459,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             // MQTT optional; fail silently
         }
+
+        await ApplyCameraStreamAsync();
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
@@ -1079,11 +1519,11 @@ public partial class KioskWindow : Window, IKioskHostActions
             await EnsureWebView2();
         }
 
+        await RestartMqttAsync();
         NavigateTo(_settings.Kiosk.Url);
 
         ConfigureGestureFallbackOverlay();
         await ReinjectScriptAsync();
-        RestartMqttIfNeeded();
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -1121,7 +1561,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.IgnoreCertificateErrors = IgnoreCertificateErrorsToggle.IsChecked == true;
         _settings.Kiosk.BetaUpdates = BetaUpdatesToggle.IsChecked == true;
         _settings.Mqtt.Host = MqttHostBox.Text?.Trim() ?? "";
-        if (int.TryParse(MqttPortBox.Text, out var port))
+        if (int.TryParse(MqttPortBox.Text, out var port) && port is >= 1 and <= 65535)
             _settings.Mqtt.Port = port;
         _settings.Mqtt.Username = string.IsNullOrWhiteSpace(MqttUsernameBox.Text) ? null : MqttUsernameBox.Text.Trim();
         _settings.Mqtt.Password = string.IsNullOrEmpty(MqttPasswordBox.Text) ? null : MqttPasswordBox.Text;
@@ -1161,6 +1601,15 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.QuadrupleTapLocation = SelectedTag(GestureQuadTapLocationCombo, "top-left");
         _settings.Kiosk.Gestures.QuintupleTapLocation = SelectedTag(GestureQuintTapLocationCombo, "top-left");
         _settings.Kiosk.ShowSettingsButton = ShowSettingsButtonToggle.IsChecked == true;
+        _settings.Kiosk.CustomButton ??= new CustomButtonConfig();
+        _settings.Kiosk.CustomButton.Enabled = CustomButtonEnabledToggle.IsChecked == true;
+        _settings.Kiosk.CustomButton.Icon = string.IsNullOrWhiteSpace(CustomButtonIconBox.Text)
+            ? MdiIconHelper.DefaultMdiName
+            : CustomButtonIconBox.Text.Trim();
+        _settings.Kiosk.CustomButton.Action = SelectedTag(CustomButtonActionCombo, "reload");
+        _settings.Kiosk.CustomButton.MqttTopic = string.IsNullOrWhiteSpace(CustomButtonMqttTopicBox.Text)
+            ? null
+            : CustomButtonMqttTopicBox.Text.Trim();
         if (ThemeModeCombo.SelectedItem is ComboBoxItem themeItem && themeItem.Tag is string ut)
             _settings.Kiosk.UiTheme = UiThemeHelper.NormalizeUiTheme(ut);
         if (SwipeDirectionCombo.SelectedItem is System.Windows.Controls.ComboBoxItem swipeItem && swipeItem.Tag is string dir)
@@ -1222,13 +1671,39 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (MqttCmdWindowsUpdateToggle.IsChecked == true) _settings.Commands.Enabled.Add("windowsupdate");
         if (MqttCmdPowerShellToggle.IsChecked == true) _settings.Commands.Enabled.Add("powershellcommand");
         if (MqttCmdNavigateToggle.IsChecked == true) _settings.Commands.Enabled.Add("nav");
-        _settings.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(MqttCmdPowerShellTextBox.Text) ? null : MqttCmdPowerShellTextBox.Text.Trim();
+        _settings.Commands.PowerShellCommand = null;
+        _settings.Commands.PowerShellCommands = MqttCmdPowerShellToggle.IsChecked == true
+            ? ReadPowerShellRowsFromUi()
+            : [];
         _settings.Kiosk.EnableMic = EnableMicToggle.IsChecked == true;
 
         if (_settings.Kiosk.EnableMic && InputDeviceCombo.SelectedItem is ComboBoxItem inputItem && inputItem.Tag is string inputTag)
             _settings.Kiosk.InputDeviceId = inputTag.Length == 0 ? "" : inputTag.Trim();
         else
             _settings.Kiosk.InputDeviceId = "";
+
+        if (!_hasCameraDevice)
+        {
+            _settings.Kiosk.CameraDeviceId = "";
+            _settings.Sensors.CameraStream.Mode = "off";
+        }
+        else
+        {
+            if (CameraDeviceCombo.SelectedItem is ComboBoxItem camItem && camItem.Tag is string camTag)
+                _settings.Kiosk.CameraDeviceId = camTag.Length == 0 ? "" : camTag.Trim();
+            else
+                _settings.Kiosk.CameraDeviceId = "";
+
+            var camMode = "off";
+            if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)
+                camMode = modeTag.Trim().ToLowerInvariant();
+            _settings.Sensors.CameraStream.Mode = camMode is "ha" or "mjpeg" ? camMode : "off";
+            _settings.Sensors.CameraStream.Fps = Math.Clamp((int)Math.Round(CameraFpsSlider.Value), 1, 15);
+            if (CameraMjpegPortBox.TryGetInt(out var camPort) && camPort is >= 1 and <= 65535)
+                _settings.Sensors.CameraStream.Port = camPort;
+            else
+                _settings.Sensors.CameraStream.Port = 8081;
+        }
     }
 
     private void ExitToWindows_Click(object sender, RoutedEventArgs e)
@@ -1237,22 +1712,23 @@ public partial class KioskWindow : Window, IKioskHostActions
         SettingsManager.Save(_settings);
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
+        _cameraStream.Dispose();
         _mqtt?.Dispose();
         _mqtt = null;
         System.Windows.Application.Current.Shutdown();
     }
 
-    private async void RestartMqttIfNeeded()
+    private async Task RestartMqttAsync()
     {
         if (_mqtt == null)
         {
-            StartMqttIfConfigured();
+            await StartMqttIfConfiguredAsync();
             return;
         }
         await _mqtt.DisconnectAsync();
         _mqtt.Dispose();
         _mqtt = null;
-        StartMqttIfConfigured();
+        await StartMqttIfConfiguredAsync();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -1260,6 +1736,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         _isClosing = true;
         DisableKioskLockdown();
         _dndManager?.SetEnabled(false);
+        _cameraStream.Dispose();
         _mqtt?.Dispose();
         base.OnClosed(e);
     }

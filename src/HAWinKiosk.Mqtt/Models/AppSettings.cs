@@ -70,6 +70,9 @@ public class KioskConfig
     [YamlMember(Alias = "showSettingsButton")]
     public bool ShowSettingsButton { get; set; } = true;
 
+    [YamlMember(Alias = "customButton")]
+    public CustomButtonConfig CustomButton { get; set; } = new();
+
     /// <summary>auto (follow Windows app mode) | light | dark</summary>
     [YamlMember(Alias = "uiTheme")]
     public string UiTheme { get; set; } = "auto";
@@ -91,6 +94,10 @@ public class KioskConfig
     /// <summary>When false, kiosk denies microphone permission requests from WebView pages.</summary>
     [YamlMember(Alias = "enableMic")]
     public bool EnableMic { get; set; } = true;
+
+    /// <summary>Windows video capture device id; empty = first available camera.</summary>
+    [YamlMember(Alias = "cameraDeviceId")]
+    public string CameraDeviceId { get; set; } = "";
 
     [YamlMember(Alias = "gestures")]
     public GesturesConfig Gestures { get; set; } = new();
@@ -257,6 +264,8 @@ public class SensorsConfig
         "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
     ];
 
+    [YamlMember(Alias = "cameraStream")]
+    public CameraStreamConfig CameraStream { get; set; } = new();
 }
 
 public class CommandsConfig
@@ -268,8 +277,39 @@ public class CommandsConfig
         "refresh", "clearcache", "opensettings", "closesettings", "windowsupdate"
     ];
 
+    /// <summary>Published single-command field; migrated into <see cref="PowerShellCommands"/> on load.</summary>
     [YamlMember(Alias = "powerShellCommand")]
     public string? PowerShellCommand { get; set; }
+
+    [YamlMember(Alias = "powerShellCommands")]
+    public List<PowerShellCommandItem> PowerShellCommands { get; set; } = [];
+}
+
+public class PowerShellCommandItem
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "command")]
+    public string Command { get; set; } = "";
+}
+
+/// <summary>Optional floating kiosk action button next to the settings gear.</summary>
+public class CustomButtonConfig
+{
+    [YamlMember(Alias = "enabled")]
+    public bool Enabled { get; set; }
+
+    /// <summary>Material Design Icon id, e.g. mdi:button-pointer.</summary>
+    [YamlMember(Alias = "icon")]
+    public string Icon { get; set; } = "mdi:button-pointer";
+
+    /// <summary>disabled | reload | clearcache_reload | settings | mqtt | mqtt_publish | keyboard</summary>
+    [YamlMember(Alias = "action")]
+    public string Action { get; set; } = "reload";
+
+    [YamlMember(Alias = "mqttTopic")]
+    public string? MqttTopic { get; set; }
 }
 
 public class ScreenBrightnessConfig
@@ -291,5 +331,21 @@ public class AudioOutputConfig
     /// <summary>Windows MMDevice ID to set as default playback device; empty = do not change OS default.</summary>
     [YamlMember(Alias = "playbackDeviceId")]
     public string PlaybackDeviceId { get; set; } = "";
+}
+
+/// <summary>Camera export: off, Home Assistant MQTT camera, or LAN MJPEG for an NVR.</summary>
+public class CameraStreamConfig
+{
+    /// <summary>off | ha | mjpeg</summary>
+    [YamlMember(Alias = "mode")]
+    public string Mode { get; set; } = "off";
+
+    /// <summary>Capture publish rate 1-15.</summary>
+    [YamlMember(Alias = "fps")]
+    public int Fps { get; set; } = 5;
+
+    /// <summary>MJPEG HTTP listen port (default 8081).</summary>
+    [YamlMember(Alias = "port")]
+    public int Port { get; set; } = 8081;
 }
 

@@ -1,0 +1,5 @@
+<UserControl x:Class="HAWinKiosk.Settings.SettingsSubPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel x:Name="ContentHost" Margin="16,0,0,4"/>
+</UserControl>

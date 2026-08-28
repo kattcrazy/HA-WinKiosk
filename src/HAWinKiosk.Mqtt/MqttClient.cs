@@ -437,13 +437,16 @@ public class MqttClientService : IDisposable
         foreach (var slug in _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()))
         {
             // Brightness is a number entity; navigate is mqtt.publish-only (no button entity).
-            if (slug is "monitorbrightness" or "nav" or "navigate")
+            // PowerShell master toggle publishes one button per row instead of a single entity.
+            if (slug is "monitorbrightness" or "nav" or "navigate" or "powershellcommand")
                 continue;
             if (!CommandDisplayNames.TryGetValue(slug, out var title))
                 title = slug;
             var (t, p) = MqttDiscovery.GenericButton(_prefix, _deviceName, _availabilityTopic, _devId, slug, title);
             await _client.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(t).WithPayload(p).WithRetainFlag().Build(), ct);
         }
+
+        await PublishPowerShellCommandDiscoveryAsync(ct);
 
         foreach (var slug in EnabledSensorSlugs())
         {
@@ -480,6 +483,16 @@ public class MqttClientService : IDisposable
 
         await PublishPersistedSettingsDiscoveryAsync(ct);
 
+        var cameraMode = (_settings.Sensors.CameraStream?.Mode ?? "off").Trim().ToLowerInvariant();
+        if (cameraMode == "ha")
+        {
+            var (camTopic, camPayload) = MqttDiscovery.MqttCamera(
+                _prefix, _deviceName, _availabilityTopic, _devId, "camera", "Camera");
+            await _client.PublishAsync(
+                new MqttApplicationMessageBuilder().WithTopic(camTopic).WithPayload(camPayload).WithRetainFlag().Build(),
+                ct);
+        }
+
         await _client.PublishAsync(
             new MqttApplicationMessageBuilder().WithTopic(_availabilityTopic).WithPayload(availPayload).WithRetainFlag().Build(),
             ct);
@@ -501,12 +514,21 @@ public class MqttClientService : IDisposable
             if (slug == "updatesensors")
                 continue;
 
+            // Legacy single PowerShell button is always cleared; rows use ps_* slugs.
+            if (slug == "powershellcommand")
+            {
+                await PublishEmptyRetainedConfigAsync($"{_prefix}/button/{_devId}_{slug}/config", ct);
+                continue;
+            }
+
             if (enabledCmds.Contains(slug))
                 continue;
 
             var topic = $"{_prefix}/button/{_devId}_{slug}/config";
             await PublishEmptyRetainedConfigAsync(topic, ct);
         }
+
+        await ClearStalePowerShellButtonDiscoveryAsync(enabledCmds.Contains("powershellcommand"), ct);
 
         foreach (var slug in AllKnownSensorSlugs)
         {
@@ -532,6 +554,52 @@ public class MqttClientService : IDisposable
         await PublishEmptyRetainedConfigAsync($"{_prefix}/select/{_devId}_orientation_default/config", ct);
         await PublishEmptyRetainedConfigAsync($"{_prefix}/sensor/{_devId}_sessionstate/config", ct);
         await PublishEmptyRetainedConfigAsync($"{_prefix}/number/{_devId}_brightness_default/config", ct);
+
+        var cameraMode = (_settings.Sensors.CameraStream?.Mode ?? "off").Trim().ToLowerInvariant();
+        if (cameraMode != "ha")
+            await PublishEmptyRetainedConfigAsync($"{_prefix}/camera/{_devId}_camera/config", ct);
+    }
+
+    private async Task PublishPowerShellCommandDiscoveryAsync(CancellationToken ct)
+    {
+        if (_client == null || !_client.IsConnected) return;
+
+        var enabled = _settings.Commands.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
+        if (!enabled.Contains("powershellcommand"))
+            return;
+
+        foreach (var entry in PowerShellCommandSlugs.Build(_settings.Commands.PowerShellCommands))
+        {
+            var (t, p) = MqttDiscovery.GenericButton(
+                _prefix, _deviceName, _availabilityTopic, _devId, entry.Slug, entry.DisplayName);
+            await _client.PublishAsync(
+                new MqttApplicationMessageBuilder().WithTopic(t).WithPayload(p).WithRetainFlag().Build(),
+                ct);
+        }
+
+        var active = PowerShellCommandSlugs.Build(_settings.Commands.PowerShellCommands)
+            .Select(e => e.Slug)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        PowerShellCommandSlugs.SaveCachedSlugs(active);
+    }
+
+    private async Task ClearStalePowerShellButtonDiscoveryAsync(bool featureEnabled, CancellationToken ct)
+    {
+        var active = featureEnabled
+            ? PowerShellCommandSlugs.Build(_settings.Commands.PowerShellCommands)
+                .Select(e => e.Slug)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var previous = PowerShellCommandSlugs.LoadCachedSlugs();
+        foreach (var slug in previous)
+        {
+            if (active.Contains(slug))
+                continue;
+            await PublishEmptyRetainedConfigAsync($"{_prefix}/button/{_devId}_{slug}/config", ct);
+        }
+
+        PowerShellCommandSlugs.SaveCachedSlugs(active);
     }
 
     private static string NormalizeNavigatePayload(string payload)
@@ -559,6 +627,10 @@ public class MqttClientService : IDisposable
     private static bool IsCommandSlugEnabled(string slug, HashSet<string> enabled)
     {
         if (enabled.Contains(slug))
+            return true;
+
+        if (slug.StartsWith("ps_", StringComparison.OrdinalIgnoreCase)
+            && enabled.Contains("powershellcommand"))
             return true;
 
         return slug is NavigateCommandSlug or LegacyNavigateCommandSlug
@@ -634,6 +706,15 @@ public class MqttClientService : IDisposable
             if (!IsCommandSlugEnabled(slug, enabled))
                 return;
 
+            if (slug.StartsWith("ps_", StringComparison.OrdinalIgnoreCase))
+            {
+                var entry = PowerShellCommandSlugs.Build(_settings.Commands.PowerShellCommands)
+                    .FirstOrDefault(e => e.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(entry.Slug))
+                    PowerShellCommand.Execute(entry.Command);
+                return;
+            }
+
             switch (slug)
             {
                 case "shutdown":
@@ -671,7 +752,12 @@ public class MqttClientService : IDisposable
                     WindowsUpdateCommand.Execute(_settings.Kiosk.WindowsUpdateRespectActiveHours);
                     break;
                 case "powershellcommand":
-                    PowerShellCommand.Execute(_settings.Commands.PowerShellCommand ?? "");
+                    // Legacy single-button topic; prefer first configured row if any remain.
+                    {
+                        var first = PowerShellCommandSlugs.Build(_settings.Commands.PowerShellCommands).FirstOrDefault();
+                        if (!string.IsNullOrEmpty(first.Slug))
+                            PowerShellCommand.Execute(first.Command);
+                    }
                     break;
                 case "nav":
                 case "navigate":
@@ -683,6 +769,33 @@ public class MqttClientService : IDisposable
         {
             Error?.Invoke(this, ex);
         }
+    }
+
+    public async Task PublishCameraDiscoveryAsync(bool enabled, CancellationToken ct = default)
+    {
+        if (_client == null || !_client.IsConnected) return;
+
+        var configTopic = $"{_prefix}/camera/{_devId}_camera/config";
+        if (!enabled)
+        {
+            await PublishEmptyRetainedConfigAsync(configTopic, ct);
+            return;
+        }
+
+        var (topic, payload) = MqttDiscovery.MqttCamera(
+            _prefix, _deviceName, _availabilityTopic, _devId, "camera", "Camera");
+        await _client.PublishAsync(
+            new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(payload).WithRetainFlag().Build(),
+            ct);
+    }
+
+    public async Task PublishCameraJpegAsync(byte[] jpeg, CancellationToken ct = default)
+    {
+        if (_client == null || !_client.IsConnected || jpeg == null || jpeg.Length == 0) return;
+        var topic = MqttDiscovery.CameraImageTopic(_prefix, $"{_devId}_camera");
+        await _client.PublishAsync(
+            new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(jpeg).Build(),
+            ct);
     }
 
     public async Task DisconnectAsync(CancellationToken ct = default)

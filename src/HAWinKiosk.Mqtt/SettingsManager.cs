@@ -48,13 +48,15 @@ public static class SettingsManager
             s = new AppSettings();
         }
 
-        NormalizeAppSettings(s);
-        if (PinSecretsStore.ApplyTo(s.Kiosk))
+        var migratedPs = NormalizeAppSettings(s);
+        var pinApplied = PinSecretsStore.ApplyTo(s.Kiosk);
+        if (pinApplied || migratedPs)
             Save(s);
         return s;
     }
 
-    private static void NormalizeAppSettings(AppSettings s)
+    /// <returns>True when PowerShell command shape was migrated and should be persisted.</returns>
+    private static bool NormalizeAppSettings(AppSettings s)
     {
         s.Sensors.Enabled = s.Sensors.Enabled
             .Select(x => x.Trim())
@@ -121,7 +123,9 @@ public static class SettingsManager
         g.ZoomDirection = NormalizeZoomDirection(g.ZoomDirection);
         s.Kiosk.PinResetQuestion = string.IsNullOrWhiteSpace(s.Kiosk.PinResetQuestion) ? null : s.Kiosk.PinResetQuestion.Trim();
         s.Kiosk.PinResetAnswer = string.IsNullOrWhiteSpace(s.Kiosk.PinResetAnswer) ? null : s.Kiosk.PinResetAnswer.Trim();
-        s.Commands.PowerShellCommand = string.IsNullOrWhiteSpace(s.Commands.PowerShellCommand) ? null : s.Commands.PowerShellCommand.Trim();
+
+        var migratedPs = MigrateAndNormalizePowerShellCommands(s.Commands);
+        NormalizeCustomButton(s.Kiosk);
 
         if (!s.ScreenBrightness.AllowZeroBrightness && s.ScreenBrightness.DefaultPercent < 1)
             s.ScreenBrightness.DefaultPercent = 1;
@@ -130,6 +134,68 @@ public static class SettingsManager
         s.Mqtt.DiscoveryPrefix = string.IsNullOrWhiteSpace(s.Mqtt.DiscoveryPrefix)
             ? "homeassistant"
             : s.Mqtt.DiscoveryPrefix.Trim();
+
+        s.Sensors.CameraStream ??= new CameraStreamConfig();
+        var cam = s.Sensors.CameraStream;
+        var mode = (cam.Mode ?? "off").Trim().ToLowerInvariant();
+        cam.Mode = mode is "ha" or "mjpeg" ? mode : "off";
+        cam.Fps = Math.Clamp(cam.Fps, 1, 15);
+        cam.Port = Math.Clamp(cam.Port <= 0 ? 8081 : cam.Port, 1, 65535);
+        s.Kiosk.CameraDeviceId ??= "";
+        return migratedPs;
+    }
+
+    private static bool MigrateAndNormalizePowerShellCommands(CommandsConfig c)
+    {
+        c.PowerShellCommands ??= [];
+        var migrated = false;
+
+        if (c.PowerShellCommands.Count == 0 && !string.IsNullOrWhiteSpace(c.PowerShellCommand))
+        {
+            c.PowerShellCommands.Add(new PowerShellCommandItem
+            {
+                Name = "PowerShell 1",
+                Command = c.PowerShellCommand.Trim()
+            });
+            migrated = true;
+        }
+
+        if (c.PowerShellCommand != null)
+        {
+            c.PowerShellCommand = null;
+            migrated = true;
+        }
+
+        foreach (var item in c.PowerShellCommands)
+        {
+            item.Name = (item.Name ?? "").Trim();
+            item.Command = (item.Command ?? "").Trim();
+        }
+
+        return migrated;
+    }
+
+    private static void NormalizeCustomButton(KioskConfig kiosk)
+    {
+        kiosk.CustomButton ??= new CustomButtonConfig();
+        var cb = kiosk.CustomButton;
+        if (string.IsNullOrWhiteSpace(cb.Icon))
+            cb.Icon = "mdi:button-pointer";
+        else
+            cb.Icon = cb.Icon.Trim();
+        cb.Action = NormalizeCustomButtonAction(cb.Action);
+        cb.MqttTopic = string.IsNullOrWhiteSpace(cb.MqttTopic) ? null : cb.MqttTopic.Trim();
+    }
+
+    private static string NormalizeCustomButtonAction(string? raw)
+    {
+        var s = (raw ?? "reload").Trim().ToLowerInvariant();
+        // "disabled" was removed from the UI (master toggle covers that); map legacy YAML to reload.
+        if (s == "disabled")
+            return "reload";
+        return s is "reload" or "clearcache_reload" or "settings" or "mqtt" or "mqtt_publish" or "keyboard"
+            ? s
+            : "reload";
     }
 
     private static string NormalizeGestureAction(string? raw, string fallback)
@@ -163,6 +229,7 @@ public static class SettingsManager
         var file = SettingsYamlConversion.FromAppSettings(settings);
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
             .Build();
         var yaml = serializer.Serialize(file);
         File.WriteAllText(SettingsPath, yaml);

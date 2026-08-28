@@ -50,6 +50,9 @@ public sealed class ConfigSectionV2
     [YamlMember(Alias = "showSettingsButton")]
     public bool ShowSettingsButton { get; set; } = true;
 
+    [YamlMember(Alias = "customButton")]
+    public CustomButtonConfig CustomButton { get; set; } = new();
+
     [YamlMember(Alias = "uiTheme")]
     public string UiTheme { get; set; } = "auto";
 
@@ -65,6 +68,9 @@ public sealed class ConfigSectionV2
 
     [YamlMember(Alias = "enableMic")]
     public bool EnableMic { get; set; } = true;
+
+    [YamlMember(Alias = "cameraDeviceId")]
+    public string CameraDeviceId { get; set; } = "";
 
     [YamlMember(Alias = "volumePercent")]
     public int VolumePercent { get; set; } = 100;
@@ -129,6 +135,7 @@ public static class SettingsYamlConversion
         s.Kiosk.PinResetAnswer = c.PinResetAnswer;
         s.Kiosk.PinProtectionDisabled = c.PinProtectionDisabled;
         s.Kiosk.ShowSettingsButton = c.ShowSettingsButton;
+        s.Kiosk.CustomButton = c.CustomButton ?? new CustomButtonConfig();
         s.Kiosk.UiTheme = c.UiTheme;
         s.Kiosk.BetaUpdates = c.BetaUpdates;
         s.Kiosk.WindowsUpdateRespectActiveHours = c.WindowsUpdateRespectActiveHours;
@@ -152,6 +159,8 @@ public static class SettingsYamlConversion
 
         s.Kiosk.InputDeviceId = c.InputDeviceId ?? "";
         s.Kiosk.EnableMic = c.EnableMic;
+        s.Kiosk.CameraDeviceId = c.CameraDeviceId ?? "";
+        s.Sensors.CameraStream ??= new CameraStreamConfig();
 
         return s;
     }
@@ -168,12 +177,14 @@ public static class SettingsYamlConversion
                 PinHint = s.Kiosk.PinHint,
                 PinProtectionDisabled = s.Kiosk.PinProtectionDisabled,
                 ShowSettingsButton = s.Kiosk.ShowSettingsButton,
+                CustomButton = s.Kiosk.CustomButton ?? new CustomButtonConfig(),
                 UiTheme = s.Kiosk.UiTheme,
                 BetaUpdates = s.Kiosk.BetaUpdates,
                 WindowsUpdateRespectActiveHours = s.Kiosk.WindowsUpdateRespectActiveHours,
                 PlaybackDeviceId = s.AudioOutput.PlaybackDeviceId,
                 InputDeviceId = s.Kiosk.InputDeviceId ?? "",
                 EnableMic = s.Kiosk.EnableMic,
+                CameraDeviceId = s.Kiosk.CameraDeviceId ?? "",
                 VolumePercent = s.AudioOutput.VolumePercent,
                 BrightnessPercent = s.ScreenBrightness.DefaultPercent,
                 AllowZeroBrightness = s.ScreenBrightness.AllowZeroBrightness,

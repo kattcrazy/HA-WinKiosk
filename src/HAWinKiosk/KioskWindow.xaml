@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:local="clr-namespace:HAWinKiosk"
+        xmlns:settings="clr-namespace:HAWinKiosk.Settings"
+        xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
         Title="HA WinKiosk"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -220,6 +222,24 @@
                            Foreground="{DynamicResource Theme.Accent.Fg}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Center"/>
+            </Button>
+        </Popup>
+
+        <Popup x:Name="CustomButtonPopup"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="None"
+               Placement="AbsolutePoint">
+            <Button Style="{StaticResource SettingsButton}"
+                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
+                    Click="CustomButton_Click">
+                <materialIcons:MaterialIcon x:Name="CustomButtonIcon"
+                                            Kind="ButtonPointer"
+                                            Width="22"
+                                            Height="22"
+                                            Foreground="{DynamicResource Theme.Accent.Fg}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"/>
             </Button>
         </Popup>
 
@@ -469,6 +489,12 @@
                                               Style="{StaticResource SettingsComboBox}"/>
                                 </StackPanel>
 
+                                <StackPanel x:Name="CameraDevicePanel" Margin="0,0,0,10" Visibility="Collapsed">
+                                    <TextBlock Text="Camera device" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="CameraDeviceCombo"
+                                              Style="{StaticResource SettingsComboBox}"/>
+                                </StackPanel>
+
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -517,25 +543,6 @@
                                                   Unchecked="PinProtectionToggle_Changed"/>
                                 </Grid>
 
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Show settings button"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="ShowSettingsButtonToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="If off, open Settings only via a configured gesture action set to Settings (or MQTT open settings if enabled)."
-                                           FontSize="11"
-                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,12"/>
-
                                 <StackPanel x:Name="PinProtectedFieldsPanel" Visibility="Visible">
                                     <TextBlock Text="Settings PIN" Style="{StaticResource SettingsItemLabel}"/>
                                     <local:SecretInputControl x:Name="SettingsPinBox"
@@ -555,6 +562,94 @@
                                     <TextBlock Text="PIN reset answer" Style="{StaticResource SettingsItemLabel}"/>
                                     <local:SecretInputControl x:Name="PinResetAnswerBox"
                                                               Margin="0,0,0,10"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Buttons" Style="{StaticResource SettingsSectionHeading}" Margin="0,16,0,10"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Settings button"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="ShowSettingsButtonToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="If off, open Settings only via a configured gesture action set to Settings (or MQTT open settings if enabled)."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,12"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Custom button"
+                                               Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="CustomButtonEnabledToggle"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource SettingsToggleSwitch}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="CustomButtonEnabledToggle_Changed"
+                                                  Unchecked="CustomButtonEnabledToggle_Changed"/>
+                                </Grid>
+                                <StackPanel x:Name="CustomButtonOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                    <TextBlock Text="Icon (mdi:name)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="CustomButtonIconBox"
+                                                 Grid.Column="0"
+                                                 Style="{StaticResource RoundedTextBox}"
+                                                 TextChanged="CustomButtonIconBox_TextChanged"/>
+                                        <Border Grid.Column="1"
+                                                Width="40"
+                                                Height="40"
+                                                Margin="8,0,0,0"
+                                                Background="{DynamicResource Theme.Settings.InputBg}"
+                                                BorderBrush="{DynamicResource Theme.Settings.InputBorder}"
+                                                BorderThickness="1.4"
+                                                CornerRadius="6">
+                                            <materialIcons:MaterialIcon x:Name="CustomButtonIconPreview"
+                                                                        Kind="ButtonPointer"
+                                                                        Width="22"
+                                                                        Height="22"
+                                                                        Foreground="{DynamicResource Theme.Settings.InputFg}"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Text="Action" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="CustomButtonActionCombo"
+                                              Style="{StaticResource SettingsComboBox}"
+                                              Margin="0,0,0,10"
+                                              SelectionChanged="CustomButtonAction_SelectionChanged">
+                                        <ComboBoxItem Content="Reload" Tag="reload"/>
+                                        <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                        <ComboBoxItem Content="Settings" Tag="settings"/>
+                                        <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                        <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
+                                        <ComboBoxItem Content="Bring up keyboard" Tag="keyboard"/>
+                                    </ComboBox>
+                                    <StackPanel x:Name="CustomButtonMqttTopicPanel" Visibility="Collapsed" Margin="0,0,0,10">
+                                        <TextBlock x:Name="CustomButtonMqttTopicHeadingText" Text="MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBlock x:Name="CustomButtonMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="CustomButtonMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,0"/>
+                                        <TextBlock x:Name="CustomButtonMqttReconnectHelpText"
+                                                   Visibility="Collapsed"
+                                                   TextWrapping="Wrap"
+                                                   Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)."
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 
@@ -848,7 +943,7 @@
                                 <TextBlock Text="MQTT IP" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="MqttHostBox" Text="192.168.1.?" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT port" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="MqttPortBox" Text="1883" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <settings:SettingsNumericInput x:Name="MqttPortBox" Text="1883" MaxLength="5" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT username" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="MqttUsernameBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT password" Style="{StaticResource SettingsItemLabel}"/>
@@ -911,6 +1006,37 @@
                                     <TextBlock Grid.Column="0" Text="Current URL" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttSensorCurrentUrlToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
+
+                                <StackPanel x:Name="CameraStreamPanel" Visibility="Collapsed">
+                                    <settings:SettingsSelectRow x:Name="CameraStreamModeSelect"
+                                                                Label="Camera stream"
+                                                                SelectionChanged="CameraStreamModeSelect_SelectionChanged">
+                                        <ComboBoxItem Content="Off" Tag="off"/>
+                                        <ComboBoxItem Content="HA camera entity" Tag="ha"/>
+                                        <ComboBoxItem Content="MJPEG stream for NVR" Tag="mjpeg"/>
+                                    </settings:SettingsSelectRow>
+                                    <StackPanel x:Name="CameraStreamOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                        <settings:SettingsSliderRow x:Name="CameraFpsSlider"
+                                                                    Label="FPS"
+                                                                    Minimum="1"
+                                                                    Maximum="15"
+                                                                    Value="5"/>
+                                        <StackPanel x:Name="CameraMjpegOptionsPanel" Visibility="Collapsed">
+                                            <TextBlock Text="Port" Style="{StaticResource SettingsItemLabel}"/>
+                                            <settings:SettingsNumericInput x:Name="CameraMjpegPortBox"
+                                                                           Text="8081"
+                                                                           MaxLength="5"
+                                                                           Margin="0,0,0,10"
+                                                                           TextChanged="CameraMjpegPortBox_TextChanged"/>
+                                            <TextBlock Text="Stream URL" Style="{StaticResource SettingsItemLabel}"/>
+                                            <TextBlock x:Name="CameraMjpegUrlText"
+                                                       Style="{StaticResource SettingsItemLabel}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,0,0,6"/>
+                                            <settings:SettingsNote Text="In Windows Settings, make sure to make the kiosk's IP static otherwise the url will change and the stream will not be accessible from the old url"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
 
                                 <TextBlock Text="Commands" Style="{StaticResource SettingsSubSectionHeading}"/>
                                 <Grid Margin="0,0,0,4">
@@ -1006,8 +1132,7 @@
                                     <ToggleButton x:Name="MqttCmdPowerShellToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdPowerShellToggle_Changed" Unchecked="MqttCmdPowerShellToggle_Changed"/>
                                 </Grid>
                                 <StackPanel x:Name="MqttCmdPowerShellCommandPanel" Margin="16,0,0,4" Visibility="Collapsed">
-                                    <TextBlock Text="PowerShell command text" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBox x:Name="MqttCmdPowerShellTextBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                    <StackPanel x:Name="MqttCmdPowerShellRowsPanel"/>
                                 </StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -1039,7 +1164,7 @@
                                                    TextWrapping="Wrap"
                                                    VerticalAlignment="Center"/>
                                     </Grid>
-                                    <TextBlock Text="See HA WinKiosk github README for how to use Navigate from Home Assistant."
+                                    <TextBlock Text="See repo README for how to use Navigate from Home Assistant."
                                                FontSize="11"
                                                Foreground="{DynamicResource Theme.Settings.FgMuted}"
                                                TextWrapping="Wrap"

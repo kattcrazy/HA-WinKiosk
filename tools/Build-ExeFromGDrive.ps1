@@ -1,6 +1,6 @@
 param(
     [string]$SourceRoot = "",
-    [string]$BuildRoot = "C:\HA-WinKiosk"
+    [string]$BuildRoot = "C:\dev\HA-WinKiosk"
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,8 +12,11 @@ if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
 }
 
 $buildProject = Join-Path $BuildRoot "src\HAWinKiosk\HAWinKiosk.csproj"
-$buildPublishDir = Join-Path $BuildRoot "src\HAWinKiosk\bin\Release\net8.0-windows\win-x64\publish"
-$sourcePublishDir = Join-Path $SourceRoot "src\HAWinKiosk\bin\Release\net8.0-windows\win-x64\publish"
+$tfm = "net8.0-windows10.0.19041.0"
+$buildPublishDir = Join-Path $BuildRoot "src\HAWinKiosk\bin\Release\$tfm\win-x64\publish"
+$sourcePublishDir = Join-Path $SourceRoot "src\HAWinKiosk\bin\Release\$tfm\win-x64\publish"
+# Camera capture (MSMF/OpenCV) fails when the EXE is launched from a Google Drive path.
+$localRunDir = "C:\dev\HA-WinKiosk-run"
 
 Write-Host "SourceRoot: $SourceRoot"
 Write-Host "BuildRoot:  $BuildRoot"
@@ -43,6 +46,7 @@ try {
     }
 
     Write-Host "Publishing self-contained win-x64 EXE..."
+    # OpenCvSharp native DLLs do not load reliably from a single-file bundle.
     $publishArgs = @(
         "publish",
         $buildProject,
@@ -50,8 +54,7 @@ try {
         "-r", "win-x64",
         "--self-contained", "true",
         "/p:BundleAsExe=true",
-        "/p:PublishSingleFile=true",
-        "/p:IncludeNativeLibrariesForSelfExtract=true"
+        "/p:PublishSingleFile=false"
     )
 
     & dotnet @publishArgs
@@ -81,8 +84,26 @@ try {
         throw "Expected EXE not found after copy-back: $sourceExe"
     }
 
+    if (Test-Path $localRunDir) {
+        Remove-Item -Path $localRunDir -Recurse -Force
+    }
+    New-Item -Path $localRunDir -ItemType Directory -Force | Out-Null
+    Write-Host "Copying runnable build to local disk (required for camera)..."
+    $copyRunArgs = @(
+        $buildPublishDir, $localRunDir, "/MIR",
+        "/R:2", "/W:1", "/NFL", "/NDL", "/NP"
+    )
+    & robocopy @copyRunArgs
+    $copyRunExit = $LASTEXITCODE
+    if ($copyRunExit -ge 8) {
+        throw "robocopy build->local run failed with exit code $copyRunExit"
+    }
+
+    $localExe = Join-Path $localRunDir "HAWinKiosk.exe"
     Write-Host ""
-    Write-Host "Done. EXE available at:"
+    Write-Host "Done. Run from local disk (camera does not work from Google Drive path):"
+    Write-Host $localExe
+    Write-Host "Source tree publish copy:"
     Write-Host $sourceExe
 }
 finally {

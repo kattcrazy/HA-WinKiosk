@@ -1,0 +1,9 @@
+<UserControl x:Class="HAWinKiosk.Settings.SettingsSelectRow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Margin="0,0,0,10">
+    <StackPanel>
+        <TextBlock x:Name="LabelText" Style="{DynamicResource SettingsItemLabel}"/>
+        <ComboBox x:Name="Combo" Style="{DynamicResource SettingsComboBox}"/>
+    </StackPanel>
+</UserControl>

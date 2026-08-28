@@ -91,6 +91,43 @@ public static partial class MqttDiscovery
         return (topic, payload);
     }
 
+    public static string CameraImageTopic(string prefix, string objectId) => $"{prefix}/camera/{objectId}/image";
+
+    public static (string Topic, string Payload) MqttCamera(
+        string prefix,
+        string deviceName,
+        string availabilityTopic,
+        string devId,
+        string slug,
+        string displayName)
+    {
+        var objectId = $"{devId}_{slug}";
+        var uniqueId = $"ha_winkiosk_{devId}_{Environment.MachineName}_{slug}";
+        var imageTopic = CameraImageTopic(prefix, objectId);
+        var deviceIdentifiers = $"ha_winkiosk_{devId}_{Environment.MachineName}";
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            name = displayName,
+            unique_id = uniqueId,
+            topic = imageTopic,
+            encoding = "",
+            availability_topic = availabilityTopic,
+            payload_available = "online",
+            payload_not_available = "offline",
+            device = new
+            {
+                identifiers = new[] { deviceIdentifiers },
+                name = deviceName,
+                model = "HA WinKiosk",
+                manufacturer = "HA WinKiosk"
+            }
+        }, JsonDiscovery);
+
+        var topic = $"{prefix}/camera/{objectId}/config";
+        return (topic, payload);
+    }
+
     public static (string Topic, string Payload) NumericSensor(
         string prefix,
         string deviceName,

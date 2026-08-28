@@ -6,7 +6,7 @@ Home Assistant Windows Kiosk - An open-source Windows webpage kiosk designed for
 1. Download the .exe file from the latest release and once downloaded double click/open to install. It will automatically install .NET 8 if needed.
 2. On first run, Settings will open. Enter your kiosk webpage URL, MQTT host, port, username, password, and other details as needed.
 3. Click Save & Back to Kiosk - the fullscreen kiosk will load your HA dashboard or chosen URL.
-4. Click the gear button to open Settings (If you've disabled show settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
+4. Click the gear button to open Settings (If you've disabled the settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
 **I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
 ## Requirements
@@ -48,7 +48,7 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Open settings | Button | Open this app’s Settings screen (no PIN) |
 | Close settings | Button | Close Settings and return to the kiosk |
 | Run Windows updates | Button | Starts a Windows Update scan/download/install run. If  `Respect active hours` is on, it will wait till inactive hours before restarting. If it's off, it will restart within 30 seconds. |
-| PowerShell command | Button | Executes configured PowerShell command text from settings |
+| PowerShell commands | Button(s) | One HA button per named PowerShell row when the master toggle is on |
 | Update sensors | Button | Immediately publish all enabled sensor values (entity is auto-created when any sensor is enabled) |
 | Battery level | Sensor | Remaining battery % (not available on PCs without a battery) |
 | Last Active | Sensor | Seconds since last input (updates every 1 second, ignoring the update interval) |
@@ -58,9 +58,10 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
 | Current URL | Sensor | WebView address currently shown in the kiosk |
 | Release info | Sensor | App version and breaking changes (always published) |
+| Camera | Camera | Optional MQTT camera when Camera stream mode is HA camera entity |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
-When the command Navigate is enabled in Settings, the kiosk listens on `{discoveryPrefix}/{device}/nav` (payload = HA path). The legacy topic `{discoveryPrefix}/command/{device}/navigate/set` still works.
+When the command Navigate is enabled in Settings, the kiosk listens on `{discoveryPrefix}/{device}/nav` (payload = HA path).
 
 ```yaml
 service: mqtt.publish
@@ -68,6 +69,22 @@ data:
   topic: "homeassistant/kiosk/nav"
   payload: "/lovelace/default_view"
 ```
+
+### Camera
+Camera stream settings appear under MQTT -> Sensors when a camera is present (built-in, USB, etc.). Mode can be one of the following; FPS is 1–15 (note that higher means more network traffic).
+
+| UI Name | Values | Notes |
+| --- | --- | --- |
+| Camera stream | `off` / `ha` / `mjpeg` | Off, HA MQTT camera entity, or LAN MJPEG for an NVR |
+| FPS | `1..15` | Capture rate when camera stream is not off |
+| Port | integer | MJPEG listen port (default 8081; only when mode is mjpeg) |
+
+| Mode | Meaning |
+| --- | --- |
+| Off | Camera(s) are not in use |
+| MJPEG stream for NVR | MJPEG listens on a configurable port at `http://<kiosk-ip>:<port>` for any NVR or software that can ingest HTTP MJPEG (for example, Frigate). Make sure to set a static IP on the kiosk so the URL doesn't change. |
+| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands |
+
 
 ## Settings
 
@@ -94,7 +111,6 @@ Below is a key of what all the options are, and below that is an example `settin
 | Ignore HTTPS cert warnings | `true`/`false` | Auto-allow invalid/self-signed TLS certs for the kiosk URL |
 | Do Not Disturb | `true`/`false` | Suppress toast notifications while the kiosk is running |
 | Beta updates | `true`/`false` | When `true`, automatic updates may install GitHub prereleases; when `false`, only stable releases |
-| Show settings button | `true`/`false` | Show/hide gear button |
 | Theme | `auto`/`light`/`dark` | UI theme mode |
 | Brightness (%) | `0..100` | Screen brightness |
 | Allow 0% brightness | `true`/`false` | When `false` (default), local slider and HA brightness entity minimum is 1% |
@@ -102,6 +118,7 @@ Below is a key of what all the options are, and below that is an example `settin
 | Respect active hours | `true`/`false` | When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds |
 | Playback device | string (MMDevice ID) | Empty keeps Windows default playback device |
 | Input device | string (MMDevice ID) | Empty uses Windows default capture device |
+| Camera device | string (video device ID) | Empty uses the first available camera |
 | Volume (%) | `0..100` | Master volume for the playback device |
 | Settings PIN | string | PIN required when PIN protection is enabled. UI only; stored in `pin-secrets.json` |
 | PIN hint | string | Hint shown on PIN prompt |
@@ -109,11 +126,21 @@ Below is a key of what all the options are, and below that is an example `settin
 | PIN reset answer | string | Forgot-PIN verification answer. UI only; stored in `pin-secrets.json` |
 | PIN protection | `true`/`false` | `false` disables PIN gate |
 
+##### Buttons
+
+| UI Name | Values | Notes |
+| --- | --- | --- |
+| Settings button | `true`/`false` | Show/hide gear button |
+| Custom button | `true`/`false` | Floating action button to the left of the gear (or alone top-right if gear is hidden) |
+| Custom button icon | `mdi:name` | Material Design Icon id; default `mdi:button-pointer` |
+| Custom button action | same as gestures (no Disabled), plus `Bring up keyboard` | Dispatches like gesture actions; off/on is the Custom button toggle; keyboard opens TabTip/`osk` |
+| Custom button MQTT topic | string | Topic suffix when action is MQTT message |
+
 #### Gestures
 
 Each enabled gesture has an action dropdown with the following possible values:
 
-```Disabled, Reload, Clear cache and reload, Settings, MQTT message```
+```Disabled, Reload, Clear cache and reload, Settings, MQTT message, MQTT reconnect```
 
 When action is `MQTT message`, make sure to set an MQTT topic suffix for that gesture.
 
@@ -145,7 +172,7 @@ Enable or disable each sensor or command in this section of settings. They are l
 | MQTT password | string | Broker password |
 | Device name | string | Base ID in MQTT entities/topics |
 | Discovery prefix | string | MQTT discovery prefix for Home Assistant (default `homeassistant`) |
-| PowerShell command text | string | Command text for the PowerShell command button |
+| PowerShell commands | name + command rows | Master toggle still uses enabled slug `powershellcommand`; each row becomes its own HA button (`ps_` + sanitized name) |
 
 
 ### Example `settings.yaml`
@@ -158,10 +185,16 @@ config:
   pinHint: ""
   pinProtectionDisabled: false
   showSettingsButton: true
+  customButton:
+    enabled: false
+    icon: "mdi:button-pointer"
+    action: reload
+    mqttTopic: ""
   uiTheme: auto
   betaUpdates: false
   playbackDeviceId: ""
   inputDeviceId: ""
+  cameraDeviceId: ""
   volumePercent: 100
   brightnessPercent: 100
   allowZeroBrightness: false
@@ -220,6 +253,10 @@ mqtt:
       - current_url
       - last_active
       - updates_pending
+    cameraStream:
+      mode: off
+      fps: 5
+      port: 8081
   commands:
     enabled:
       - shutdown
@@ -233,9 +270,10 @@ mqtt:
       - closesettings
       - windowsupdate
       - nav
-    powerShellCommand: ""
+    powerShellCommands:
+      - name: "Restart Explorer"
+        command: "Stop-Process -Name explorer -Force"
 ```
-
 ## Autostart and updates
 
 The app checks daily at 3:00 AM local device time for any updates. If a newer version is found, it downloads the installer, silently replaces the old app, and relaunches the new version.

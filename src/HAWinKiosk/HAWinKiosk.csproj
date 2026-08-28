@@ -5,8 +5,8 @@
     <!-- Default to DLL output for Google Drive reliability. Set /p:BundleAsExe=true when ready to ship an .exe. -->
     <UseAppHost Condition="'$(BundleAsExe)' == 'true'">true</UseAppHost>
     <UseAppHost Condition="'$(BundleAsExe)' != 'true'">false</UseAppHost>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Version>3.21.8</Version>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Version>3.24.0</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
@@ -15,8 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Material.Icons.WPF" Version="2.2.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
     <PackageReference Include="YamlDotNet" Version="16.0.0" />
   </ItemGroup>
 
