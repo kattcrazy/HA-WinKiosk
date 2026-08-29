@@ -18,6 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify release notes exist
+        shell: powershell
+        run: |
+          $notes = "docs/releases/${{ github.ref_name }}.md"
+          if (-not (Test-Path $notes)) {
+            throw "Missing $notes. Add release notes before pushing the tag."
+          }
+
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -42,5 +50,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: installer/output/HAWinKiosk-Setup.exe
-          generate_release_notes: true
+          body_path: docs/releases/${{ github.ref_name }}.md
+          generate_release_notes: false
           fail_on_unmatched_files: true

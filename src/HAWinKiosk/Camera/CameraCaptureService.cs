@@ -80,17 +80,7 @@ public sealed class CameraCaptureService : IDisposable
         if (_capture is null || !_capture.IsOpened())
             throw new InvalidOperationException("OpenCvSharp could not open the camera.");
 
-        try
-        {
-            _capture.FrameWidth = 640;
-            _capture.FrameHeight = 480;
-        }
-        catch
-        {
-            // some drivers reject size hints
-        }
-
-        Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight}");
+        Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight} (native)");
 
         _loopCts = new CancellationTokenSource();
         var token = _loopCts.Token;
@@ -161,20 +151,7 @@ public sealed class CameraCaptureService : IDisposable
                     continue;
                 }
 
-                using var resized = new Mat();
-                if (frame.Width > 640 || frame.Height > 480)
-                {
-                    var scale = Math.Min(640.0 / frame.Width, 480.0 / frame.Height);
-                    Cv2.Resize(frame, resized, new OpenCvSharp.Size(
-                        Math.Max(1, (int)(frame.Width * scale)),
-                        Math.Max(1, (int)(frame.Height * scale))));
-                }
-                else
-                {
-                    frame.CopyTo(resized);
-                }
-
-                if (!Cv2.ImEncode(".jpg", resized, out var jpeg, new[] { (int)ImwriteFlags.JpegQuality, 55 }))
+                if (!Cv2.ImEncode(".jpg", frame, out var jpeg, new[] { (int)ImwriteFlags.JpegQuality, 55 }))
                 {
                     Thread.Sleep(40);
                     continue;
@@ -182,7 +159,7 @@ public sealed class CameraCaptureService : IDisposable
 
                 var n = Interlocked.Increment(ref _framesEncoded);
                 if (n == 1 || n % 30 == 0)
-                    Log($"Encoded frame #{n} bytes={jpeg.Length}");
+                    Log($"Encoded frame #{n} {frame.Width}x{frame.Height} bytes={jpeg.Length}");
                 FrameCaptured?.Invoke(jpeg);
             }
             catch (Exception ex)

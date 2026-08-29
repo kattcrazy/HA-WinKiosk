@@ -794,7 +794,12 @@ public class MqttClientService : IDisposable
         if (_client == null || !_client.IsConnected || jpeg == null || jpeg.Length == 0) return;
         var topic = MqttDiscovery.CameraImageTopic(_prefix, $"{_devId}_camera");
         await _client.PublishAsync(
-            new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(jpeg).Build(),
+            new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(jpeg)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
+                .WithRetainFlag(false)
+                .Build(),
             ct);
     }
 

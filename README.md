@@ -71,19 +71,19 @@ data:
 ```
 
 ### Camera
-Camera stream settings appear under MQTT -> Sensors when a camera is present (built-in, USB, etc.). Mode can be one of the following; FPS is 1–15 (note that higher means more network traffic).
+Camera stream settings appear under MQTT -> Sensors when a camera is present, and the camera can be chosen under Config.
 
 | UI Name | Values | Notes |
 | --- | --- | --- |
 | Camera stream | `off` / `ha` / `mjpeg` | Off, HA MQTT camera entity, or LAN MJPEG for an NVR |
-| FPS | `1..15` | Capture rate when camera stream is not off |
-| Port | integer | MJPEG listen port (default 8081; only when mode is mjpeg) |
+| FPS | `1..15` | MJPEG mode only. Note that higher means more network traffic. |
+| Port | integer | MMJPEG mode only. Listen port (default 8081) |
 
 | Mode | Meaning |
 | --- | --- |
 | Off | Camera(s) are not in use |
-| MJPEG stream for NVR | MJPEG listens on a configurable port at `http://<kiosk-ip>:<port>` for any NVR or software that can ingest HTTP MJPEG (for example, Frigate). Make sure to set a static IP on the kiosk so the URL doesn't change. |
-| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands |
+| MJPEG stream for NVR | MJPEG camera stream on a configurable port at `http://<kiosk-ip>:<port>`, ready for any NVR or software that can ingest HTTP MJPEG (for example, Frigate). Make sure to set a static IP on the kiosk so the URL doesn't change. |
+| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands. EXPECT LAG - this cannot be fixed as far as I know (feel free to make an issue if you know a way) |
 
 
 ## Settings

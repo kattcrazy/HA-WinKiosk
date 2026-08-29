@@ -47,6 +47,7 @@ if (Test-Path $outputDir) {
 }
 
 $appVersion = "0.0.0"
+$targetFramework = ""
 try {
     [xml]$projXml = Get-Content -Path $csproj -Raw
     $versionNode = $projXml.Project.PropertyGroup.Version | Select-Object -First 1
@@ -56,10 +57,25 @@ try {
             $appVersion = $parsed
         }
     }
+    $tfmNode = $projXml.Project.PropertyGroup.TargetFramework | Select-Object -First 1
+    if ($tfmNode) {
+        $targetFramework = $tfmNode.ToString().Trim()
+    }
 } catch {
 }
 
-& $iscc "/DMyAppVersion=$appVersion" $issFile
+if ([string]::IsNullOrWhiteSpace($targetFramework)) {
+    throw "Could not read TargetFramework from $csproj"
+}
+
+$publishDir = Join-Path $SourceRoot "src\HAWinKiosk\bin\Release\$targetFramework\win-x64\publish"
+if (-not (Test-Path $publishDir)) {
+    throw "Publish output not found: $publishDir (check dotnet publish / Build-ExeFromGDrive.ps1)"
+}
+
+Write-Host "Installer source: $publishDir"
+
+& $iscc "/DMyAppVersion=$appVersion" "/DPublishDir=$publishDir" $issFile
 if ($LASTEXITCODE -ne 0) {
     throw "Installer compilation failed with exit code $LASTEXITCODE"
 }

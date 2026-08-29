@@ -582,7 +582,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (CameraStreamModeSelect.SelectedItem is ComboBoxItem item && item.Tag is string tag)
             mode = tag.Trim().ToLowerInvariant();
 
-        CameraStreamOptionsPanel.Visibility = mode is "ha" or "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
+        CameraStreamOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
         if (CameraMjpegOptionsPanel != null)
             CameraMjpegOptionsPanel.Visibility = mode == "mjpeg" ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -1698,7 +1698,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)
                 camMode = modeTag.Trim().ToLowerInvariant();
             _settings.Sensors.CameraStream.Mode = camMode is "ha" or "mjpeg" ? camMode : "off";
-            _settings.Sensors.CameraStream.Fps = Math.Clamp((int)Math.Round(CameraFpsSlider.Value), 1, 15);
+            if (camMode == "mjpeg")
+                _settings.Sensors.CameraStream.Fps = Math.Clamp((int)Math.Round(CameraFpsSlider.Value), 1, 15);
             if (CameraMjpegPortBox.TryGetInt(out var camPort) && camPort is >= 1 and <= 65535)
                 _settings.Sensors.CameraStream.Port = camPort;
             else
@@ -1725,6 +1726,9 @@ public partial class KioskWindow : Window, IKioskHostActions
             await StartMqttIfConfiguredAsync();
             return;
         }
+
+        // Avoid publishing camera frames to a client that is about to disconnect.
+        _cameraStream.SetMqttClient(null);
         await _mqtt.DisconnectAsync();
         _mqtt.Dispose();
         _mqtt = null;
