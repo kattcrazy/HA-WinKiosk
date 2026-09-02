@@ -26,6 +26,20 @@ jobs:
             throw "Missing $notes. Add release notes before pushing the tag."
           }
 
+      - name: Create GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notes = "docs/releases/$tag.md"
+          gh release view $tag 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit $tag --title $tag --notes-file $notes
+          } else {
+            gh release create $tag --title $tag --notes-file $notes
+          }
+
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -46,10 +60,9 @@ jobs:
             throw "Installer not found at installer/output/HAWinKiosk-Setup.exe"
           }
 
-      - name: Publish GitHub release asset
-        uses: softprops/action-gh-release@v2
-        with:
-          files: installer/output/HAWinKiosk-Setup.exe
-          body_path: docs/releases/${{ github.ref_name }}.md
-          generate_release_notes: false
-          fail_on_unmatched_files: true
+      - name: Upload installer to release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.ref_name }}" "installer/output/HAWinKiosk-Setup.exe" --clobber
