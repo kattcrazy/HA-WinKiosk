@@ -1,6 +1,9 @@
 namespace HAWinKiosk.Mqtt;
 
-/// <summary>Display on/off as set by monitor sleep/wake commands (WM_SYSCOMMAND / SC_MONITORPOWER).</summary>
+/// <summary>
+/// Display on/off for the MQTT monitor_on sensor. Updated from Windows session display power
+/// notifications and from monitor sleep/wake MQTT commands.
+/// </summary>
 public static class MonitorPowerTracker
 {
     private static bool _on = true;

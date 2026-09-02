@@ -144,6 +144,41 @@
             </Grid>
         </Grid>
 
+        <Popup x:Name="SettingsButtonPopup"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="None"
+               Placement="AbsolutePoint">
+            <Button Style="{StaticResource SettingsButton}"
+                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
+                    Click="SettingsButton_Click">
+                <TextBlock FontFamily="Segoe MDL2 Assets"
+                           Text="&#xE713;"
+                           FontSize="18"
+                           Foreground="{DynamicResource Theme.Accent.Fg}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+            </Button>
+        </Popup>
+
+        <Popup x:Name="CustomButtonPopup"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="None"
+               Placement="AbsolutePoint">
+            <Button Style="{StaticResource SettingsButton}"
+                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
+                    Click="CustomButton_Click">
+                <materialIcons:MaterialIcon x:Name="CustomButtonIcon"
+                                            Kind="ButtonPointer"
+                                            Width="22"
+                                            Height="22"
+                                            Foreground="{DynamicResource Theme.Accent.Fg}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+            </Button>
+        </Popup>
+
         <Popup x:Name="BreakingChangesBannerPopup"
                StaysOpen="True"
                AllowsTransparency="True"
@@ -206,41 +241,6 @@
                     </Button>
                 </Grid>
             </Border>
-        </Popup>
-
-        <Popup x:Name="SettingsButtonPopup"
-               StaysOpen="True"
-               AllowsTransparency="True"
-               PopupAnimation="None"
-               Placement="AbsolutePoint">
-            <Button Style="{StaticResource SettingsButton}"
-                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
-                    Click="SettingsButton_Click">
-                <TextBlock FontFamily="Segoe MDL2 Assets"
-                           Text="&#xE713;"
-                           FontSize="18"
-                           Foreground="{DynamicResource Theme.Accent.Fg}"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"/>
-            </Button>
-        </Popup>
-
-        <Popup x:Name="CustomButtonPopup"
-               StaysOpen="True"
-               AllowsTransparency="True"
-               PopupAnimation="None"
-               Placement="AbsolutePoint">
-            <Button Style="{StaticResource SettingsButton}"
-                    Background="{DynamicResource Theme.Kiosk.SettingsButtonBg}"
-                    Click="CustomButton_Click">
-                <materialIcons:MaterialIcon x:Name="CustomButtonIcon"
-                                            Kind="ButtonPointer"
-                                            Width="22"
-                                            Height="22"
-                                            Foreground="{DynamicResource Theme.Accent.Fg}"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"/>
-            </Button>
         </Popup>
 
         <Grid x:Name="SettingsPanel"

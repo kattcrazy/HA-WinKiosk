@@ -8,7 +8,7 @@ Home Assistant Windows Kiosk - An open-source Windows webpage kiosk designed for
 3. Click Save & Back to Kiosk - the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled the settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-**I recommend checking out [my setup](my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
+**I recommend checking out [my setup](docs/my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
 ## Requirements
 
 - Windows 10/11 (I would be interested to know if this works on previous versions)
@@ -83,7 +83,7 @@ Camera stream settings appear under MQTT -> Sensors when a camera is present, an
 | --- | --- |
 | Off | Camera(s) are not in use |
 | MJPEG stream for NVR | MJPEG camera stream on a configurable port at `http://<kiosk-ip>:<port>`, ready for any NVR or software that can ingest HTTP MJPEG (for example, Frigate). Make sure to set a static IP on the kiosk so the URL doesn't change. |
-| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands. EXPECT LAG - this cannot be fixed as far as I know (feel free to make an issue if you know a way) |
+| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands. **EXPECT LAG** - I haven't found a way to fix this yet (feel free to make an issue if you know a way) |
 
 
 ## Settings
@@ -280,7 +280,7 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
-When Start on boot is enabled in Settings, the app adds itself to the current-user Run key and opens immediately. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](my_setup.md) docs. 
+When Start on boot is enabled in Settings, the app adds itself to the current-user Run key and opens immediately. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](docs/my_setup.md) docs. 
 
 ## License
 

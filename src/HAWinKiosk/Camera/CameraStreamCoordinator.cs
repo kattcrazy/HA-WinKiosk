@@ -7,6 +7,8 @@ namespace HAWinKiosk.Camera;
 /// <summary>Starts/stops capture and routes frames to MQTT camera and/or MJPEG HTTP.</summary>
 public sealed class CameraStreamCoordinator : IDisposable
 {
+    private const int HaCameraFps = 5;
+
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "HA-WinKiosk",
@@ -35,7 +37,9 @@ public sealed class CameraStreamCoordinator : IDisposable
     {
         _mqtt = mqtt;
         var mode = (settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        var fps = Math.Clamp(settings.Sensors.CameraStream.Fps, 1, 15);
+        var fps = mode == "ha"
+            ? HaCameraFps
+            : Math.Clamp(settings.Sensors.CameraStream.Fps, 1, 15);
         var port = Math.Clamp(settings.Sensors.CameraStream.Port <= 0 ? 8081 : settings.Sensors.CameraStream.Port, 1, 65535);
         var deviceId = string.IsNullOrWhiteSpace(settings.Kiosk.CameraDeviceId)
             ? null

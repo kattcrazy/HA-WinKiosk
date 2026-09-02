@@ -113,6 +113,8 @@ actions:
 ```
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 700 milliseconds, presses the enter key to bypass the lockscreen, then repeats the last 2 steps to ensure it worked.
 
+If Windows turns the display off on its own (display timeout in Windows power settings), enable the Monitor state sensor in HA WinKiosk. The `monitor_on` entity reflects actual display power and updates on the normal sensor interval (~30s), or immediately when you press Update sensors in HA. Motion-based wake automations can trigger on motion directly, or wait for `monitor_on` to show `off` before calling monitor wake.
+
 ## 4. Longterm management
 
 #### Updates

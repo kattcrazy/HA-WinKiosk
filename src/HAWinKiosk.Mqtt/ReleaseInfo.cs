@@ -10,8 +10,7 @@ namespace HAWinKiosk.Mqtt;
 public static class ReleaseInfo
 {
     // UPDATE THIS BEFORE EACH RELEASE. Use "None" when there are no breaking changes.
-    public const string BreakingChanges =
-        "The old single 'PowerShell command' button is gone. You now get a separate button for each PowerShell command you configured, named after that command! You'll need to update any automations that pressed the old button.";
+    public const string BreakingChanges = "None";
 
     public static bool HasBreakingChanges =>
         !string.IsNullOrWhiteSpace(BreakingChanges)

@@ -46,9 +46,10 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         InitializeComponent();
         _showSettingsFirst = showSettingsFirst;
+        BreakingChangesBannerPopup.PlacementTarget = this;
         SettingsButtonPopup.PlacementTarget = this;
         CustomButtonPopup.PlacementTarget = this;
-        BreakingChangesBannerPopup.PlacementTarget = this;
+        ContentRendered += (_, _) => UpdateSettingsButtonVisibility();
         _updatePopupTimer.Interval = TimeSpan.FromSeconds(2.5);
         _updatePopupTimer.Tick += (_, _) =>
         {
@@ -63,6 +64,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         ApplyKioskBounds();
         EnableKioskLockdown();
+        DisplayPowerMonitor.Register(new WindowInteropHelper(this).Handle);
 
         _settings = SettingsManager.Load();
         ApplySettingsUiTheme();
@@ -150,6 +152,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _isClosing = true;
+        DisplayPowerMonitor.Unregister();
         DisableKioskLockdown();
     }
 
@@ -976,15 +979,16 @@ public partial class KioskWindow : Window, IKioskHostActions
         PositionKioskChromeButtons();
     }
 
-    private void ApplyCustomButtonIcon()
-    {
-        if (CustomButtonIcon == null) return;
-        MdiIconHelper.ApplyTo(CustomButtonIcon, _settings.Kiosk.CustomButton?.Icon);
-    }
-
     private void PositionKioskChromeButtons()
     {
-        if (ActualWidth <= 0 || ActualHeight <= 0) return;
+        if (!SettingsButtonPopup.IsOpen && !CustomButtonPopup.IsOpen)
+            return;
+
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            _ = Dispatcher.BeginInvoke(new Action(PositionKioskChromeButtons), DispatcherPriority.Loaded);
+            return;
+        }
 
         const double size = 40;
         const double margin = 16;
@@ -1006,7 +1010,11 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private void PositionSettingsButtonPopup() => PositionKioskChromeButtons();
+    private void ApplyCustomButtonIcon()
+    {
+        if (CustomButtonIcon == null) return;
+        MdiIconHelper.ApplyTo(CustomButtonIcon, _settings.Kiosk.CustomButton?.Icon);
+    }
 
     private void ThemeModeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -1241,6 +1249,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         {
             // optional: page may block script injection
         }
+
+        UpdateSettingsButtonVisibility();
     }
 
     private async Task TryInjectGestureScriptIntoMainAsync()
@@ -1882,7 +1892,11 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     void IKioskHostActions.ReloadWebView()
     {
-        Dispatcher.Invoke(() => WebView.CoreWebView2?.Reload());
+        Dispatcher.Invoke(() =>
+        {
+            WebView.CoreWebView2?.Reload();
+            UpdateSettingsButtonVisibility();
+        });
     }
 
     async Task IKioskHostActions.ClearBrowsingCacheAsync(CancellationToken cancellationToken)

@@ -80,12 +80,81 @@ public sealed class CameraCaptureService : IDisposable
         if (_capture is null || !_capture.IsOpened())
             throw new InvalidOperationException("OpenCvSharp could not open the camera.");
 
-        Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight} (native)");
+        // MSMF/DSHOW often default to 640x480 if unset — ask for the highest mode the driver accepts.
+        PreferHighestResolution(_capture);
+        Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight}");
 
         _loopCts = new CancellationTokenSource();
         var token = _loopCts.Token;
         _loopTask = Task.Run(() => CaptureLoop(token), token);
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Try common capture sizes descending. Drivers ignore unsupported sizes; we keep the best that sticks.
+    /// </summary>
+    private static void PreferHighestResolution(VideoCapture capture)
+    {
+        var beforeW = (int)capture.FrameWidth;
+        var beforeH = (int)capture.FrameHeight;
+        Log($"PreferHighestResolution start {beforeW}x{beforeH}");
+
+        // Landscape common modes first, then a few portrait / odd laptop cams.
+        (int W, int H)[] candidates =
+        [
+            (1920, 1080),
+            (1600, 1200),
+            (1280, 720),
+            (1280, 960),
+            (1024, 768),
+            (960, 540),
+            (800, 600),
+            (640, 480)
+        ];
+
+        var bestW = beforeW;
+        var bestH = beforeH;
+        var bestArea = Math.Max(0, beforeW * beforeH);
+
+        foreach (var (w, h) in candidates)
+        {
+            try
+            {
+                capture.FrameWidth = w;
+                capture.FrameHeight = h;
+            }
+            catch
+            {
+                continue;
+            }
+
+            var gotW = (int)capture.FrameWidth;
+            var gotH = (int)capture.FrameHeight;
+            var area = gotW * gotH;
+            Log($"  tried {w}x{h} -> {gotW}x{gotH}");
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestW = gotW;
+                bestH = gotH;
+            }
+        }
+
+        // Re-apply best so we do not end on a failed lower attempt.
+        if (bestArea > 0)
+        {
+            try
+            {
+                capture.FrameWidth = bestW;
+                capture.FrameHeight = bestH;
+            }
+            catch
+            {
+                // keep whatever the driver left
+            }
+        }
+
+        Log($"PreferHighestResolution chose {capture.FrameWidth}x{capture.FrameHeight}");
     }
 
     private static VideoCapture? OpenCapture(int index, VideoCaptureAPIs api)
