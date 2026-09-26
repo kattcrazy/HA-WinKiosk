@@ -13,7 +13,7 @@ public static class AutoUpdateService
     private const string GitHubRepo = "HA-WinKiosk";
     private const int UpdateHourLocal = 3;
     private static readonly HttpClient Http = BuildHttpClient();
-    /// <summary>Longer timeout for multi‑MB installer downloads (GitHub API client stays short).</summary>
+    /// <summary>Longer timeout for multi-MB installer downloads (GitHub API client stays short).</summary>
     private static readonly HttpClient DownloadHttp = BuildDownloadHttpClient();
     private static readonly SemaphoreSlim CheckGate = new(1, 1);
 

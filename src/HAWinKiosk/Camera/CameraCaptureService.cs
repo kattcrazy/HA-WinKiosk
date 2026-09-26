@@ -72,7 +72,7 @@ public sealed class CameraCaptureService : IDisposable
 
         Log($"Opening OpenCV index={index} name={listed[index].Name}");
 
-        // Prefer MSMF, then DSHOW — both bypass broken WinRT MediaCapture on this machine.
+        // Prefer MSMF, then DSHOW - both bypass broken WinRT MediaCapture on this machine.
         _capture = OpenCapture(index, VideoCaptureAPIs.MSMF)
                    ?? OpenCapture(index, VideoCaptureAPIs.DSHOW)
                    ?? OpenCapture(index, VideoCaptureAPIs.ANY);
@@ -80,7 +80,7 @@ public sealed class CameraCaptureService : IDisposable
         if (_capture is null || !_capture.IsOpened())
             throw new InvalidOperationException("OpenCvSharp could not open the camera.");
 
-        // MSMF/DSHOW often default to 640x480 if unset — ask for the highest mode the driver accepts.
+        // MSMF/DSHOW often default to 640x480 if unset - ask for the highest mode the driver accepts.
         PreferHighestResolution(_capture);
         Log($"OpenCV opened backend={_capture.GetBackendName()} size={_capture.FrameWidth}x{_capture.FrameHeight}");
 

@@ -510,6 +510,15 @@ public partial class KioskWindow : Window, IKioskHostActions
             MqttSensorBatteryToggle.IsChecked = false;
     }
 
+    private void UpdateGpuSensorVisibility()
+    {
+        if (MqttSensorGpuPanel == null || MqttSensorGpuToggle == null) return;
+        var hasGpu = SensorReader.HasGpu();
+        MqttSensorGpuPanel.Visibility = hasGpu ? Visibility.Visible : Visibility.Collapsed;
+        if (!hasGpu)
+            MqttSensorGpuToggle.IsChecked = false;
+    }
+
     private void UpdateWindowsUpdateNoteVisibility()
     {
         if (MqttCmdWindowsUpdateNotePanel == null || MqttCmdWindowsUpdateToggle == null) return;
@@ -565,7 +574,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim().ToLowerInvariant();
-        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode is "ha" or "mjpeg" ? mode : "off");
+        SelectComboByTag(CameraStreamModeSelect.ComboBox, mode == "mjpeg" ? "mjpeg" : "off");
         CameraFpsSlider.Value = Math.Clamp(_settings.Sensors.CameraStream.Fps, 1, 15);
         CameraMjpegPortBox.Text = Math.Clamp(_settings.Sensors.CameraStream.Port <= 0 ? 8081 : _settings.Sensors.CameraStream.Port, 1, 65535).ToString();
         UpdateCameraStreamOptionsVisibility();
@@ -596,7 +605,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         var port = 8081;
         if (CameraMjpegPortBox.TryGetInt(out var p) && p is >= 1 and <= 65535)
             port = p;
-        CameraMjpegUrlText.Text = $"http://{LocalLanIp.Detect()}:{port}";
+        CameraMjpegUrlText.Text = $"http://{LocalLanIp.Detect()}:{port}/stream.mjpg";
     }
 
     private async Task PopulateCameraDevicesAsync()
@@ -762,9 +771,11 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         var sensors = _settings.Sensors.Enabled.Select(s => s.ToLowerInvariant()).ToHashSet();
         UpdateBatterySensorVisibility();
+        UpdateGpuSensorVisibility();
         MqttSensorBatteryToggle.IsChecked = sensors.Contains("battery");
         MqttSensorCpuToggle.IsChecked = sensors.Contains("cpu");
         MqttSensorMemoryToggle.IsChecked = sensors.Contains("memory");
+        MqttSensorGpuToggle.IsChecked = sensors.Contains("gpu");
         MqttSensorMonitorOnToggle.IsChecked = sensors.Contains("monitor_on");
         MqttSensorCurrentUrlToggle.IsChecked = sensors.Contains("current_url");
         MqttSensorIdleToggle.IsChecked = sensors.Contains("last_active");
@@ -1663,6 +1674,8 @@ public partial class KioskWindow : Window, IKioskHostActions
             _settings.Sensors.Enabled.Add("battery");
         if (MqttSensorCpuToggle.IsChecked == true) _settings.Sensors.Enabled.Add("cpu");
         if (MqttSensorMemoryToggle.IsChecked == true) _settings.Sensors.Enabled.Add("memory");
+        if (SensorReader.HasGpu() && MqttSensorGpuToggle.IsChecked == true)
+            _settings.Sensors.Enabled.Add("gpu");
         if (MqttSensorMonitorOnToggle.IsChecked == true) _settings.Sensors.Enabled.Add("monitor_on");
         if (MqttSensorCurrentUrlToggle.IsChecked == true) _settings.Sensors.Enabled.Add("current_url");
         if (MqttSensorIdleToggle.IsChecked == true) _settings.Sensors.Enabled.Add("last_active");
@@ -1707,7 +1720,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             var camMode = "off";
             if (CameraStreamModeSelect.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is string modeTag)
                 camMode = modeTag.Trim().ToLowerInvariant();
-            _settings.Sensors.CameraStream.Mode = camMode is "ha" or "mjpeg" ? camMode : "off";
+            _settings.Sensors.CameraStream.Mode = camMode == "mjpeg" ? "mjpeg" : "off";
             if (camMode == "mjpeg")
                 _settings.Sensors.CameraStream.Fps = Math.Clamp((int)Math.Round(CameraFpsSlider.Value), 1, 15);
             if (CameraMjpegPortBox.TryGetInt(out var camPort) && camPort is >= 1 and <= 65535)

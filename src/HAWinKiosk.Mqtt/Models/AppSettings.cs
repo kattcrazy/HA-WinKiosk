@@ -261,7 +261,7 @@ public class SensorsConfig
     [YamlMember(Alias = "enabled")]
     public List<string> Enabled { get; set; } =
     [
-        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "gpu", "monitor_on", "current_url", "last_active", "updates_pending"
     ];
 
     [YamlMember(Alias = "cameraStream")]
@@ -333,14 +333,14 @@ public class AudioOutputConfig
     public string PlaybackDeviceId { get; set; } = "";
 }
 
-/// <summary>Camera export: off, Home Assistant MQTT camera, or LAN MJPEG for an NVR.</summary>
+/// <summary>Camera export: off, or LAN MJPEG for an NVR / Home Assistant MJPEG camera.</summary>
 public class CameraStreamConfig
 {
-    /// <summary>off | ha | mjpeg</summary>
+    /// <summary>off | mjpeg</summary>
     [YamlMember(Alias = "mode")]
     public string Mode { get; set; } = "off";
 
-    /// <summary>Capture publish rate 1-15.</summary>
+    /// <summary>Capture rate 1-15 (MJPEG mode).</summary>
     [YamlMember(Alias = "fps")]
     public int Fps { get; set; } = 5;
 

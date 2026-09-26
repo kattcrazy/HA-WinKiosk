@@ -131,6 +131,35 @@ public static class SensorReader
         }
     }
 
+    public static bool HasGpu()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "root\\CIMV2",
+                "SELECT PercentProcessorTime FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
+            using var results = searcher.Get();
+            foreach (ManagementObject mo in results)
+            {
+                try
+                {
+                    if (mo["PercentProcessorTime"] != null)
+                        return true;
+                }
+                finally
+                {
+                    mo.Dispose();
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static string LastActiveSeconds()
     {
         var lii = new NativeMethods.LastInputInfo();

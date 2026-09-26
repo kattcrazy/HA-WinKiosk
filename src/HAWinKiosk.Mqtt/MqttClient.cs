@@ -26,11 +26,11 @@ public class MqttClientService : IDisposable
     private const string NavigateCommandSlug = "nav";
     private const string LegacyNavigateCommandSlug = "navigate";
 
-    /// <summary>Retired switch — retained discovery is always cleared on connect.</summary>
+    /// <summary>Retired switch - retained discovery is always cleared on connect.</summary>
     private static readonly string[] LegacySwitchSlugs = ["monitor"];
 
     /// <summary>All sensor slugs that may have a retained <c>homeassistant/sensor/.../config</c> topic.</summary>
-    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "current_url", "last_active", "updates_pending"];
+    private static readonly string[] AllKnownSensorSlugs = ["battery", "cpu", "memory", "gpu", "current_url", "last_active", "updates_pending"];
 
     /// <summary>Always published; not user-configurable in settings.</summary>
     private const string AlwaysEnabledSensorSlug = "release_info";
@@ -330,6 +330,7 @@ public class MqttClientService : IDisposable
                 "battery" => SensorReader.BatteryPercentOrUnavailable(),
                 "cpu" => SensorReader.CpuLoadPercent(),
                 "memory" => SensorReader.MemoryUsagePercent(),
+                "gpu" => SensorReader.GpuLoadPercent(),
                 "current_url" => _host?.GetCurrentUrl(),
                 "monitor_on" => SensorReader.MonitorOnOrOff(),
                 "release_info" => ReleaseInfo.GetSensorValue(),
@@ -465,6 +466,7 @@ public class MqttClientService : IDisposable
                 "battery" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Battery level", "%", "battery"),
                 "cpu" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "CPU usage", "%", null),
                 "memory" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Memory usage", "%", null),
+                "gpu" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "GPU usage", "%", null),
                 "current_url" => MqttDiscovery.StringSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Current URL"),
                 "release_info" => MqttDiscovery.StringSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Release info"),
                 "last_active" => MqttDiscovery.NumericSensor(_prefix, _deviceName, _availabilityTopic, _devId, slug, "Last Active", "s", null),
@@ -483,15 +485,8 @@ public class MqttClientService : IDisposable
 
         await PublishPersistedSettingsDiscoveryAsync(ct);
 
-        var cameraMode = (_settings.Sensors.CameraStream?.Mode ?? "off").Trim().ToLowerInvariant();
-        if (cameraMode == "ha")
-        {
-            var (camTopic, camPayload) = MqttDiscovery.MqttCamera(
-                _prefix, _deviceName, _availabilityTopic, _devId, "camera", "Camera");
-            await _client.PublishAsync(
-                new MqttApplicationMessageBuilder().WithTopic(camTopic).WithPayload(camPayload).WithRetainFlag().Build(),
-                ct);
-        }
+        // HA MQTT camera entity removed; always clear retained discovery from older builds.
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/camera/{_devId}_camera/config", ct);
 
         await _client.PublishAsync(
             new MqttApplicationMessageBuilder().WithTopic(_availabilityTopic).WithPayload(availPayload).WithRetainFlag().Build(),
@@ -554,10 +549,7 @@ public class MqttClientService : IDisposable
         await PublishEmptyRetainedConfigAsync($"{_prefix}/select/{_devId}_orientation_default/config", ct);
         await PublishEmptyRetainedConfigAsync($"{_prefix}/sensor/{_devId}_sessionstate/config", ct);
         await PublishEmptyRetainedConfigAsync($"{_prefix}/number/{_devId}_brightness_default/config", ct);
-
-        var cameraMode = (_settings.Sensors.CameraStream?.Mode ?? "off").Trim().ToLowerInvariant();
-        if (cameraMode != "ha")
-            await PublishEmptyRetainedConfigAsync($"{_prefix}/camera/{_devId}_camera/config", ct);
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/camera/{_devId}_camera/config", ct);
     }
 
     private async Task PublishPowerShellCommandDiscoveryAsync(CancellationToken ct)
@@ -771,36 +763,11 @@ public class MqttClientService : IDisposable
         }
     }
 
-    public async Task PublishCameraDiscoveryAsync(bool enabled, CancellationToken ct = default)
+    /// <summary>Clears retained MQTT camera discovery from older builds that published an HA camera entity.</summary>
+    public async Task ClearCameraDiscoveryAsync(CancellationToken ct = default)
     {
         if (_client == null || !_client.IsConnected) return;
-
-        var configTopic = $"{_prefix}/camera/{_devId}_camera/config";
-        if (!enabled)
-        {
-            await PublishEmptyRetainedConfigAsync(configTopic, ct);
-            return;
-        }
-
-        var (topic, payload) = MqttDiscovery.MqttCamera(
-            _prefix, _deviceName, _availabilityTopic, _devId, "camera", "Camera");
-        await _client.PublishAsync(
-            new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(payload).WithRetainFlag().Build(),
-            ct);
-    }
-
-    public async Task PublishCameraJpegAsync(byte[] jpeg, CancellationToken ct = default)
-    {
-        if (_client == null || !_client.IsConnected || jpeg == null || jpeg.Length == 0) return;
-        var topic = MqttDiscovery.CameraImageTopic(_prefix, $"{_devId}_camera");
-        await _client.PublishAsync(
-            new MqttApplicationMessageBuilder()
-                .WithTopic(topic)
-                .WithPayload(jpeg)
-                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
-                .WithRetainFlag(false)
-                .Build(),
-            ct);
+        await PublishEmptyRetainedConfigAsync($"{_prefix}/camera/{_devId}_camera/config", ct);
     }
 
     public async Task DisconnectAsync(CancellationToken ct = default)

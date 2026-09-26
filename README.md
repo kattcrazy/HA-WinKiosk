@@ -55,10 +55,10 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Windows updates pending | Number | Count of available Windows updates |
 | CPU usage | Sensor | Processor load % |
 | Memory usage | Sensor | Physical memory used % |
-| Monitor state | Binary sensor | Whether the display is on (`on`/`off`) |
+| GPU usage | Sensor | GPU load % (only when Windows GPU performance counters are available) |
+| Monitor state | Binary sensor | Whether the display is on (`on`/`off`). Tracks Windows display power (including display timeout) and MQTT monitor sleep/wake; published on the normal sensor interval (~30s). |
 | Current URL | Sensor | WebView address currently shown in the kiosk |
 | Release info | Sensor | App version and breaking changes (always published) |
-| Camera | Camera | Optional MQTT camera when Camera stream mode is HA camera entity |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
 
 When the command Navigate is enabled in Settings, the kiosk listens on `{discoveryPrefix}/{device}/nav` (payload = HA path).
@@ -75,15 +75,25 @@ Camera stream settings appear under MQTT -> Sensors when a camera is present, an
 
 | UI Name | Values | Notes |
 | --- | --- | --- |
-| Camera stream | `off` / `ha` / `mjpeg` | Off, HA MQTT camera entity, or LAN MJPEG for an NVR |
+| Camera stream | `off` / `mjpeg` | Off, or LAN MJPEG for NVR / Home Assistant |
 | FPS | `1..15` | MJPEG mode only. Note that higher means more network traffic. |
-| Port | integer | MMJPEG mode only. Listen port (default 8081) |
+| Port | integer | MJPEG mode only. Listen port (default 8081) |
 
 | Mode | Meaning |
 | --- | --- |
 | Off | Camera(s) are not in use |
-| MJPEG stream for NVR | MJPEG camera stream on a configurable port at `http://<kiosk-ip>:<port>`, ready for any NVR or software that can ingest HTTP MJPEG (for example, Frigate). Make sure to set a static IP on the kiosk so the URL doesn't change. |
-| HA camera entity | Camera feed is sent to Home Assistant alongside any other MQTT sensors or commands. **EXPECT LAG** - I haven't found a way to fix this yet (feel free to make an issue if you know a way) |
+| MJPEG stream | MJPEG at `http://<kiosk-ip>:<port>/stream.mjpg`, for Frigate/NVRs or a Home Assistant MJPEG camera. Set a static IP on the kiosk so the URL does not change. |
+
+Example Home Assistant MJPEG camera (YAML):
+
+```yaml
+camera:
+  - platform: mjpeg
+    name: Kiosk Camera
+    mjpeg_url: http://192.168.1.50:8081/stream.mjpg
+```
+
+Or add the **MJPEG IP Camera** integration in the HA UI and use the same URL.
 
 
 ## Settings
@@ -249,6 +259,7 @@ mqtt:
       - battery
       - cpu
       - memory
+      - gpu
       - monitor_on
       - current_url
       - last_active

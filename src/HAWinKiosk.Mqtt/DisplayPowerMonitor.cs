@@ -71,7 +71,7 @@ public static class DisplayPowerMonitor
 
             // POWERBROADCAST_SETTING: GUID (16) + DataLength (4) + Data (DWORD).
             var displayState = Marshal.ReadInt32(lParam + 20);
-            // 0=off, 1=on, 2=dimmed — treat dimmed as on so wake automations still run.
+            // 0=off, 1=on, 2=dimmed - treat dimmed as on so wake automations still run.
             MonitorPowerTracker.SetOn(displayState != 0);
         }
         catch

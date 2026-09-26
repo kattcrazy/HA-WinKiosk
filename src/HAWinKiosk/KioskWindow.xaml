@@ -990,6 +990,14 @@
                                     <TextBlock Grid.Column="0" Text="Memory usage" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttSensorMemoryToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
+                                <Grid x:Name="MqttSensorGpuPanel" Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="GPU usage" Style="{StaticResource SettingsToggleRowLabel}"/>
+                                    <ToggleButton x:Name="MqttSensorGpuToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1012,8 +1020,7 @@
                                                                 Label="Camera stream"
                                                                 SelectionChanged="CameraStreamModeSelect_SelectionChanged">
                                         <ComboBoxItem Content="Off" Tag="off"/>
-                                        <ComboBoxItem Content="HA camera entity" Tag="ha"/>
-                                        <ComboBoxItem Content="MJPEG stream for NVR" Tag="mjpeg"/>
+                                        <ComboBoxItem Content="MJPEG stream" Tag="mjpeg"/>
                                     </settings:SettingsSelectRow>
                                     <StackPanel x:Name="CameraStreamOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
                                         <settings:SettingsSliderRow x:Name="CameraFpsSlider"
@@ -1033,7 +1040,7 @@
                                                        Style="{StaticResource SettingsItemLabel}"
                                                        TextWrapping="Wrap"
                                                        Margin="0,0,0,6"/>
-                                            <settings:SettingsNote Text="In Windows Settings, make sure to make the kiosk's IP static otherwise the url will change and the stream will not be accessible from the old url"/>
+                                            <settings:SettingsNote Text="Add a Home Assistant MJPEG camera pointing at this stream URL (use /stream.mjpg). Set a static IP on the kiosk so the URL does not change."/>
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>

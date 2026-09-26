@@ -10,7 +10,7 @@ public static class SettingsManager
 {
     private static readonly HashSet<string> AllowedSensorIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "battery", "cpu", "memory", "monitor_on", "current_url", "last_active", "updates_pending"
+        "battery", "cpu", "memory", "gpu", "monitor_on", "current_url", "last_active", "updates_pending"
     };
 
     private static readonly string AppDataDir = Path.Combine(
@@ -70,6 +70,13 @@ public static class SettingsManager
         {
             s.Sensors.Enabled = s.Sensors.Enabled
                 .Where(x => !x.Equals("battery", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (!SensorReader.HasGpu())
+        {
+            s.Sensors.Enabled = s.Sensors.Enabled
+                .Where(x => !x.Equals("gpu", StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
@@ -138,11 +145,15 @@ public static class SettingsManager
         s.Sensors.CameraStream ??= new CameraStreamConfig();
         var cam = s.Sensors.CameraStream;
         var mode = (cam.Mode ?? "off").Trim().ToLowerInvariant();
-        cam.Mode = mode is "ha" or "mjpeg" ? mode : "off";
+        // Legacy "ha" (MQTT camera entity) remaps to off; only off | mjpeg remain.
+        var normalizedMode = mode == "mjpeg" ? "mjpeg" : "off";
+        var cameraMigrated = !string.Equals(cam.Mode, normalizedMode, StringComparison.OrdinalIgnoreCase)
+            || mode is "ha";
+        cam.Mode = normalizedMode;
         cam.Fps = Math.Clamp(cam.Fps, 1, 15);
         cam.Port = Math.Clamp(cam.Port <= 0 ? 8081 : cam.Port, 1, 65535);
         s.Kiosk.CameraDeviceId ??= "";
-        return migratedPs;
+        return migratedPs || cameraMigrated;
     }
 
     private static bool MigrateAndNormalizePowerShellCommands(CommandsConfig c)
