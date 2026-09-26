@@ -31,13 +31,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Native gh stderr must not abort the step when the release does not exist yet.
+          $ErrorActionPreference = "Continue"
           $tag = "${{ github.ref_name }}"
           $notes = "docs/releases/$tag.md"
-          gh release view $tag 2>$null | Out-Null
+          gh release view $tag 1>$null 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release edit $tag --title $tag --notes-file $notes
+            if ($LASTEXITCODE -ne 0) { throw "gh release edit failed" }
           } else {
             gh release create $tag --title $tag --notes-file $notes
+            if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
           }
 
       - name: Setup .NET 8 SDK
