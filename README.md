@@ -19,9 +19,9 @@ Home Assistant Windows Kiosk - An open-source Windows webpage kiosk designed for
 **I recommend checking out [my setup](docs/my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
 ## Requirements
 
-- Windows 10/11 (I would be interested to know if this works on previous versions)
-- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) (the installer will install this automatically if not already present)
-- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
+- Windows 10/11 - I would be interested to know if this works on previous versions, please lmk
+- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) - if not already present, will automatically install)
+- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) - usually pre-installed on Windows 11
 
 ## Kiosk Lockdown
 
