@@ -314,6 +314,4 @@ This project uses the [GNU General Public License v3.0](https://www.gnu.org/lice
 ## About
 This is my first Windows app (super excited that I finally made one). I use it for my own setup and it's been really helpful. Please report an issue if something doesn't work, I'll try my best to fix it.
 
-Contributions/PRs welcome. 
-
 If this app helps you out, consider supporting me [here](https://kattcrazy.nz/product/support-me/) :)
