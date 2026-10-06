@@ -16,7 +16,7 @@ Windows webpage kiosk designed for integration with Home Assistant. Prevents acc
 3. Click Save & Back to Kiosk - the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled the settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-**I recommend checking out [my setup](docs/my_setup.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
+**I recommend checking out [Further Instructions](docs/further_instructions.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
 ## Requirements
 
 - Windows 10/11 - I would be interested to know if this works on previous versions, please lmk
@@ -299,7 +299,7 @@ The app checks daily at 3:00 AM local device time for any updates. If a newer ve
 
 If beta updates are enabled, it will download the latest update, even if it is a pre-release. If disabled, it will download the latest stable release.
 
-When Start on boot is enabled in Settings, the app adds itself to the current-user Run key and opens immediately. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [my setup](docs/my_setup.md) docs. 
+When Start on boot is enabled in Settings, the app adds itself to the current-user Run key and opens immediately. The exception for this is if Windows Smart App Control decides that it's not safe to open (even if it has opened before). To solve this, read [Further Instructions](docs/further_instructions.md). 
 
 ## License
 

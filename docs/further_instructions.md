@@ -72,13 +72,13 @@ In netplwiz, there is a checkbox. Uncheck it. If already unchecked, check and un
 Press "apply" and then enter the password as instructed. Then press ok to close the window.
 
 #### Part 2: HA WinKiosk
-In HA WinKiosk settings in the MQTT section, there is a powershell command toggle. Enable this. 
-In the new input box below it, put `(New-Object -ComObject WScript.Shell).SendKeys("{ENTER}")`. 
+In HA WinKiosk settings in the MQTT section, enable the PowerShell commands toggle.
+Add a name and this command: `(New-Object -ComObject WScript.Shell).SendKeys("{ENTER}")`.
 Now press Save & Back to Kiosk.
 
 #### Part 3: Home Assistant
-In Home Assistant, you'll see the powershell command as a new MQTT button.
-Put it into an automation along with the monitorwake command like this, replacing `[your kiosk name]` with the name of your kiosk device that you put in HA WinKiosk settings.
+In Home Assistant, you'll see a button for that PowerShell command.
+Put it into an automation along with the monitorwake command like this, replacing `[your kiosk name]` with your kiosk device name and `[your powershell command entity here]` with the PowerShell button entity from HA.
 
 ```
 alias: Turn on Kiosk
@@ -102,7 +102,7 @@ actions:
     metadata: {}
     data: {}
     target:
-      entity_id: button.[your kiosk name]_powershell_command
+      entity_id: [your powershell command entity here]
   - delay:
       hours: 0
       minutes: 0
@@ -112,7 +112,7 @@ actions:
     metadata: {}
     data: {}
     target:
-      entity_id: button.[your kiosk name]_powershell_command
+      entity_id: [your powershell command entity here]
 ```
 This effectively wakes up the kiosk from its monitorsleep (will not work with systemsleep or shutdown), waits 700 milliseconds, presses the enter key to bypass the lockscreen, then repeats the last 2 steps to ensure it worked.
 
@@ -162,6 +162,9 @@ actions:
 This refreshes the kiosk webpage to prevent memory buildup. If prefered, you could trigger the button `[your kiosk name]`_clear_kiosk_cache instead.
 
 <!--
+
+work in progress
+
 ### Schedule disabling & enabling of touchscreen to avoid false clicks during times when the screen needs to stay off (Surface Pro 3, but may work for other devices)
 
 powershell.exe
