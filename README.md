@@ -21,12 +21,12 @@ Windows webpage kiosk designed for integration with Home Assistant. Prevents acc
 ## Requirements
 
 - Windows 10/11 - I would be interested to know if this works on previous versions, please lmk
-- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) - if not already present, will automatically install)
+- [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) - if not already present, will automatically install
 - [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) - usually pre-installed on Windows 11
 
 ## Kiosk Lockdown
 
-- WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
+- WebView zoom is blocked.
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
 - Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu will still come up on windows key/swipe up from bottom.
@@ -35,9 +35,9 @@ Windows webpage kiosk designed for integration with Home Assistant. Prevents acc
 
 ## Voice Assist
 
-While I previously attempted to add native openwakeword and wyoming services support with releases [v3.9.3-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.9.3-beta) to [v3.10.9-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.10.9-beta) I have discovered a wonderful intergration that does this just as well, if not better, with a lot less work. 
+I previously attempted to add native openwakeword and wyoming services support with releases [v3.9.3-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.9.3-beta) to [v3.10.9-beta](https://github.com/kattcrazy/HA-WinKiosk/releases/tag/v3.10.9-beta).
 
-Instead of continuing, I've optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea. Mic access, input device, output device, and volume can be changed from the config section of HA WinKiosk's settings. If you want to customise the Voice Assist appearance to match this app better, you can follow the intergration instructions for skins and extra css.
+Instead, I've now optimised this kiosk app to work with [voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration) by jxlarrea. Mic access, input device, output device, and volume can be changed from the config section of HA WinKiosk's settings. If you want to customise the Voice Assist appearance to match this app better, you can follow their instructions for skins and extra CSS.
 
 ## MQTT and Home Assistant
 
