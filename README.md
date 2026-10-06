@@ -16,7 +16,8 @@ Windows webpage kiosk designed for integration with Home Assistant. Prevents acc
 3. Click Save & Back to Kiosk - the fullscreen kiosk will load your HA dashboard or chosen URL.
 4. Click the gear button to open Settings (If you've disabled the settings button use a configured gesture with action set to `settings`, or MQTT `opensettings`). Use Exit to Windows in Settings to quit the app.
 
-**I recommend checking out [Further Instructions](docs/further_instructions.md) if you want to sleep/wake your kiosk, use autologin, have troubles with the app not starting, or have a Surface Pro 3. Please check this out before making an issue!**
+**I recommend checking out [Further Instructions](docs/further_instructions.md) before making an issue. It has instructions on how to enable automatic logging in, fixing not waking after monitor sleep, app not starting, and more.**
+
 ## Requirements
 
 - Windows 10/11 - I would be interested to know if this works on previous versions, please lmk
