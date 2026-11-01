@@ -74,7 +74,8 @@ public class MqttClientService : IDisposable
     private static readonly HashSet<string> PersistedSettingsSlugs = new(StringComparer.OrdinalIgnoreCase)
     {
         "monitor_brightness",
-        "brightness_default" // legacy command topic; discovery uses monitor_brightness
+        "brightness_default", // legacy command topic; discovery uses monitor_brightness
+        "page_zoom"
     };
 
     public bool IsConnected => _client?.IsConnected ?? false;
@@ -353,7 +354,9 @@ public class MqttClientService : IDisposable
         var list = new List<(string Topic, string Payload)>
         {
             MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "monitor_brightness", "Monitor brightness",
-                _settings.ScreenBrightness.AllowZeroBrightness ? 0 : 1, 100, 1, "%")
+                _settings.ScreenBrightness.AllowZeroBrightness ? 0 : 1, 100, 1, "%"),
+            MqttDiscovery.MqttNumber(_prefix, _deviceName, _availabilityTopic, _devId, "page_zoom", "Page zoom",
+                KioskConfig.ZoomPercentMin, KioskConfig.ZoomPercentMax, 1, "%")
         };
 
         foreach (var (topic, payload) in list)
@@ -366,6 +369,8 @@ public class MqttClientService : IDisposable
 
         await PublishNumberStateAsync("monitor_brightness",
             ClampBrightnessPercent(_settings.ScreenBrightness.DefaultPercent).ToString(CultureInfo.InvariantCulture), ct);
+        await PublishNumberStateAsync("page_zoom",
+            KioskConfig.ClampZoomPercent(_settings.Kiosk.ZoomPercent).ToString(CultureInfo.InvariantCulture), ct);
     }
 
     private int ClampBrightnessPercent(int pct)
@@ -420,6 +425,14 @@ public class MqttClientService : IDisposable
                         Error?.Invoke(this, ex);
                     }
 
+                    await PersistSettingsFromMqttAsync(ct);
+                }
+
+                return;
+            case "page_zoom":
+                if (double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var zoomRaw))
+                {
+                    _settings.Kiosk.ZoomPercent = KioskConfig.ClampZoomPercent((int)Math.Round(zoomRaw));
                     await PersistSettingsFromMqttAsync(ct);
                 }
 

@@ -137,6 +137,8 @@ public static class SettingsManager
         if (!s.ScreenBrightness.AllowZeroBrightness && s.ScreenBrightness.DefaultPercent < 1)
             s.ScreenBrightness.DefaultPercent = 1;
 
+        s.Kiosk.ZoomPercent = KioskConfig.ClampZoomPercent(s.Kiosk.ZoomPercent);
+
         s.Mqtt.DeviceName = MqttDiscovery.NormalizeDeviceDisplayName(s.Mqtt.DeviceName);
         s.Mqtt.DiscoveryPrefix = string.IsNullOrWhiteSpace(s.Mqtt.DiscoveryPrefix)
             ? "homeassistant"

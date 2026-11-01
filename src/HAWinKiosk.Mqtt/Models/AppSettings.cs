@@ -99,8 +99,17 @@ public class KioskConfig
     [YamlMember(Alias = "cameraDeviceId")]
     public string CameraDeviceId { get; set; } = "";
 
+    /// <summary>WebView page zoom percent (25-225). Default 100.</summary>
+    [YamlMember(Alias = "zoomPercent")]
+    public int ZoomPercent { get; set; } = 100;
+
     [YamlMember(Alias = "gestures")]
     public GesturesConfig Gestures { get; set; } = new();
+
+    public const int ZoomPercentMin = 25;
+    public const int ZoomPercentMax = 225;
+
+    public static int ClampZoomPercent(int pct) => Math.Clamp(pct, ZoomPercentMin, ZoomPercentMax);
 }
 
 public class GesturesConfig

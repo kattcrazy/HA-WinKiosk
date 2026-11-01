@@ -183,7 +183,7 @@
                StaysOpen="True"
                AllowsTransparency="True"
                PopupAnimation="None"
-               Placement="AbsolutePoint">
+               Placement="Custom">
             <Border x:Name="BreakingChangesBanner"
                     HorizontalAlignment="Center"
                     Background="{DynamicResource Theme.BreakingChanges.Bg}"
@@ -434,6 +434,32 @@
                                                   VerticalAlignment="Center"
                                                   Checked="AllowZeroBrightnessToggle_Changed"
                                                   Unchecked="AllowZeroBrightnessToggle_Changed"/>
+                                </Grid>
+
+                                <TextBlock Text="Page zoom (%)" Style="{StaticResource SettingsItemLabel}"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="PageZoomSlider"
+                                            Grid.Column="0"
+                                            Style="{StaticResource SettingsSlider}"
+                                            Minimum="25"
+                                            Maximum="225"
+                                            Value="100"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,10,0"
+                                            ValueChanged="PageZoomSlider_ValueChanged"/>
+                                    <TextBlock x:Name="PageZoomValueText"
+                                               Grid.Column="1"
+                                               Width="40"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource SettingsItemLabel}"
+                                               Text="100"/>
                                 </Grid>
 
                                 <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>

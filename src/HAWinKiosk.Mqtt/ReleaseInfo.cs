@@ -10,8 +10,7 @@ namespace HAWinKiosk.Mqtt;
 public static class ReleaseInfo
 {
     // UPDATE THIS BEFORE EACH RELEASE. Use "None" when there are no breaking changes.
-    public const string BreakingChanges =
-        "The HA MQTT camera entity is removed in favour of the MJPEG steam intergration in Home Assistant for less lag. If you were using it, the camera strea setting will be set to Off when updated. Set it to MJPEG stream in Settings and add a Home Assistant MJPEG camera pointing at http://<kiosk-ip>:<port>/stream.mjpg to get your cam back up and running!";
+    public const string BreakingChanges = "None";
 
     public static bool HasBreakingChanges =>
         !string.IsNullOrWhiteSpace(BreakingChanges)

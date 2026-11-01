@@ -21,11 +21,11 @@ Windows webpage kiosk designed for integration with Home Assistant. Prevents acc
 
 - Windows 10/11 - I would be interested to know if this works on previous versions, please lmk
 - [.NET 8 Runtime (Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) - if not already present, will automatically install)
-- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) - usually pre-installed on Windows 11
+- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) - usually pre-installed on Windows 11. Windows Server does not include it; install the Evergreen Runtime there before running the kiosk.
 
 ## Kiosk Lockdown
 
-- WebView zoom is blocked (pinch zoom and Ctrl+wheel zoom).
+- WebView pinch zoom and Ctrl+wheel zoom are blocked. Page zoom is set from Settings or the Home Assistant entity.
 - WebView back/forward swipe navigation is blocked.
 - Kiosk window keeps itself topmost and fullscreen, hides the Windows taskbar while running, and restores the taskbar when the app exits.
 - Windows key, context-menu key, Alt+F4, Alt+Tab, F11, F12, Ctrl+Esc, and Ctrl+Shift+Esc are intercepted while the kiosk is running. A limitation of running inside Windows Explorer is that the start menu will still come up on windows key/swipe up from bottom.
@@ -68,6 +68,7 @@ With MQTT configured, the app publishes MQTT payloads that show up in Integratio
 | Current URL | Sensor | WebView address currently shown in the kiosk |
 | Release info | Sensor | App version and breaking changes (always published) |
 | Monitor brightness | Number | Brightness % (1-100 by default; 0-100 when `Allow 0% brightness` is on)|
+| Page zoom | Number | WebView page zoom % (25-225, default 100) |
 
 When the command Navigate is enabled in Settings, the kiosk listens on `{discoveryPrefix}/{device}/nav` (payload = HA path).
 
@@ -132,6 +133,7 @@ Below is a key of what all the options are, and below that is an example `settin
 | Theme | `auto`/`light`/`dark` | UI theme mode |
 | Brightness (%) | `0..100` | Screen brightness |
 | Allow 0% brightness | `true`/`false` | When `false` (default), local slider and HA brightness entity minimum is 1% |
+| Page zoom (%) | `25..225` | WebView page zoom (default 100). Pinch and Ctrl+wheel stay blocked |
 | Start when Windows starts | `true`/`false` | Launch app at sign-in |
 | Respect active hours | `true`/`false` | When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds |
 | Playback device | string (MMDevice ID) | Empty keeps Windows default playback device |
@@ -216,6 +218,7 @@ config:
   volumePercent: 100
   brightnessPercent: 100
   allowZeroBrightness: false
+  zoomPercent: 100
   autoStartEnabled: true
   windowsUpdateRespectActiveHours: true
 

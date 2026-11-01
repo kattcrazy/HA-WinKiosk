@@ -79,6 +79,10 @@ public sealed class ConfigSectionV2
     [YamlMember(Alias = "brightnessPercent")]
     public int BrightnessPercent { get; set; } = 100;
 
+    /// <summary>WebView page zoom percent (25-225). Default 100.</summary>
+    [YamlMember(Alias = "zoomPercent")]
+    public int ZoomPercent { get; set; } = 100;
+
     [YamlMember(Alias = "autoStartEnabled")]
     public bool AutoStartEnabled { get; set; }
 
@@ -145,6 +149,7 @@ public static class SettingsYamlConversion
         s.AudioOutput.VolumePercent = c.VolumePercent;
         s.ScreenBrightness.DefaultPercent = c.BrightnessPercent;
         s.ScreenBrightness.AllowZeroBrightness = c.AllowZeroBrightness;
+        s.Kiosk.ZoomPercent = c.ZoomPercent;
         s.AutoStart.Enabled = c.AutoStartEnabled;
 
         var m = v.Mqtt ?? new MqttSectionV2();
@@ -188,6 +193,7 @@ public static class SettingsYamlConversion
                 VolumePercent = s.AudioOutput.VolumePercent,
                 BrightnessPercent = s.ScreenBrightness.DefaultPercent,
                 AllowZeroBrightness = s.ScreenBrightness.AllowZeroBrightness,
+                ZoomPercent = s.Kiosk.ZoomPercent,
                 AutoStartEnabled = s.AutoStart.Enabled
             },
             Gestures = s.Kiosk.Gestures,

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -42,11 +43,14 @@ public partial class KioskWindow : Window, IKioskHostActions
     private string? _gestureDocumentScriptId;
     private bool _mainNavigationSucceeded = true;
 
-    public KioskWindow(bool showSettingsFirst = false)
+    public KioskWindow(bool showSettingsFirst = false, bool previewWebViewError = false)
     {
         InitializeComponent();
         _showSettingsFirst = showSettingsFirst;
+        _previewWebViewError = previewWebViewError;
         BreakingChangesBannerPopup.PlacementTarget = this;
+        BreakingChangesBannerPopup.Placement = PlacementMode.Custom;
+        BreakingChangesBannerPopup.CustomPopupPlacementCallback = PositionBreakingChangesBannerCustom;
         SettingsButtonPopup.PlacementTarget = this;
         CustomButtonPopup.PlacementTarget = this;
         ContentRendered += (_, _) => UpdateSettingsButtonVisibility();
@@ -59,11 +63,13 @@ public partial class KioskWindow : Window, IKioskHostActions
     }
 
     private readonly bool _showSettingsFirst;
+    private readonly bool _previewWebViewError;
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         ApplyKioskBounds();
-        EnableKioskLockdown();
+        if (!_previewWebViewError)
+            EnableKioskLockdown();
         DisplayPowerMonitor.Register(new WindowInteropHelper(this).Handle);
 
         _settings = SettingsManager.Load();
@@ -71,6 +77,12 @@ public partial class KioskWindow : Window, IKioskHostActions
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
         ConfigureGestureFallbackOverlay();
+
+        if (_previewWebViewError)
+        {
+            ShowWebViewInitFailure(runtimeMissing: true, detail: null);
+            return;
+        }
 
         if (_settings.AutoStart.Enabled)
             AutoStartManager.SetEnabled(true);
@@ -83,11 +95,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         else
         {
             ShowKiosk();
-            await EnsureWebView2();
-            UpdateBreakingChangesBanner();
-            // Camera/MJPEG must listen before Navigate when the kiosk URL is the local stream.
-            await StartMqttIfConfiguredAsync();
-            NavigateTo(_settings.Kiosk.Url);
+            await StartKioskContentAsync();
         }
     }
 
@@ -134,7 +142,7 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void Window_Activated(object sender, EventArgs e)
     {
         if (_isClosing) return;
-        ApplyKioskBounds();
+        Topmost = true;
     }
 
     private void Window_Deactivated(object sender, EventArgs e)
@@ -617,7 +625,7 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         try
         {
-            var devices = await CameraCaptureService.ListDevicesAsync();
+            var devices = await ListCameraDevicesWithTimeoutAsync();
             _hasCameraDevice = devices.Count > 0;
             if (_hasCameraDevice)
             {
@@ -652,6 +660,21 @@ public partial class KioskWindow : Window, IKioskHostActions
         CameraDeviceCombo.SelectedIndex = 0;
     }
 
+    private static async Task<IReadOnlyList<(string Id, string Name)>> ListCameraDevicesWithTimeoutAsync()
+    {
+        try
+        {
+            var task = CameraCaptureService.ListDevicesAsync();
+            if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(2))) != task)
+                return [];
+            return await task;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     private async Task ApplyCameraStreamAsync()
     {
         try
@@ -661,7 +684,7 @@ public partial class KioskWindow : Window, IKioskHostActions
             {
                 try
                 {
-                    var devices = await CameraCaptureService.ListDevicesAsync();
+                    var devices = await ListCameraDevicesWithTimeoutAsync();
                     hasCam = devices.Count > 0;
                     _hasCameraDevice = hasCam;
                 }
@@ -752,6 +775,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         AllowZeroBrightnessToggle.IsChecked = _settings.ScreenBrightness.AllowZeroBrightness;
         ApplyBrightnessSliderMinimum();
         DefaultBrightnessValueText.Text = $"{(int)Math.Round(DefaultBrightnessSlider.Value)}";
+        PageZoomSlider.Value = KioskConfig.ClampZoomPercent(_settings.Kiosk.ZoomPercent);
+        PageZoomValueText.Text = $"{(int)Math.Round(PageZoomSlider.Value)}";
 
         _audioUiPopulating = true;
         try
@@ -930,17 +955,29 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void PositionBreakingChangesBannerPopup()
     {
-        if (BreakingChangesBannerPopup is not { IsOpen: true } || BreakingChangesBanner == null)
+        if (BreakingChangesBannerPopup is not { IsOpen: true })
             return;
 
+        // CustomPopupPlacementCallback only re-runs when offset changes.
+        BreakingChangesBannerPopup.HorizontalOffset = 0.1;
+        BreakingChangesBannerPopup.HorizontalOffset = 0;
+    }
+
+    private CustomPopupPlacement[] PositionBreakingChangesBannerCustom(System.Windows.Size popupSize, System.Windows.Size targetSize, System.Windows.Point _)
+    {
         const double margin = 16;
-        if (ActualWidth <= 0 || ActualHeight <= 0)
-            return;
+        var width = targetSize.Width > 1 ? targetSize.Width : ActualWidth;
+        var height = targetSize.Height > 1 ? targetSize.Height : ActualHeight;
+        if (width <= 0) width = 1;
+        if (height <= 0) height = 1;
 
-        BreakingChangesBanner.Measure(new System.Windows.Size(Math.Max(0, ActualWidth - margin * 2), double.PositiveInfinity));
-        var size = BreakingChangesBanner.DesiredSize;
-        BreakingChangesBannerPopup.HorizontalOffset = Math.Max(margin, (ActualWidth - size.Width) / 2);
-        BreakingChangesBannerPopup.VerticalOffset = Math.Max(0, ActualHeight - size.Height - margin);
+        var x = Math.Max(margin, (width - popupSize.Width) / 2);
+        var y = Math.Max(margin, height - popupSize.Height - margin);
+        return
+        [
+            new CustomPopupPlacement(new System.Windows.Point(x, y), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new System.Windows.Point(x, margin), PopupPrimaryAxis.Horizontal)
+        ];
     }
 
     private void BreakingChangesBannerDismiss_Click(object sender, RoutedEventArgs e)
@@ -1036,6 +1073,25 @@ public partial class KioskWindow : Window, IKioskHostActions
     {
         if (DefaultBrightnessValueText != null)
             DefaultBrightnessValueText.Text = ((int)Math.Round(e.NewValue)).ToString(CultureInfo.InvariantCulture);
+    }
+
+    private void PageZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (PageZoomValueText != null)
+            PageZoomValueText.Text = ((int)Math.Round(e.NewValue)).ToString(CultureInfo.InvariantCulture);
+    }
+
+    private void ApplyPageZoom(int? percent = null)
+    {
+        var pct = KioskConfig.ClampZoomPercent(percent ?? _settings.Kiosk.ZoomPercent);
+        try
+        {
+            WebView.ZoomFactor = pct / 100.0;
+        }
+        catch
+        {
+            // WebView may not be ready yet (startup / init failure).
+        }
     }
 
     private void SelectPlaybackDeviceCombo(string? deviceId)
@@ -1134,15 +1190,63 @@ public partial class KioskWindow : Window, IKioskHostActions
             PositionBreakingChangesBannerPopup();
     }
 
-    private async Task EnsureWebView2()
+    private async Task<bool> EnsureWebView2()
     {
         if (WebView.CoreWebView2 != null)
-            return;
+            return true;
 
-        var env = await CoreWebView2Environment.CreateAsync(
-            null, SettingsManager.GetUserDataFolder(), null);
-        await WebView.EnsureCoreWebView2Async(env);
-        var wv = WebView.CoreWebView2!;
+        if (!IsWebView2RuntimeAvailable())
+        {
+            ShowWebViewInitFailure(runtimeMissing: true, detail: null);
+            return false;
+        }
+
+        try
+        {
+            CoreWebView2EnvironmentOptions? options = null;
+            if (IsWindowsServer())
+            {
+                options = new CoreWebView2EnvironmentOptions
+                {
+                    AdditionalBrowserArguments = "--disable-gpu"
+                };
+            }
+
+            var env = await AwaitOrTimeout(
+                CoreWebView2Environment.CreateAsync(
+                    null, SettingsManager.GetUserDataFolder(), options),
+                TimeSpan.FromSeconds(15));
+            if (env == null)
+            {
+                ShowWebViewInitFailure(runtimeMissing: false, detail: "WebView2 did not start in time.");
+                return false;
+            }
+
+            if (!await AwaitOrTimeout(WebView.EnsureCoreWebView2Async(env), TimeSpan.FromSeconds(15)))
+            {
+                ShowWebViewInitFailure(runtimeMissing: false, detail: "WebView2 did not start in time.");
+                return false;
+            }
+
+            try { WebView.UpdateWindowPos(); } catch { /* ignore */ }
+        }
+        catch (WebView2RuntimeNotFoundException)
+        {
+            ShowWebViewInitFailure(runtimeMissing: true, detail: null);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            ShowWebViewInitFailure(runtimeMissing: false, detail: ex.Message);
+            return false;
+        }
+
+        var wv = WebView.CoreWebView2;
+        if (wv == null)
+        {
+            ShowWebViewInitFailure(runtimeMissing: false, detail: "WebView2 started but did not create a view.");
+            return false;
+        }
         wv.Settings.AreDefaultScriptDialogsEnabled = false;
         // Lock down browser-like behavior on touch kiosks.
         TrySetCoreWebView2BoolSetting(wv.Settings, "IsZoomControlEnabled", false);
@@ -1173,6 +1277,111 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
 
         await RegisterGestureDocumentCreatedScriptAsync(wv);
+        ApplyPageZoom();
+        return true;
+    }
+
+    private static async Task<bool> AwaitOrTimeout(Task task, TimeSpan timeout)
+    {
+        if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
+            return false;
+        await task;
+        return true;
+    }
+
+    private static async Task<T?> AwaitOrTimeout<T>(Task<T> task, TimeSpan timeout) where T : class
+    {
+        if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
+            return null;
+        return await task;
+    }
+
+    private async Task StartKioskContentAsync()
+    {
+        var webOk = await EnsureWebView2();
+        var url = _settings.Kiosk.Url;
+        var waitForCamera = KioskUrlNeedsLocalMjpeg(url);
+
+        if (webOk)
+            UpdateBreakingChangesBanner();
+
+        if (waitForCamera)
+            await StartMqttIfConfiguredAsync();
+        else
+            _ = StartMqttInBackgroundAsync();
+
+        if (webOk)
+            NavigateTo(url);
+    }
+
+    private bool KioskUrlNeedsLocalMjpeg(string? url)
+    {
+        var mode = (_settings.Sensors.CameraStream.Mode ?? "off").Trim();
+        if (!mode.Equals("mjpeg", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var safe = NormalizeNavigableUrl(url);
+        return Uri.TryCreate(safe, UriKind.Absolute, out var uri)
+            && uri.AbsolutePath.Contains("stream.mjpg", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWebView2RuntimeAvailable()
+    {
+        try
+        {
+            return !string.IsNullOrWhiteSpace(CoreWebView2Environment.GetAvailableBrowserVersionString());
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsWindowsServer()
+    {
+        try
+        {
+            var type = Microsoft.Win32.Registry.GetValue(
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+                "InstallationType",
+                null) as string;
+            return string.Equals(type, "Server", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ShowWebViewInitFailure(bool runtimeMissing, string? detail)
+    {
+        PopulateSettingsForm();
+        ShowSettings();
+
+        var message = runtimeMissing
+            ? "Microsoft Edge WebView2 Runtime is not installed. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save & Back to Kiosk."
+            : $"The kiosk page could not start.\n\n{(string.IsNullOrWhiteSpace(detail) ? "Unknown error." : detail)}";
+
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_isClosing) return;
+            var wasTopmost = Topmost;
+            Topmost = false;
+            try
+            {
+                System.Windows.MessageBox.Show(
+                    this,
+                    message,
+                    "HA WinKiosk",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            finally
+            {
+                if (!_isClosing)
+                    Topmost = wasTopmost;
+            }
+        }), DispatcherPriority.Loaded);
     }
 
     private void ConfigureGestureFallbackOverlay()
@@ -1250,6 +1459,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (WebView.CoreWebView2 == null) return;
 
         _mainNavigationSucceeded = e.IsSuccess;
+        ApplyPageZoom();
         ConfigureGestureFallbackOverlay();
 
         try
@@ -1530,21 +1740,30 @@ public partial class KioskWindow : Window, IKioskHostActions
 
         SettingsManager.Save(_settings);
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
+        ApplyPageZoom(_settings.Kiosk.ZoomPercent);
         ApplyDoNotDisturbIfEnabled();
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
 
         ShowKiosk();
 
-        if (WebView.CoreWebView2 == null)
-        {
-            await EnsureWebView2();
-        }
+        var url = _settings.Kiosk.Url;
+        var waitForCamera = KioskUrlNeedsLocalMjpeg(url);
+        var webOk = WebView.CoreWebView2 != null || await EnsureWebView2();
 
-        await RestartMqttAsync();
-        NavigateTo(_settings.Kiosk.Url);
+        if (webOk)
+            UpdateBreakingChangesBanner();
+
+        if (waitForCamera)
+            await RestartMqttAsync();
+        else
+            _ = RestartMqttInBackgroundAsync();
+
+        if (webOk)
+            NavigateTo(url);
 
         ConfigureGestureFallbackOverlay();
-        await ReinjectScriptAsync();
+        if (webOk)
+            await ReinjectScriptAsync();
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -1663,6 +1882,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (AllowZeroBrightnessToggle.IsChecked != true && _settings.ScreenBrightness.DefaultPercent < 1)
             _settings.ScreenBrightness.DefaultPercent = 1;
         _settings.ScreenBrightness.AllowZeroBrightness = AllowZeroBrightnessToggle.IsChecked == true;
+        _settings.Kiosk.ZoomPercent = KioskConfig.ClampZoomPercent((int)Math.Round(PageZoomSlider.Value));
         _settings.AudioOutput.VolumePercent = Math.Clamp((int)Math.Round(VolumePercentSlider.Value), 0, 100);
         if (PlaybackDeviceCombo.SelectedItem is ComboBoxItem playItem && playItem.Tag is string devTag)
             _settings.AudioOutput.PlaybackDeviceId = devTag;
@@ -1742,6 +1962,18 @@ public partial class KioskWindow : Window, IKioskHostActions
         System.Windows.Application.Current.Shutdown();
     }
 
+    private async Task StartMqttInBackgroundAsync()
+    {
+        try { await StartMqttIfConfiguredAsync(); }
+        catch { /* MQTT/camera must not fail kiosk start */ }
+    }
+
+    private async Task RestartMqttInBackgroundAsync()
+    {
+        try { await RestartMqttAsync(); }
+        catch { /* MQTT/camera must not fail kiosk start */ }
+    }
+
     private async Task RestartMqttAsync()
     {
         if (_mqtt == null)
@@ -1817,11 +2049,22 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private void ShowTaskbar()
     {
-        var taskbar = FindWindow("Shell_TrayWnd", null);
-        if (taskbar == nint.Zero) return;
-        if (_taskbarHidden)
-            _ = ShowWindow(taskbar, SW_SHOW);
+        RestoreTaskbar();
         _taskbarHidden = false;
+    }
+
+    internal static void RestoreTaskbar()
+    {
+        try
+        {
+            var taskbar = FindWindow("Shell_TrayWnd", null);
+            if (taskbar != nint.Zero)
+                _ = ShowWindow(taskbar, SW_SHOW);
+        }
+        catch
+        {
+            // Best-effort; a crash must not leave the shell hidden.
+        }
     }
 
     private nint KeyboardHookCallback(int nCode, nint wParam, nint lParam)
@@ -1936,6 +2179,7 @@ public partial class KioskWindow : Window, IKioskHostActions
                 PopulateSettingsForm();
             else
                 ApplySettingsUiTheme();
+            ApplyPageZoom();
             await ReinjectScriptAsync();
         });
     }
@@ -1956,8 +2200,8 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private async Task NavigateHaPathUiAsync(string path, CancellationToken cancellationToken)
     {
-        if (WebView.CoreWebView2 == null)
-            await EnsureWebView2();
+        if (WebView.CoreWebView2 == null && !await EnsureWebView2())
+            return;
         await HaNavigation.NavigateHaPathAsync(
             WebView.CoreWebView2,
             _settings.Kiosk.Url ?? "",
