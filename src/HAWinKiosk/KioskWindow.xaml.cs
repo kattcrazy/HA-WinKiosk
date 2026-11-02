@@ -1195,12 +1195,6 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (WebView.CoreWebView2 != null)
             return true;
 
-        if (!IsWebView2RuntimeAvailable())
-        {
-            ShowWebViewInitFailure(runtimeMissing: true, detail: null);
-            return false;
-        }
-
         try
         {
             CoreWebView2EnvironmentOptions? options = null;
@@ -1230,9 +1224,9 @@ public partial class KioskWindow : Window, IKioskHostActions
 
             try { WebView.UpdateWindowPos(); } catch { /* ignore */ }
         }
-        catch (WebView2RuntimeNotFoundException)
+        catch (WebView2RuntimeNotFoundException ex)
         {
-            ShowWebViewInitFailure(runtimeMissing: true, detail: null);
+            ShowWebViewInitFailure(runtimeMissing: true, detail: ex.Message);
             return false;
         }
         catch (Exception ex)
@@ -1325,18 +1319,6 @@ public partial class KioskWindow : Window, IKioskHostActions
             && uri.AbsolutePath.Contains("stream.mjpg", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsWebView2RuntimeAvailable()
-    {
-        try
-        {
-            return !string.IsNullOrWhiteSpace(CoreWebView2Environment.GetAvailableBrowserVersionString());
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static bool IsWindowsServer()
     {
         try
@@ -1359,7 +1341,8 @@ public partial class KioskWindow : Window, IKioskHostActions
         ShowSettings();
 
         var message = runtimeMissing
-            ? "Microsoft Edge WebView2 Runtime is not installed. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save & Back to Kiosk."
+            ? "Microsoft Edge WebView2 Runtime was not found. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save & Back to Kiosk."
+              + (string.IsNullOrWhiteSpace(detail) ? "" : $"\n\n{detail}")
             : $"The kiosk page could not start.\n\n{(string.IsNullOrWhiteSpace(detail) ? "Unknown error." : detail)}";
 
         _ = Dispatcher.BeginInvoke(new Action(() =>
