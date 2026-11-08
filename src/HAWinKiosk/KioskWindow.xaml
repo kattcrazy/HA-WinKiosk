@@ -23,7 +23,7 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource Theme.Settings.Fg}"/>
         </Style>
-        <!-- Section: Config, Gestures, Pin, MQTT -->
+        <!-- Legacy section heading (kept for any remaining plain headings) -->
         <Style x:Key="SettingsSectionHeading" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -340,7 +340,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Config + Pin | Gestures | MQTT -->
+                        <!-- Kiosk/Display/Lockdown | Audio/Buttons/Gestures | MQTT -->
                         <Grid Grid.Row="1" Margin="24,20,24,28">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -351,338 +351,373 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Config" Style="{StaticResource SettingsSectionHeading}"/>
-                                <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
+                                <settings:SettingsSection Header="Kiosk">
+                                    <TextBlock Text="Kiosk URL" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="UrlBox" Text="http://homeassistant.local:8123" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
 
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Ignore HTTPS cert warnings"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="IgnoreCertificateErrorsToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Ignore HTTPS cert warnings"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="IgnoreCertificateErrorsToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"/>
+                                    </Grid>
 
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Do Not Disturb (quiet hours)"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="DoNotDisturbToggle"
-                                                   Grid.Column="1"
-                                                   Style="{StaticResource SettingsToggleSwitch}"
-                                                   VerticalAlignment="Center"/>
-                                </Grid>
+                                    <TextBlock Text="Device name" Style="{StaticResource SettingsItemLabel}"/>
+                                    <TextBox x:Name="DeviceNameBox" Text="living-room-kiosk" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10" TextChanged="DeviceNameBox_TextChanged"/>
 
-                                <TextBlock Text="Device name" Style="{StaticResource SettingsItemLabel}"/>
-                                <TextBox x:Name="DeviceNameBox" Text="living-room-kiosk" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10" TextChanged="DeviceNameBox_TextChanged"/>
-
-                                <TextBlock Text="Theme" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="ThemeModeCombo"
-                                          Style="{StaticResource SettingsComboBox}"
-                                          Margin="0,0,0,12"
-                                          SelectionChanged="ThemeModeCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Auto (Windows)" Tag="auto"/>
-                                    <ComboBoxItem Content="Light" Tag="light"/>
-                                    <ComboBoxItem Content="Dark" Tag="dark"/>
-                                </ComboBox>
-
-                                <TextBlock Text="Brightness (%)" Style="{StaticResource SettingsItemLabel}"/>
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Slider x:Name="DefaultBrightnessSlider"
-                                            Grid.Column="0"
-                                            Style="{StaticResource SettingsSlider}"
-                                            Minimum="0"
-                                            Maximum="100"
-                                            TickFrequency="1"
-                                            IsSnapToTickEnabled="True"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0"
-                                            ValueChanged="DefaultBrightnessSlider_ValueChanged"/>
-                                    <TextBlock x:Name="DefaultBrightnessValueText"
-                                               Grid.Column="1"
-                                               Width="40"
-                                               TextAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               Text="100"/>
-                                </Grid>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Allow 0% brightness"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="AllowZeroBrightnessToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"
-                                                  Checked="AllowZeroBrightnessToggle_Changed"
-                                                  Unchecked="AllowZeroBrightnessToggle_Changed"/>
-                                </Grid>
-
-                                <TextBlock Text="Page zoom (%)" Style="{StaticResource SettingsItemLabel}"/>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Slider x:Name="PageZoomSlider"
-                                            Grid.Column="0"
-                                            Style="{StaticResource SettingsSlider}"
-                                            Minimum="25"
-                                            Maximum="225"
-                                            Value="100"
-                                            TickFrequency="1"
-                                            IsSnapToTickEnabled="True"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0"
-                                            ValueChanged="PageZoomSlider_ValueChanged"/>
-                                    <TextBlock x:Name="PageZoomValueText"
-                                               Grid.Column="1"
-                                               Width="40"
-                                               TextAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               Text="100"/>
-                                </Grid>
-
-                                <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Slider x:Name="VolumePercentSlider"
-                                            Grid.Column="0"
-                                            Style="{StaticResource SettingsSlider}"
-                                            Minimum="0"
-                                            Maximum="100"
-                                            TickFrequency="1"
-                                            IsSnapToTickEnabled="True"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0"
-                                            ValueChanged="VolumePercentSlider_ValueChanged"/>
-                                    <TextBlock x:Name="VolumePercentValueText"
-                                               Grid.Column="1"
-                                               Width="40"
-                                               TextAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               Text="100"/>
-                                </Grid>
-
-                                <TextBlock Text="Playback device" Style="{StaticResource SettingsItemLabel}"/>
-                                <ComboBox x:Name="PlaybackDeviceCombo"
-                                          Style="{StaticResource SettingsComboBox}"
-                                          Margin="0,0,0,10"
-                                          SelectionChanged="PlaybackDeviceCombo_SelectionChanged"/>
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Enable mic"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="EnableMicToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"
-                                                  Checked="EnableMicToggle_Changed"
-                                                  Unchecked="EnableMicToggle_Changed"/>
-                                </Grid>
-
-                                <StackPanel x:Name="InputDevicePanel" Margin="0,0,0,10">
-                                    <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="InputDeviceCombo"
-                                              Style="{StaticResource SettingsComboBox}"/>
-                                </StackPanel>
-
-                                <StackPanel x:Name="CameraDevicePanel" Margin="0,0,0,10" Visibility="Collapsed">
-                                    <TextBlock Text="Camera device" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="CameraDeviceCombo"
-                                              Style="{StaticResource SettingsComboBox}"/>
-                                </StackPanel>
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Start on boot"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="AutoStartToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Respect active hours"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="WindowsUpdateRespectActiveHoursToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds."
-                                           Style="{StaticResource SettingsHintText}"
-                                           Margin="0,0,0,20"/>
-
-                                <TextBlock Text="Pin" Style="{StaticResource SettingsSectionHeading}" Margin="0,16,0,10"/>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Pin protection"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="PinProtectionToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"
-                                                  Checked="PinProtectionToggle_Changed"
-                                                  Unchecked="PinProtectionToggle_Changed"/>
-                                </Grid>
-
-                                <StackPanel x:Name="PinProtectedFieldsPanel" Visibility="Visible">
-                                    <TextBlock Text="Settings PIN" Style="{StaticResource SettingsItemLabel}"/>
-                                    <local:SecretInputControl x:Name="SettingsPinBox"
-                                                              Margin="0,0,0,10"/>
-
-                                    <TextBlock Text="PIN hint (optional)" Style="{StaticResource SettingsItemLabel}"/>
-                                    <TextBox x:Name="PinHintBox"
-                                             Style="{StaticResource RoundedTextBox}"
-                                             Margin="0,0,0,10"/>
-
-                                    <TextBlock Text="Add a verification question for if you've forgotten the pin and need to reset it."
-                                               Style="{StaticResource SettingsItemLabel}"
-                                               TextWrapping="Wrap"/>
-                                    <TextBox x:Name="PinResetQuestionBox"
-                                             Style="{StaticResource RoundedTextBox}"
-                                             Margin="0,0,0,10"/>
-                                    <TextBlock Text="PIN reset answer" Style="{StaticResource SettingsItemLabel}"/>
-                                    <local:SecretInputControl x:Name="PinResetAnswerBox"
-                                                              Margin="0,0,0,10"/>
-                                </StackPanel>
-
-                                <TextBlock Text="Buttons" Style="{StaticResource SettingsSectionHeading}" Margin="0,16,0,10"/>
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Settings button"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="ShowSettingsButtonToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="If off, open Settings only via a configured gesture action set to Settings (or MQTT open settings if enabled)."
-                                           FontSize="11"
-                                           Foreground="{DynamicResource Theme.Settings.FgMuted}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,12"/>
-
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Custom button"
-                                               Style="{StaticResource SettingsToggleRowLabel}"/>
-                                    <ToggleButton x:Name="CustomButtonEnabledToggle"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource SettingsToggleSwitch}"
-                                                  VerticalAlignment="Center"
-                                                  Checked="CustomButtonEnabledToggle_Changed"
-                                                  Unchecked="CustomButtonEnabledToggle_Changed"/>
-                                </Grid>
-                                <StackPanel x:Name="CustomButtonOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
-                                    <TextBlock Text="Icon (mdi:name)" Style="{StaticResource SettingsItemLabel}"/>
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox x:Name="CustomButtonIconBox"
-                                                 Grid.Column="0"
-                                                 Style="{StaticResource RoundedTextBox}"
-                                                 TextChanged="CustomButtonIconBox_TextChanged"/>
-                                        <Border Grid.Column="1"
-                                                Width="40"
-                                                Height="40"
-                                                Margin="8,0,0,0"
-                                                Background="{DynamicResource Theme.Settings.InputBg}"
-                                                BorderBrush="{DynamicResource Theme.Settings.InputBorder}"
-                                                BorderThickness="1.4"
-                                                CornerRadius="6">
-                                            <materialIcons:MaterialIcon x:Name="CustomButtonIconPreview"
-                                                                        Kind="ButtonPointer"
-                                                                        Width="22"
-                                                                        Height="22"
-                                                                        Foreground="{DynamicResource Theme.Settings.InputFg}"
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center"/>
-                                        </Border>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Start on boot"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="AutoStartToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"/>
                                     </Grid>
-                                    <TextBlock Text="Action" Style="{StaticResource SettingsItemLabel}"/>
-                                    <ComboBox x:Name="CustomButtonActionCombo"
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Respect active hours"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="WindowsUpdateRespectActiveHoursToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="When on, a required reboot after Windows Update is deferred to outside active hours; when off, reboot is scheduled in 30 seconds."
+                                               Style="{StaticResource SettingsHintText}"
+                                               Margin="0,0,0,12"/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Do Not Disturb (quiet hours)"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="DoNotDisturbToggle"
+                                                       Grid.Column="1"
+                                                       Style="{StaticResource SettingsToggleSwitch}"
+                                                       VerticalAlignment="Center"/>
+                                    </Grid>
+                                </settings:SettingsSection>
+
+                                <settings:SettingsSection Header="Display">
+                                    <TextBlock Text="Theme" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="ThemeModeCombo"
                                               Style="{StaticResource SettingsComboBox}"
-                                              Margin="0,0,0,10"
-                                              SelectionChanged="CustomButtonAction_SelectionChanged">
-                                        <ComboBoxItem Content="Reload" Tag="reload"/>
-                                        <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
-                                        <ComboBoxItem Content="Settings" Tag="settings"/>
-                                        <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
-                                        <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
-                                        <ComboBoxItem Content="Bring up keyboard" Tag="keyboard"/>
+                                              Margin="0,0,0,12"
+                                              SelectionChanged="ThemeModeCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Auto (Windows)" Tag="auto"/>
+                                        <ComboBoxItem Content="Light" Tag="light"/>
+                                        <ComboBoxItem Content="Dark" Tag="dark"/>
                                     </ComboBox>
-                                    <StackPanel x:Name="CustomButtonMqttTopicPanel" Visibility="Collapsed" Margin="0,0,0,10">
-                                        <TextBlock x:Name="CustomButtonMqttTopicHeadingText" Text="MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
-                                        <TextBlock x:Name="CustomButtonMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
-                                        <TextBox x:Name="CustomButtonMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,0"/>
-                                        <TextBlock x:Name="CustomButtonMqttReconnectHelpText"
-                                                   Visibility="Collapsed"
-                                                   TextWrapping="Wrap"
-                                                   Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)."
+
+                                    <TextBlock Text="Brightness (%)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="DefaultBrightnessSlider"
+                                                Grid.Column="0"
+                                                Style="{StaticResource SettingsSlider}"
+                                                Minimum="0"
+                                                Maximum="100"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0"
+                                                ValueChanged="DefaultBrightnessSlider_ValueChanged"/>
+                                        <TextBlock x:Name="DefaultBrightnessValueText"
+                                                   Grid.Column="1"
+                                                   Width="40"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Style="{StaticResource SettingsItemLabel}"
-                                                   Margin="0,8,0,0"/>
+                                                   Text="100"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Allow 0% brightness"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="AllowZeroBrightnessToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="AllowZeroBrightnessToggle_Changed"
+                                                      Unchecked="AllowZeroBrightnessToggle_Changed"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Page zoom (%)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="PageZoomSlider"
+                                                Grid.Column="0"
+                                                Style="{StaticResource SettingsSlider}"
+                                                Minimum="25"
+                                                Maximum="225"
+                                                Value="100"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0"
+                                                ValueChanged="PageZoomSlider_ValueChanged"/>
+                                        <TextBlock x:Name="PageZoomValueText"
+                                                   Grid.Column="1"
+                                                   Width="40"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   Text="100"/>
+                                    </Grid>
+                                </settings:SettingsSection>
+
+                                <settings:SettingsSection Header="Lockdown">
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Pin protection"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="PinProtectionToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="PinProtectionToggle_Changed"
+                                                      Unchecked="PinProtectionToggle_Changed"/>
+                                    </Grid>
+
+                                    <StackPanel x:Name="PinProtectedFieldsPanel" Visibility="Visible">
+                                        <TextBlock Text="Settings PIN" Style="{StaticResource SettingsItemLabel}"/>
+                                        <local:SecretInputControl x:Name="SettingsPinBox"
+                                                                  Margin="0,0,0,10"/>
+
+                                        <TextBlock Text="PIN hint (optional)" Style="{StaticResource SettingsItemLabel}"/>
+                                        <TextBox x:Name="PinHintBox"
+                                                 Style="{StaticResource RoundedTextBox}"
+                                                 Margin="0,0,0,10"/>
+
+                                        <TextBlock Text="Add a verification question for if you've forgotten the pin and need to reset it."
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBox x:Name="PinResetQuestionBox"
+                                                 Style="{StaticResource RoundedTextBox}"
+                                                 Margin="0,0,0,10"/>
+                                        <TextBlock Text="PIN reset answer" Style="{StaticResource SettingsItemLabel}"/>
+                                        <local:SecretInputControl x:Name="PinResetAnswerBox"
+                                                                  Margin="0,0,0,10"/>
                                     </StackPanel>
-                                </StackPanel>
+                                </settings:SettingsSection>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Gestures"
-                                           Style="{StaticResource SettingsSectionHeading}"
-                                           Margin="0,0,0,10"/>
+                                <settings:SettingsSection Header="Audio &amp; camera">
+                                    <TextBlock Text="Volume (%)" Style="{StaticResource SettingsItemLabel}"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="VolumePercentSlider"
+                                                Grid.Column="0"
+                                                Style="{StaticResource SettingsSlider}"
+                                                Minimum="0"
+                                                Maximum="100"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0"
+                                                ValueChanged="VolumePercentSlider_ValueChanged"/>
+                                        <TextBlock x:Name="VolumePercentValueText"
+                                                   Grid.Column="1"
+                                                   Width="40"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   Style="{StaticResource SettingsItemLabel}"
+                                                   Text="100"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Playback device" Style="{StaticResource SettingsItemLabel}"/>
+                                    <ComboBox x:Name="PlaybackDeviceCombo"
+                                              Style="{StaticResource SettingsComboBox}"
+                                              Margin="0,0,0,10"
+                                              SelectionChanged="PlaybackDeviceCombo_SelectionChanged"/>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Enable mic"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="EnableMicToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="EnableMicToggle_Changed"
+                                                      Unchecked="EnableMicToggle_Changed"/>
+                                    </Grid>
+
+                                    <StackPanel x:Name="InputDevicePanel" Margin="0,0,0,10">
+                                        <TextBlock Text="Input device" Style="{StaticResource SettingsItemLabel}"/>
+                                        <ComboBox x:Name="InputDeviceCombo"
+                                                  Style="{StaticResource SettingsComboBox}"/>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="CameraDevicePanel" Margin="0,0,0,10" Visibility="Collapsed">
+                                        <TextBlock Text="Camera device" Style="{StaticResource SettingsItemLabel}"/>
+                                        <ComboBox x:Name="CameraDeviceCombo"
+                                                  Style="{StaticResource SettingsComboBox}"/>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="CameraStreamPanel" Visibility="Collapsed">
+                                        <settings:SettingsSelectRow x:Name="CameraStreamModeSelect"
+                                                                    Label="Camera stream"
+                                                                    SelectionChanged="CameraStreamModeSelect_SelectionChanged">
+                                            <ComboBoxItem Content="Off" Tag="off"/>
+                                            <ComboBoxItem Content="MJPEG stream" Tag="mjpeg"/>
+                                        </settings:SettingsSelectRow>
+                                        <StackPanel x:Name="CameraStreamOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                            <settings:SettingsSliderRow x:Name="CameraFpsSlider"
+                                                                        Label="FPS"
+                                                                        Minimum="1"
+                                                                        Maximum="15"
+                                                                        Value="5"/>
+                                            <StackPanel x:Name="CameraMjpegOptionsPanel" Visibility="Collapsed">
+                                                <TextBlock Text="Port" Style="{StaticResource SettingsItemLabel}"/>
+                                                <settings:SettingsNumericInput x:Name="CameraMjpegPortBox"
+                                                                               Text="8081"
+                                                                               MaxLength="5"
+                                                                               Margin="0,0,0,10"
+                                                                               TextChanged="CameraMjpegPortBox_TextChanged"/>
+                                                <TextBlock Text="Stream URL" Style="{StaticResource SettingsItemLabel}"/>
+                                                <TextBlock x:Name="CameraMjpegUrlText"
+                                                           Style="{StaticResource SettingsItemLabel}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,0,0,6"/>
+                                                <settings:SettingsNote Text="Add a Home Assistant MJPEG camera pointing at this stream URL (use /stream.mjpg). Set a static IP on the kiosk so the URL does not change."/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </settings:SettingsSection>
+
+                                <settings:SettingsSection Header="Buttons">
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Settings button"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="ShowSettingsButtonToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="If off, open Settings only via a configured gesture action set to Settings (or MQTT open settings if enabled)."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource Theme.Settings.FgMuted}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,12"/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Custom button"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="CustomButtonEnabledToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="CustomButtonEnabledToggle_Changed"
+                                                      Unchecked="CustomButtonEnabledToggle_Changed"/>
+                                    </Grid>
+                                    <StackPanel x:Name="CustomButtonOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
+                                        <TextBlock Text="Icon (mdi:name)" Style="{StaticResource SettingsItemLabel}"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="CustomButtonIconBox"
+                                                     Grid.Column="0"
+                                                     Style="{StaticResource RoundedTextBox}"
+                                                     TextChanged="CustomButtonIconBox_TextChanged"/>
+                                            <Border Grid.Column="1"
+                                                    Width="40"
+                                                    Height="40"
+                                                    Margin="8,0,0,0"
+                                                    Background="{DynamicResource Theme.Settings.InputBg}"
+                                                    BorderBrush="{DynamicResource Theme.Settings.InputBorder}"
+                                                    BorderThickness="1.4"
+                                                    CornerRadius="6">
+                                                <materialIcons:MaterialIcon x:Name="CustomButtonIconPreview"
+                                                                            Kind="ButtonPointer"
+                                                                            Width="22"
+                                                                            Height="22"
+                                                                            Foreground="{DynamicResource Theme.Settings.InputFg}"
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
+                                        <TextBlock Text="Action" Style="{StaticResource SettingsItemLabel}"/>
+                                        <ComboBox x:Name="CustomButtonActionCombo"
+                                                  Style="{StaticResource SettingsComboBox}"
+                                                  Margin="0,0,0,10"
+                                                  SelectionChanged="CustomButtonAction_SelectionChanged">
+                                            <ComboBoxItem Content="Reload" Tag="reload"/>
+                                            <ComboBoxItem Content="Clear cache and reload" Tag="clearcache_reload"/>
+                                            <ComboBoxItem Content="Settings" Tag="settings"/>
+                                            <ComboBoxItem Content="MQTT message" Tag="mqtt"/>
+                                            <ComboBoxItem Content="MQTT reconnect" Tag="mqtt_publish"/>
+                                            <ComboBoxItem Content="Bring up keyboard" Tag="keyboard"/>
+                                        </ComboBox>
+                                        <StackPanel x:Name="CustomButtonMqttTopicPanel" Visibility="Collapsed" Margin="0,0,0,10">
+                                            <TextBlock x:Name="CustomButtonMqttTopicHeadingText" Text="MQTT topic" Style="{StaticResource SettingsItemLabel}"/>
+                                            <TextBlock x:Name="CustomButtonMqttPrefixText" Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="CustomButtonMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,0"/>
+                                            <TextBlock x:Name="CustomButtonMqttReconnectHelpText"
+                                                       Visibility="Collapsed"
+                                                       TextWrapping="Wrap"
+                                                       Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)."
+                                                       Style="{StaticResource SettingsItemLabel}"
+                                                       Margin="0,8,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </settings:SettingsSection>
+
+                                <settings:SettingsSection Header="Gestures">
                                 <TextBlock Text="Taps" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,0,0,6"/>
                                 <TextBlock Text="Single tap" Style="{StaticResource SettingsItemLabel}"/>
                                 <ComboBox x:Name="GestureSingleTapActionCombo" Style="{StaticResource SettingsComboBox}" Margin="0,0,0,10" SelectionChanged="GestureAction_SelectionChanged">
@@ -961,11 +996,12 @@
                                     <TextBox x:Name="GestureZoomMqttTopicBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                     <TextBlock x:Name="GestureZoomMqttReconnectHelpText" Visibility="Collapsed" TextWrapping="Wrap" Text="Triggers the same MQTT reconnect as automatic recovery (disconnect, then reconnect with backoff)." Style="{StaticResource SettingsItemLabel}" Margin="0,0,0,10"/>
                                 </StackPanel>
+                                </settings:SettingsSection>
 
                             </StackPanel>
 
                             <StackPanel Grid.Column="4">
-                                <TextBlock Text="MQTT" Style="{StaticResource SettingsSectionHeading}"/>
+                                <settings:SettingsSection Header="MQTT connection">
                                 <TextBlock Text="MQTT IP" Style="{StaticResource SettingsItemLabel}"/>
                                 <TextBox x:Name="MqttHostBox" Text="192.168.1.?" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT port" Style="{StaticResource SettingsItemLabel}"/>
@@ -974,8 +1010,10 @@
                                 <TextBox x:Name="MqttUsernameBox" Style="{StaticResource RoundedTextBox}" Margin="0,0,0,10"/>
                                 <TextBlock Text="MQTT password" Style="{StaticResource SettingsItemLabel}"/>
                                 <local:SecretInputControl x:Name="MqttPasswordBox" Margin="0,0,0,12"/>
+                                </settings:SettingsSection>
 
-                                <TextBlock Text="Sensors" Style="{StaticResource SettingsSubSectionHeading}"/>
+                                <settings:SettingsSection Header="MQTT entities">
+                                <TextBlock Text="Sensors" Style="{StaticResource SettingsSubSectionHeading}" Margin="0,0,0,6"/>
                                 <Grid x:Name="MqttSensorBatteryPanel" Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1040,36 +1078,6 @@
                                     <TextBlock Grid.Column="0" Text="Current URL" Style="{StaticResource SettingsToggleRowLabel}"/>
                                     <ToggleButton x:Name="MqttSensorCurrentUrlToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
-
-                                <StackPanel x:Name="CameraStreamPanel" Visibility="Collapsed">
-                                    <settings:SettingsSelectRow x:Name="CameraStreamModeSelect"
-                                                                Label="Camera stream"
-                                                                SelectionChanged="CameraStreamModeSelect_SelectionChanged">
-                                        <ComboBoxItem Content="Off" Tag="off"/>
-                                        <ComboBoxItem Content="MJPEG stream" Tag="mjpeg"/>
-                                    </settings:SettingsSelectRow>
-                                    <StackPanel x:Name="CameraStreamOptionsPanel" Margin="16,0,0,4" Visibility="Collapsed">
-                                        <settings:SettingsSliderRow x:Name="CameraFpsSlider"
-                                                                    Label="FPS"
-                                                                    Minimum="1"
-                                                                    Maximum="15"
-                                                                    Value="5"/>
-                                        <StackPanel x:Name="CameraMjpegOptionsPanel" Visibility="Collapsed">
-                                            <TextBlock Text="Port" Style="{StaticResource SettingsItemLabel}"/>
-                                            <settings:SettingsNumericInput x:Name="CameraMjpegPortBox"
-                                                                           Text="8081"
-                                                                           MaxLength="5"
-                                                                           Margin="0,0,0,10"
-                                                                           TextChanged="CameraMjpegPortBox_TextChanged"/>
-                                            <TextBlock Text="Stream URL" Style="{StaticResource SettingsItemLabel}"/>
-                                            <TextBlock x:Name="CameraMjpegUrlText"
-                                                       Style="{StaticResource SettingsItemLabel}"
-                                                       TextWrapping="Wrap"
-                                                       Margin="0,0,0,6"/>
-                                            <settings:SettingsNote Text="Add a Home Assistant MJPEG camera pointing at this stream URL (use /stream.mjpg). Set a static IP on the kiosk so the URL does not change."/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </StackPanel>
 
                                 <TextBlock Text="Commands" Style="{StaticResource SettingsSubSectionHeading}"/>
                                 <Grid Margin="0,0,0,4">
@@ -1153,7 +1161,7 @@
                                     <ToggleButton x:Name="MqttCmdWindowsUpdateToggle" Grid.Column="1" Style="{StaticResource SettingsToggleSwitch}" VerticalAlignment="Center" Checked="MqttCmdWindowsUpdateToggle_Changed" Unchecked="MqttCmdWindowsUpdateToggle_Changed"/>
                                 </Grid>
                                 <StackPanel x:Name="MqttCmdWindowsUpdateNotePanel" Margin="16,0,0,8" Visibility="Collapsed">
-                                    <TextBlock Text="If a reboot is required, timing follows Config -> Respect active hours."
+                                    <TextBlock Text="If a reboot is required, timing follows Kiosk -> Respect active hours."
                                                Style="{StaticResource SettingsHintText}"/>
                                 </StackPanel>
                                 <Grid Margin="0,0,0,4">
@@ -1203,6 +1211,7 @@
                                                TextWrapping="Wrap"
                                                Margin="0,0,0,10"/>
                                 </StackPanel>
+                                </settings:SettingsSection>
                             </StackPanel>
 
                         </Grid>

@@ -918,8 +918,30 @@ public partial class KioskWindow : Window, IKioskHostActions
         CustomButtonPopup.IsOpen = false;
         if (BreakingChangesBannerPopup != null)
             BreakingChangesBannerPopup.IsOpen = false;
+        CollapseAllSettingsSections();
         SettingsPanel.Visibility = Visibility.Visible;
         UpdateExitButtonVisibility();
+    }
+
+    private void CollapseAllSettingsSections()
+    {
+        foreach (var section in FindLogicalChildren<SettingsSection>(SettingsPanel))
+            section.IsExpanded = false;
+    }
+
+    private static IEnumerable<T> FindLogicalChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null)
+            yield break;
+
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindLogicalChildren<T>(child))
+                yield return nested;
+        }
     }
 
     private void ShowKiosk()
