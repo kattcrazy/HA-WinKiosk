@@ -11,8 +11,11 @@ public partial class App : System.Windows.Application
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
+        // Recover if a previous crash/kill left the taskbar hidden.
+        KioskWindow.RestoreTaskbar();
         DispatcherUnhandledException += (_, _) => KioskWindow.RestoreTaskbar();
         AppDomain.CurrentDomain.UnhandledException += (_, _) => KioskWindow.RestoreTaskbar();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => KioskWindow.RestoreTaskbar();
 
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out var createdNew);
         if (!createdNew)
@@ -37,6 +40,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        KioskWindow.RestoreTaskbar();
         _singleInstanceMutex?.ReleaseMutex();
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);

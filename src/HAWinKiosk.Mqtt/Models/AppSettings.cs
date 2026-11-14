@@ -70,6 +70,18 @@ public class KioskConfig
     [YamlMember(Alias = "showSettingsButton")]
     public bool ShowSettingsButton { get; set; } = true;
 
+    /// <summary>When true, borderless kiosk lockdown (taskbar hide, optional topmost/shortcut block). Default true.</summary>
+    [YamlMember(Alias = "lockdownEnabled")]
+    public bool LockdownEnabled { get; set; } = true;
+
+    /// <summary>When lockdown is on, allow other windows above the kiosk (Topmost off). Default false.</summary>
+    [YamlMember(Alias = "allowAppsOnTop")]
+    public bool AllowAppsOnTop { get; set; }
+
+    /// <summary>When lockdown is on, install the shortcut-key hook. Default true.</summary>
+    [YamlMember(Alias = "restrictShortcutKeys")]
+    public bool RestrictShortcutKeys { get; set; } = true;
+
     [YamlMember(Alias = "customButton")]
     public CustomButtonConfig CustomButton { get; set; } = new();
 

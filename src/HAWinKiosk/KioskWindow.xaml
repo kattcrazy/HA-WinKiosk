@@ -8,7 +8,7 @@
         Title="HA WinKiosk"
         WindowStyle="None"
         ResizeMode="NoResize"
-        Topmost="True"
+        Topmost="False"
         Background="{DynamicResource Theme.Kiosk.Bg}"
         Loaded="Window_Loaded"
         Activated="Window_Activated"
@@ -309,10 +309,15 @@
                                             BorderBrush="{DynamicResource Theme.Button.SecondaryBorder}"
                                             Click="CheckUpdatesButton_Click"/>
                                     <Button x:Name="SaveButton"
-                                            Content="Save &amp; Back to Kiosk"
+                                            Content="Save"
                                             Style="{StaticResource PrimaryActionButton}"
                                             Margin="12,0,0,0"
                                             Click="SaveButton_Click"/>
+                                    <Button x:Name="BackToKioskButton"
+                                            Content="Back to Kiosk"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Margin="12,0,0,0"
+                                            Click="BackToKioskButton_Click"/>
                                     <Button x:Name="ExitToWindowsButton"
                                             Content="Exit to Windows"
                                             Style="{StaticResource SecondaryActionButton}"
@@ -497,13 +502,62 @@
                                 </settings:SettingsSection>
 
                                 <settings:SettingsSection Header="Lockdown">
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Kiosk lockdown"
+                                                   Style="{StaticResource SettingsToggleRowLabel}"/>
+                                        <ToggleButton x:Name="LockdownEnabledToggle"
+                                                      Grid.Column="1"
+                                                      Style="{StaticResource SettingsToggleSwitch}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="LockdownEnabledToggle_Changed"
+                                                      Unchecked="LockdownEnabledToggle_Changed"/>
+                                    </Grid>
+                                    <TextBlock Text="When off, HA WinKiosk runs as a normal Windows app (taskbar visible, no kiosk key blocking)."
+                                               Style="{StaticResource SettingsHintText}"
+                                               Margin="0,0,0,10"/>
+
+                                    <StackPanel x:Name="LockdownOptionsPanel" Margin="0,0,0,10">
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="Allow other apps on top"
+                                                       Style="{StaticResource SettingsToggleRowLabel}"/>
+                                            <ToggleButton x:Name="AllowAppsOnTopToggle"
+                                                          Grid.Column="1"
+                                                          Style="{StaticResource SettingsToggleSwitch}"
+                                                          VerticalAlignment="Center"/>
+                                        </Grid>
+
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="Restrict shortcut keys"
+                                                       Style="{StaticResource SettingsToggleRowLabel}"/>
+                                            <ToggleButton x:Name="RestrictShortcutKeysToggle"
+                                                          Grid.Column="1"
+                                                          Style="{StaticResource SettingsToggleSwitch}"
+                                                          VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </StackPanel>
+
                                     <Grid Margin="0,0,0,12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0"
-                                                   Text="Pin protection"
+                                                   Text="Settings pin protection"
                                                    Style="{StaticResource SettingsToggleRowLabel}"/>
                                         <ToggleButton x:Name="PinProtectionToggle"
                                                       Grid.Column="1"

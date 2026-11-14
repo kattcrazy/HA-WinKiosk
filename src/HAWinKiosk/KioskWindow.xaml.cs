@@ -36,6 +36,8 @@ public partial class KioskWindow : Window, IKioskHostActions
     private readonly DispatcherTimer _updatePopupTimer = new();
     private nint _keyboardHookHandle = nint.Zero;
     private LowLevelKeyboardProc? _keyboardHookProc;
+    private nint _foregroundHookHandle = nint.Zero;
+    private WinEventDelegate? _foregroundHookProc;
     private bool _taskbarHidden;
     private bool _isClosing;
     private readonly bool _hasTouchInput = Tablet.TabletDevices.OfType<TabletDevice>().Any(d => d.Type == TabletDeviceType.Touch);
@@ -67,12 +69,15 @@ public partial class KioskWindow : Window, IKioskHostActions
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        ApplyKioskBounds();
-        if (!_previewWebViewError)
-            EnableKioskLockdown();
+        // Always restore first so a previous force-kill cannot leave the shell hidden.
+        RestoreTaskbar();
+        _settings = SettingsManager.Load();
+        if (_previewWebViewError)
+            ApplyKioskBounds(forceTopmost: true);
+        else
+            ApplyLockdownMode();
         DisplayPowerMonitor.Register(new WindowInteropHelper(this).Handle);
 
-        _settings = SettingsManager.Load();
         ApplySettingsUiTheme();
         PlaybackAudio.ApplyPersisted(_settings.AudioOutput);
         ApplyDoNotDisturbIfEnabled();
@@ -112,7 +117,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private void ApplyKioskBounds()
+    private void ApplyKioskBounds(bool forceTopmost = true)
     {
         var hwnd = new WindowInteropHelper(this).EnsureHandle();
         var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
@@ -136,13 +141,23 @@ public partial class KioskWindow : Window, IKioskHostActions
         Top = screen.Bounds.Top / scaleY;
         Width = screen.Bounds.Width / scaleX;
         Height = screen.Bounds.Height / scaleY;
-        Topmost = true;
+        Topmost = forceTopmost;
     }
+
+    private bool ShouldForceTopmost() =>
+        _settings.Kiosk.LockdownEnabled && !_settings.Kiosk.AllowAppsOnTop;
 
     private void Window_Activated(object sender, EventArgs e)
     {
         if (_isClosing) return;
-        Topmost = true;
+        if (!ShouldForceTopmost())
+        {
+            // Keep Z-order honest when "allow apps on top" is enabled.
+            if (_settings.Kiosk.LockdownEnabled && _settings.Kiosk.AllowAppsOnTop)
+                ApplyNativeTopmost(false);
+            return;
+        }
+        ApplyNativeTopmost(true);
     }
 
     private void Window_Deactivated(object sender, EventArgs e)
@@ -150,16 +165,28 @@ public partial class KioskWindow : Window, IKioskHostActions
         if (_isClosing) return;
         // Do not force-activate here; it can steal focus from modal dialogs (PIN entry).
         if (OwnedWindows.OfType<Window>().Any(w => w.IsVisible)) return;
+        if (!ShouldForceTopmost())
+        {
+            if (_settings.Kiosk.LockdownEnabled && _settings.Kiosk.AllowAppsOnTop)
+            {
+                // Deactivate can race the new foreground HWND; yield after focus settles.
+                Dispatcher.BeginInvoke(() => YieldZOrderToForeground(nint.Zero), DispatcherPriority.Input);
+            }
+            return;
+        }
         Dispatcher.BeginInvoke(() =>
         {
-            if (_isClosing) return;
-            Topmost = true;
+            if (_isClosing || !ShouldForceTopmost()) return;
+            ApplyNativeTopmost(true);
         });
     }
 
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _isClosing = true;
+        // Taskbar first so a later crash during cleanup cannot leave it hidden.
+        RestoreTaskbar();
+        _taskbarHidden = false;
         DisplayPowerMonitor.Unregister();
         DisableKioskLockdown();
     }
@@ -839,6 +866,10 @@ public partial class KioskWindow : Window, IKioskHostActions
         SelectInputDeviceCombo(_settings.Kiosk.InputDeviceId);
         _ = PopulateCameraDevicesAsync();
         ShowSettingsButtonToggle.IsChecked = _settings.Kiosk.ShowSettingsButton;
+        LockdownEnabledToggle.IsChecked = _settings.Kiosk.LockdownEnabled;
+        AllowAppsOnTopToggle.IsChecked = _settings.Kiosk.AllowAppsOnTop;
+        RestrictShortcutKeysToggle.IsChecked = _settings.Kiosk.RestrictShortcutKeys;
+        UpdateLockdownOptionsVisibility();
         var custom = _settings.Kiosk.CustomButton ?? new CustomButtonConfig();
         CustomButtonEnabledToggle.IsChecked = custom.Enabled;
         CustomButtonIconBox.Text = string.IsNullOrWhiteSpace(custom.Icon) ? MdiIconHelper.DefaultMdiName : custom.Icon;
@@ -907,6 +938,18 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void UpdatePinProtectedFieldsVisibility()
     {
         PinProtectedFieldsPanel.Visibility = PinProtectionToggle.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void LockdownEnabledToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateLockdownOptionsVisibility();
+    }
+
+    private void UpdateLockdownOptionsVisibility()
+    {
+        LockdownOptionsPanel.Visibility = LockdownEnabledToggle.IsChecked == true
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -1024,7 +1067,9 @@ public partial class KioskWindow : Window, IKioskHostActions
     private void UpdateExitButtonVisibility()
     {
         if (ExitToWindowsButton == null) return;
-        ExitToWindowsButton.Visibility = IsLikelyShellMode() ? Visibility.Collapsed : Visibility.Visible;
+        // Based on saved settings (and shell mode), not the live lockdown toggle.
+        var hide = !_settings.Kiosk.LockdownEnabled || IsLikelyShellMode();
+        ExitToWindowsButton.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void UpdateSettingsButtonVisibility()
@@ -1063,8 +1108,17 @@ public partial class KioskWindow : Window, IKioskHostActions
         const double size = 40;
         const double margin = 16;
         const double gap = 8;
+        // AbsolutePoint is relative to the outer window; clear the title bar when not borderless.
         var top = margin;
-        var rightEdge = ActualWidth - margin;
+        var rightInset = margin;
+        if (!_settings.Kiosk.LockdownEnabled)
+        {
+            var frame = SystemParameters.WindowNonClientFrameThickness;
+            top = frame.Top + margin;
+            rightInset = frame.Right + margin;
+        }
+
+        var rightEdge = ActualWidth - rightInset;
 
         if (SettingsButtonPopup.IsOpen)
         {
@@ -1363,7 +1417,7 @@ public partial class KioskWindow : Window, IKioskHostActions
         ShowSettings();
 
         var message = runtimeMissing
-            ? "Microsoft Edge WebView2 Runtime was not found. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save & Back to Kiosk."
+            ? "Microsoft Edge WebView2 Runtime was not found. Windows Server does not include it by default.\n\nInstall the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ then click Save."
               + (string.IsNullOrWhiteSpace(detail) ? "" : $"\n\n{detail}")
             : $"The kiosk page could not start.\n\n{(string.IsNullOrWhiteSpace(detail) ? "Unknown error." : detail)}";
 
@@ -1748,8 +1802,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         ApplyPageZoom(_settings.Kiosk.ZoomPercent);
         ApplyDoNotDisturbIfEnabled();
         AutoStartManager.SetEnabled(_settings.AutoStart.Enabled);
-
-        ShowKiosk();
+        ApplyLockdownMode();
+        UpdateExitButtonVisibility();
+        PositionKioskChromeButtons();
 
         var url = _settings.Kiosk.Url;
         var waitForCamera = KioskUrlNeedsLocalMjpeg(url);
@@ -1769,6 +1824,11 @@ public partial class KioskWindow : Window, IKioskHostActions
         ConfigureGestureFallbackOverlay();
         if (webOk)
             await ReinjectScriptAsync();
+    }
+
+    private void BackToKioskButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowKiosk();
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -1846,6 +1906,9 @@ public partial class KioskWindow : Window, IKioskHostActions
         _settings.Kiosk.Gestures.QuadrupleTapLocation = SelectedTag(GestureQuadTapLocationCombo, "top-left");
         _settings.Kiosk.Gestures.QuintupleTapLocation = SelectedTag(GestureQuintTapLocationCombo, "top-left");
         _settings.Kiosk.ShowSettingsButton = ShowSettingsButtonToggle.IsChecked == true;
+        _settings.Kiosk.LockdownEnabled = LockdownEnabledToggle.IsChecked == true;
+        _settings.Kiosk.AllowAppsOnTop = AllowAppsOnTopToggle.IsChecked == true;
+        _settings.Kiosk.RestrictShortcutKeys = RestrictShortcutKeysToggle.IsChecked == true;
         _settings.Kiosk.CustomButton ??= new CustomButtonConfig();
         _settings.Kiosk.CustomButton.Enabled = CustomButtonEnabledToggle.IsChecked == true;
         _settings.Kiosk.CustomButton.Icon = string.IsNullOrWhiteSpace(CustomButtonIconBox.Text)
@@ -2019,15 +2082,227 @@ public partial class KioskWindow : Window, IKioskHostActions
         }
     }
 
-    private void EnableKioskLockdown()
+    private void ApplyLockdownMode()
     {
-        InstallKeyboardHook();
-        HideTaskbar();
+        if (_settings.Kiosk.LockdownEnabled)
+        {
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            var keepTopmost = !_settings.Kiosk.AllowAppsOnTop;
+            ApplyKioskBounds(forceTopmost: keepTopmost);
+            // WindowStyle changes can recreate the HWND; apply Z-order now and again after layout.
+            ApplyNativeTopmost(keepTopmost);
+            ScheduleNativeTopmost(keepTopmost);
+            HideTaskbar();
+            if (_settings.Kiosk.RestrictShortcutKeys)
+                InstallKeyboardHook();
+            else
+                UninstallKeyboardHook();
+            if (_settings.Kiosk.AllowAppsOnTop)
+                InstallForegroundHook();
+            else
+                UninstallForegroundHook();
+            return;
+        }
+
+        UninstallKeyboardHook();
+        UninstallForegroundHook();
+        ShowTaskbar();
+        WindowStyle = WindowStyle.SingleBorderWindow;
+        ResizeMode = ResizeMode.CanResize;
+        ApplyNativeTopmost(false);
+        ScheduleNativeTopmost(false);
+        WindowState = WindowState.Maximized;
+    }
+
+    private void ScheduleNativeTopmost(bool topmost)
+    {
+        _ = Dispatcher.BeginInvoke(new Action(() => ApplyNativeTopmost(topmost)), DispatcherPriority.Loaded);
+        _ = Dispatcher.BeginInvoke(new Action(() => ApplyNativeTopmost(topmost)), DispatcherPriority.ApplicationIdle);
+    }
+
+    private void ApplyNativeTopmost(bool topmost)
+    {
+        try
+        {
+            Topmost = topmost;
+            var hwnd = new WindowInteropHelper(this).EnsureHandle();
+            if (hwnd == nint.Zero) return;
+
+            // Clear/set WS_EX_TOPMOST explicitly; WPF Topmost alone is not always enough
+            // after WindowStyle changes recreate the HWND.
+            var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
+            var wasTopmost = (ex & WS_EX_TOPMOST) != 0;
+            var next = topmost ? (ex | WS_EX_TOPMOST) : (ex & ~WS_EX_TOPMOST);
+            if (next != ex)
+                _ = SetWindowLong(hwnd, GWL_EXSTYLE, next);
+
+            if (topmost)
+            {
+                _ = SetWindowPos(
+                    hwnd,
+                    HWND_TOPMOST,
+                    0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                return;
+            }
+
+            // Leaving the topmost band with HWND_NOTOPMOST also raises the window to the
+            // top of the normal Z-order. That fights "allow apps on top", so only use it
+            // when we were actually topmost; otherwise keep current Z-order.
+            if (wasTopmost)
+            {
+                _ = SetWindowPos(
+                    hwnd,
+                    HWND_NOTOPMOST,
+                    0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
+            else
+            {
+                _ = SetWindowPos(
+                    hwnd,
+                    nint.Zero,
+                    0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            }
+        }
+        catch
+        {
+            // Best-effort native Z-order sync with WPF Topmost.
+        }
+    }
+
+    private void YieldZOrderToForeground(nint foreignHwnd)
+    {
+        if (_isClosing || !_settings.Kiosk.LockdownEnabled || !_settings.Kiosk.AllowAppsOnTop)
+            return;
+
+        try
+        {
+            var our = new WindowInteropHelper(this).Handle;
+            if (our == nint.Zero) return;
+
+            var fg = foreignHwnd != nint.Zero ? foreignHwnd : GetForegroundWindow();
+            if (fg == nint.Zero || IsHwndOursOrOwned(fg)) return;
+
+            // Clear topmost without raising, then sink under every other window so the
+            // foreign app can cover a fullscreen borderless kiosk.
+            ApplyNativeTopmost(false);
+            _ = SetWindowPos(
+                our,
+                HWND_BOTTOM,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            DemoteChromePopupZOrder();
+
+            // WebView2 / WPF composition can reshuffle once; re-sink after idle.
+            _ = Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_isClosing || !_settings.Kiosk.LockdownEnabled || !_settings.Kiosk.AllowAppsOnTop)
+                    return;
+                var still = GetForegroundWindow();
+                if (still == nint.Zero || IsHwndOursOrOwned(still)) return;
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == nint.Zero) return;
+                _ = SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                DemoteChromePopupZOrder();
+            }), DispatcherPriority.ApplicationIdle);
+        }
+        catch
+        {
+            // Best-effort Z-order yield for allow-apps-on-top.
+        }
+    }
+
+    private void DemoteChromePopupZOrder()
+    {
+        // WPF Popup HWNDs are WS_EX_TOPMOST by default and can sit above other apps
+        // even after the main window yields.
+        foreach (var popup in new[] { SettingsButtonPopup, CustomButtonPopup, BreakingChangesBannerPopup })
+        {
+            if (popup?.Child is not Visual child) continue;
+            if (PresentationSource.FromVisual(child) is not HwndSource source) continue;
+            var hwnd = source.Handle;
+            if (hwnd == nint.Zero) continue;
+
+            var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
+            if ((ex & WS_EX_TOPMOST) != 0)
+                _ = SetWindowLong(hwnd, GWL_EXSTYLE, ex & ~WS_EX_TOPMOST);
+
+            _ = SetWindowPos(
+                hwnd,
+                HWND_BOTTOM,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        }
+    }
+
+    private bool IsHwndOursOrOwned(nint hwnd)
+    {
+        var our = new WindowInteropHelper(this).Handle;
+        if (our == nint.Zero || hwnd == nint.Zero) return false;
+        if (hwnd == our) return true;
+
+        var root = GetAncestor(hwnd, GA_ROOT);
+        if (root == our) return true;
+
+        foreach (Window owned in OwnedWindows)
+        {
+            var ownedHwnd = new WindowInteropHelper(owned).Handle;
+            if (ownedHwnd == nint.Zero) continue;
+            if (hwnd == ownedHwnd || root == ownedHwnd) return true;
+        }
+
+        return GetWindow(hwnd, GW_OWNER) == our;
+    }
+
+    private void InstallForegroundHook()
+    {
+        if (_foregroundHookHandle != nint.Zero) return;
+        _foregroundHookProc = OnForegroundWinEvent;
+        _foregroundHookHandle = SetWinEventHook(
+            EVENT_SYSTEM_FOREGROUND,
+            EVENT_SYSTEM_FOREGROUND,
+            nint.Zero,
+            _foregroundHookProc,
+            0,
+            0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+    }
+
+    private void UninstallForegroundHook()
+    {
+        if (_foregroundHookHandle == nint.Zero) return;
+        _ = UnhookWinEvent(_foregroundHookHandle);
+        _foregroundHookHandle = nint.Zero;
+        _foregroundHookProc = null;
+    }
+
+    private void OnForegroundWinEvent(nint hWinEventHook, uint eventType, nint hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+    {
+        if (eventType != EVENT_SYSTEM_FOREGROUND || hwnd == nint.Zero) return;
+        try
+        {
+            var foreign = hwnd;
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                if (_isClosing) return;
+                if (!_settings.Kiosk.LockdownEnabled || !_settings.Kiosk.AllowAppsOnTop) return;
+                if (IsHwndOursOrOwned(foreign)) return;
+                YieldZOrderToForeground(foreign);
+            }, DispatcherPriority.Input);
+        }
+        catch
+        {
+            // Hook callbacks must never throw.
+        }
     }
 
     private void DisableKioskLockdown()
     {
         UninstallKeyboardHook();
+        UninstallForegroundHook();
         ShowTaskbar();
     }
 
@@ -2065,6 +2340,11 @@ public partial class KioskWindow : Window, IKioskHostActions
             var taskbar = FindWindow("Shell_TrayWnd", null);
             if (taskbar != nint.Zero)
                 _ = ShowWindow(taskbar, SW_SHOW);
+
+            // Multi-monitor secondary taskbars.
+            var secondary = FindWindow("Shell_SecondaryTrayWnd", null);
+            if (secondary != nint.Zero)
+                _ = ShowWindow(secondary, SW_SHOW);
         }
         catch
         {
@@ -2127,6 +2407,64 @@ public partial class KioskWindow : Window, IKioskHostActions
     private const int VK_SHIFT = 0x10;
     private const int SW_HIDE = 0;
     private const int SW_SHOW = 5;
+    private static readonly nint HWND_TOPMOST = new(-1);
+    private static readonly nint HWND_NOTOPMOST = new(-2);
+    private static readonly nint HWND_BOTTOM = new(1);
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_FRAMECHANGED = 0x0020;
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_TOPMOST = 0x00000008;
+    private const uint GW_OWNER = 4;
+    private const uint GA_ROOT = 2;
+    private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    private const uint WINEVENT_OUTOFCONTEXT = 0;
+    private const uint WINEVENT_SKIPOWNPROCESS = 2;
+
+    private delegate void WinEventDelegate(
+        nint hWinEventHook, uint eventType, nint hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern nint GetWindow(nint hWnd, uint uCmd);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetAncestor(nint hwnd, uint gaFlags);
+
+    [DllImport("user32.dll")]
+    private static extern nint SetWinEventHook(
+        uint eventMin, uint eventMax, nint hmodWinEventProc, WinEventDelegate lpfnWinEventProc,
+        uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWinEvent(nint hWinEventHook);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static extern int GetWindowLong32(nint hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+    private static extern nint GetWindowLongPtr64(nint hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static extern int SetWindowLong32(nint hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    private static extern nint SetWindowLongPtr64(nint hWnd, int nIndex, nint dwNewLong);
+
+    private static int GetWindowLong(nint hWnd, int nIndex) =>
+        nint.Size == 8 ? (int)GetWindowLongPtr64(hWnd, nIndex) : GetWindowLong32(hWnd, nIndex);
+
+    private static int SetWindowLong(nint hWnd, int nIndex, int dwNewLong) =>
+        nint.Size == 8 ? (int)SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLong32(hWnd, nIndex, dwNewLong);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern nint SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, nint hMod, uint dwThreadId);

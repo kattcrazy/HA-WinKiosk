@@ -50,6 +50,15 @@ public sealed class ConfigSectionV2
     [YamlMember(Alias = "showSettingsButton")]
     public bool ShowSettingsButton { get; set; } = true;
 
+    [YamlMember(Alias = "lockdownEnabled")]
+    public bool LockdownEnabled { get; set; } = true;
+
+    [YamlMember(Alias = "allowAppsOnTop")]
+    public bool AllowAppsOnTop { get; set; }
+
+    [YamlMember(Alias = "restrictShortcutKeys")]
+    public bool RestrictShortcutKeys { get; set; } = true;
+
     [YamlMember(Alias = "customButton")]
     public CustomButtonConfig CustomButton { get; set; } = new();
 
@@ -139,6 +148,9 @@ public static class SettingsYamlConversion
         s.Kiosk.PinResetAnswer = c.PinResetAnswer;
         s.Kiosk.PinProtectionDisabled = c.PinProtectionDisabled;
         s.Kiosk.ShowSettingsButton = c.ShowSettingsButton;
+        s.Kiosk.LockdownEnabled = c.LockdownEnabled;
+        s.Kiosk.AllowAppsOnTop = c.AllowAppsOnTop;
+        s.Kiosk.RestrictShortcutKeys = c.RestrictShortcutKeys;
         s.Kiosk.CustomButton = c.CustomButton ?? new CustomButtonConfig();
         s.Kiosk.UiTheme = c.UiTheme;
         s.Kiosk.BetaUpdates = c.BetaUpdates;
@@ -182,6 +194,9 @@ public static class SettingsYamlConversion
                 PinHint = s.Kiosk.PinHint,
                 PinProtectionDisabled = s.Kiosk.PinProtectionDisabled,
                 ShowSettingsButton = s.Kiosk.ShowSettingsButton,
+                LockdownEnabled = s.Kiosk.LockdownEnabled,
+                AllowAppsOnTop = s.Kiosk.AllowAppsOnTop,
+                RestrictShortcutKeys = s.Kiosk.RestrictShortcutKeys,
                 CustomButton = s.Kiosk.CustomButton ?? new CustomButtonConfig(),
                 UiTheme = s.Kiosk.UiTheme,
                 BetaUpdates = s.Kiosk.BetaUpdates,
